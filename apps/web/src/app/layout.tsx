@@ -1,12 +1,8 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'LeanPilot — Lean Manufacturing Made Simple',
-  description: 'Democratize lean management for every factory, every team, every person.',
+export const metadata = {
+  title: 'LeanPilot',
+  description: 'Lean Manufacturing Made Simple',
 };
 
 export default function RootLayout({
@@ -15,10 +11,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        {children}
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }

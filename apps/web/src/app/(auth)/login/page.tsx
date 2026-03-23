@@ -2,14 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/api';
-import { Factory, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,9 +16,23 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const user = await auth.login(email, password);
-      // Route based on role
-      if (user.role === 'corporate_admin') {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ message: 'Login failed' }));
+        throw new Error(body.message || 'Login failed');
+      }
+
+      const data = await res.json();
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      if (data.user.role === 'corporate_admin') {
         router.push('/corporate');
       } else {
         router.push('/dashboard');
@@ -34,85 +45,70 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl mb-4">
-            <Factory className="w-8 h-8 text-white" />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
+      <div style={{ width: '100%', maxWidth: '400px', padding: '0 16px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '64px', height: '64px', background: '#2563eb', borderRadius: '16px', marginBottom: '16px'
+          }}>
+            <span style={{ fontSize: '28px' }}>🏭</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            LeanPilot
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Lean Manufacturing Made Simple
-          </p>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>LeanPilot</h1>
+          <p style={{ color: '#6b7280', marginTop: '4px' }}>Lean Manufacturing Made Simple</p>
         </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8"
-        >
+        <form onSubmit={handleSubmit} style={{
+          background: '#fff', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          border: '1px solid #e5e7eb', padding: '32px'
+        }}>
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+            <div style={{
+              marginBottom: '16px', padding: '12px', background: '#fef2f2',
+              border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '14px'
+            }}>
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoFocus
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                placeholder="admin@leanpilot.me"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent pr-10"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>
+              Email
+            </label>
+            <input
+              id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              required autoFocus placeholder="admin@leanpilot.me"
+              style={{
+                width: '100%', padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db',
+                fontSize: '14px', outline: 'none', boxSizing: 'border-box'
+              }}
+            />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-6 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-400 text-white font-medium rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-          >
+          <div style={{ marginBottom: '24px' }}>
+            <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>
+              Password
+            </label>
+            <input
+              id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+              required placeholder="Enter your password"
+              style={{
+                width: '100%', padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db',
+                fontSize: '14px', outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <button type="submit" disabled={loading} style={{
+            width: '100%', padding: '10px 16px', background: loading ? '#93c5fd' : '#2563eb',
+            color: '#fff', fontWeight: 500, borderRadius: '8px', border: 'none',
+            cursor: loading ? 'not-allowed' : 'pointer', fontSize: '14px'
+          }}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
+        <p style={{ textAlign: 'center', fontSize: '12px', color: '#9ca3af', marginTop: '24px' }}>
           LeanPilot v4.0 — leanpilot.me
         </p>
       </div>
