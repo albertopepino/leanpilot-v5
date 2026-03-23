@@ -12,33 +12,27 @@ export class CorporateService {
         sites: {
           where: { isActive: true },
           include: {
-            _count: {
-              select: {
-                users: true,
-                fiveSAudits: true,
-                kaizenItems: true,
-              },
-            },
+            _count: { select: { users: true, workstations: true } },
           },
         },
-        _count: { select: { users: true } },
       },
     });
 
     if (!corporate) throw new NotFoundException('Corporate not found');
 
+    const totalUsers = await this.prisma.user.count({ where: { corporateId } });
+
     return {
       id: corporate.id,
       name: corporate.name,
-      totalUsers: corporate._count.users,
+      totalUsers,
       totalSites: corporate.sites.length,
       sites: corporate.sites.map(site => ({
         id: site.id,
         name: site.name,
         location: site.location,
         userCount: site._count.users,
-        auditCount: site._count.fiveSAudits,
-        kaizenCount: site._count.kaizenItems,
+        workstationCount: site._count.workstations,
         isActive: site.isActive,
       })),
     };

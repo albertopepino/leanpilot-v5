@@ -11,7 +11,7 @@ export class SitesService {
     return this.prisma.site.findMany({
       where: { corporateId },
       include: {
-        _count: { select: { users: true } },
+        _count: { select: { users: true, workstations: true } },
       },
       orderBy: { name: 'asc' },
     });
@@ -21,7 +21,7 @@ export class SitesService {
     const site = await this.prisma.site.findUnique({
       where: { id },
       include: {
-        _count: { select: { users: true, fiveSAudits: true, kaizenItems: true } },
+        _count: { select: { users: true, workstations: true, orders: true } },
         corporate: { select: { name: true } },
       },
     });
@@ -43,9 +43,6 @@ export class SitesService {
   }
 
   async update(id: string, dto: UpdateSiteDto) {
-    return this.prisma.site.update({
-      where: { id },
-      data: dto,
-    });
+    return this.prisma.site.update({ where: { id }, data: dto });
   }
 }

@@ -6,8 +6,10 @@ import { UsersModule } from './users/users.module';
 import { SitesModule } from './sites/sites.module';
 import { CorporateModule } from './corporate/corporate.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { FiveSModule } from './tools/five-s/five-s.module';
-import { KaizenModule } from './tools/kaizen/kaizen.module';
+import { WorkstationsModule } from './workstations/workstations.module';
+import { OrdersModule } from './orders/orders.module';
+import { ShopfloorModule } from './shopfloor/shopfloor.module';
+import { GembaModule } from './gemba/gemba.module';
 
 @Module({
   imports: [
@@ -18,9 +20,11 @@ import { KaizenModule } from './tools/kaizen/kaizen.module';
     SitesModule,
     CorporateModule,
     DashboardModule,
-    // Lean tools — Phase 1
-    FiveSModule,
-    KaizenModule,
+    WorkstationsModule,
+    OrdersModule,
+    ShopfloorModule,
+    GembaModule,
+    // Phase 2: FiveSModule, KaizenModule
   ],
 })
 export class AppModule {}

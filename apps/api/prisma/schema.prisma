@@ -35,11 +35,13 @@ model Site {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  corporate Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
-  users     User[]
-
-  fiveSAudits FiveSAudit[]
-  kaizenItems KaizenItem[]
+  corporate    Corporate          @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  users        User[]
+  workstations Workstation[]
+  orders       ProductionOrder[]
+  reasonCodes  ReasonCode[]
+  shifts       ShiftDefinition[]
+  gembaWalks   GembaWalk[]
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -65,9 +67,10 @@ model User {
   site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   corporate Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
 
-  fiveSAudits       FiveSAudit[]
-  kaizenSubmissions KaizenItem[]   @relation("KaizenSubmitter")
-  kaizenReviews     KaizenItem[]   @relation("KaizenReviewer")
+  productionRuns     ProductionRun[]
+  workstationEvents  WorkstationEvent[]
+  gembaWalks         GembaWalk[]        @relation("GembaWalker")
+  gembaObservations  GembaObservation[]
 
   @@map("users")
 }
@@ -82,69 +85,181 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-// ===== LEAN TOOLS: Phase 1 =====
+// ===== PRODUCTION: Shop Floor =====
 
-// ----- 5S / 6S Audit -----
-// FiveSCategory values: sort | set_in_order | shine | standardize | sustain | safety
+model Workstation {
+  id     String @id @default(cuid())
+  siteId String
+  name   String
+  type   String @default("machine") // machine | line | manual
+  area   String @default("")
+  code   String @default("")        // short code for display, e.g. "CNC-01"
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-model FiveSAudit {
-  id          String    @id @default(cuid())
-  siteId      String
-  auditorId   String
-  area        String
-  totalScore  Float     @default(0)
-  maxScore    Float     @default(0)
-  percentage  Float     @default(0)
-  status      String    @default("draft")
-  notes       String?
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  site            Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  phases          ProductionOrderPhase[]
+  productionRuns  ProductionRun[]
+  events          WorkstationEvent[]
 
-  site    Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  auditor User         @relation(fields: [auditorId], references: [id])
-  scores  FiveSScore[]
-
-  @@map("five_s_audits")
+  @@unique([siteId, code])
+  @@map("workstations")
 }
 
-model FiveSScore {
+// Configurable reason codes per site, per category
+// category: breakdown | changeover | quality | idle | maintenance | planned_stop | scrap
+model ReasonCode {
   id       String @id @default(cuid())
-  auditId  String
-  category String
-  score    Int    @default(0)
-  notes    String?
-  photoUrl String?
+  siteId   String
+  category String // which status or scrap this reason applies to
+  code     String // short code, e.g. "MECH"
+  label    String // display name, e.g. "Mechanical failure"
+  color    String @default("#gray")
+  sortOrder Int   @default(0)
+  isActive Boolean @default(true)
 
-  audit FiveSAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-  @@unique([auditId, category])
-  @@map("five_s_scores")
+  @@unique([siteId, category, code])
+  @@map("reason_codes")
 }
 
-// ----- Kaizen Board -----
-// KaizenStatus values: submitted | under_review | approved | in_progress | completed | rejected
-// KaizenImpact values: low | medium | high
+model ShiftDefinition {
+  id        String @id @default(cuid())
+  siteId    String
+  name      String   // "Morning", "Afternoon", "Night"
+  startTime String   // "06:00"
+  endTime   String   // "14:00"
+  days      String   // JSON: ["mon","tue","wed","thu","fri"]
+  isActive  Boolean  @default(true)
 
-model KaizenItem {
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("shift_definitions")
+}
+
+// ===== PRODUCTION ORDER =====
+
+model ProductionOrder {
   id             String    @id @default(cuid())
   siteId         String
-  submittedById  String
-  title          String
-  problem        String
-  suggestion     String
-  expectedImpact String    @default("medium")
-  area           String
-  status         String    @default("submitted")
-  reviewedById   String?
-  reviewNotes    String?
-  implementedAt  DateTime?
+  poNumber       String
+  productName    String
+  targetQuantity Int
+  unit           String    @default("pcs")
+  dueDate        DateTime?
+  priority       String    @default("normal") // normal | high | urgent
+  status         String    @default("released") // draft | released | in_progress | completed | closed
+  source         String    @default("manual") // manual | excel | erp
+  notes          String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  site        Site  @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  submittedBy User  @relation("KaizenSubmitter", fields: [submittedById], references: [id])
-  reviewedBy  User? @relation("KaizenReviewer", fields: [reviewedById], references: [id])
+  site   Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  phases ProductionOrderPhase[]
 
-  @@map("kaizen_items")
+  @@unique([siteId, poNumber])
+  @@map("production_orders")
+}
+
+model ProductionOrderPhase {
+  id               String @id @default(cuid())
+  orderId          String
+  sequence         Int    // 10, 20, 30...
+  name             String // "Cutting", "Bending", "Welding"
+  workstationId    String // planned workstation
+  cycleTimeSeconds Int    // theoretical cycle time for OEE Performance
+  status           String @default("pending") // pending | in_progress | completed
+
+  order       ProductionOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  workstation Workstation     @relation(fields: [workstationId], references: [id])
+  runs        ProductionRun[]
+
+  @@unique([orderId, sequence])
+  @@map("production_order_phases")
+}
+
+// ===== PRODUCTION RUN (operator executing a phase on a workstation) =====
+
+model ProductionRun {
+  id               String    @id @default(cuid())
+  phaseId          String
+  workstationId    String    // actual workstation (may differ from planned)
+  operatorId       String
+  shiftDate        String    // "2026-03-23"
+  startedAt        DateTime  @default(now())
+  endedAt          DateTime?
+  producedQuantity Int       @default(0)
+  scrapQuantity    Int       @default(0)
+  status           String    @default("active") // active | completed
+
+  phase       ProductionOrderPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  workstation Workstation          @relation(fields: [workstationId], references: [id])
+  operator    User                 @relation(fields: [operatorId], references: [id])
+  events      WorkstationEvent[]
+
+  @@map("production_runs")
+}
+
+// ===== WORKSTATION EVENT (append-only — THE source of truth) =====
+// eventType: status_change | flag | shift_start | shift_end | po_start | po_end
+// status (for status_change): running | breakdown | changeover | quality_hold | idle | maintenance | planned_stop
+
+model WorkstationEvent {
+  id              String   @id @default(cuid())
+  workstationId   String
+  productionRunId String?
+  operatorId      String
+  eventType       String   // status_change | flag | shift_start | shift_end | po_start | po_end
+  status          String?  // running | breakdown | changeover | quality_hold | idle | maintenance | planned_stop
+  reasonCode      String?  // code from ReasonCode table
+  notes           String?
+  timestamp       DateTime @default(now()) // when it happened (from tablet)
+  syncedAt        DateTime @default(now()) // when server received it
+
+  workstation   Workstation    @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  productionRun ProductionRun? @relation(fields: [productionRunId], references: [id])
+  operator      User           @relation(fields: [operatorId], references: [id])
+
+  @@map("workstation_events")
+}
+
+// ===== GEMBA WALK =====
+
+model GembaWalk {
+  id        String    @id @default(cuid())
+  siteId    String
+  walkerId  String
+  date      String    // "2026-03-23"
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  status    String    @default("in_progress") // in_progress | completed
+
+  site         Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  walker       User               @relation("GembaWalker", fields: [walkerId], references: [id])
+  observations GembaObservation[]
+
+  @@map("gemba_walks")
+}
+
+// wasteCategory: waiting | overproduction | inventory | motion | transportation | over_processing | defect | talent
+model GembaObservation {
+  id            String  @id @default(cuid())
+  walkId        String
+  observerId    String
+  workstationId String? // optional — where was this observed
+  wasteCategory String  // one of the 8 wastes
+  severity      String  @default("medium") // low | medium | high
+  description   String
+  photoUrl      String?
+  operatorQuote String? // what the operator said
+  status        String  @default("open") // open | investigating | addressed | closed
+  escalatedTo   String? // improvement_project | kaizen | action_item | none
+  createdAt     DateTime @default(now())
+
+  walk     GembaWalk @relation(fields: [walkId], references: [id], onDelete: Cascade)
+  observer User      @relation(fields: [observerId], references: [id])
+
+  @@map("gemba_observations")
 }

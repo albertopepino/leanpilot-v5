@@ -5,53 +5,125 @@ import { PrismaService } from '../prisma/prisma.service';
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getSiteKPIs(siteId: string) {
-    const [userCount, auditCount, kaizenTotal, kaizenCompleted, recentAudits] =
-      await Promise.all([
-        this.prisma.user.count({ where: { siteId, isActive: true } }),
-        this.prisma.fiveSAudit.count({ where: { siteId, status: 'completed' } }),
-        this.prisma.kaizenItem.count({ where: { siteId } }),
-        this.prisma.kaizenItem.count({ where: { siteId, status: 'completed' } }),
-        this.prisma.fiveSAudit.findMany({
-          where: { siteId, status: 'completed' },
-          orderBy: { completedAt: 'desc' },
-          take: 5,
-          select: {
-            id: true,
-            area: true,
-            percentage: true,
-            completedAt: true,
-            auditor: { select: { firstName: true, lastName: true } },
-          },
-        }),
-      ]);
+  /** Overview: Losses + Attention signals */
+  async getOverview(siteId: string) {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Average 5S score (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Workstation count and status
+    const workstations = await this.prisma.workstation.findMany({
+      where: { siteId, isActive: true },
+    });
 
-    const recentScores = await this.prisma.fiveSAudit.aggregate({
+    // Get current status per workstation
+    let machinesDown = 0;
+    for (const ws of workstations) {
+      const lastEvent = await this.prisma.workstationEvent.findFirst({
+        where: { workstationId: ws.id, eventType: 'status_change' },
+        orderBy: { timestamp: 'desc' },
+      });
+      if (lastEvent && lastEvent.status && lastEvent.status !== 'running' && lastEvent.status !== 'idle') {
+        machinesDown++;
+      }
+    }
+
+    // Losses this week: calculate from status_change events
+    const events = await this.prisma.workstationEvent.findMany({
+      where: {
+        workstation: { siteId },
+        eventType: 'status_change',
+        timestamp: { gte: weekAgo },
+      },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    // Calculate time spent in each status
+    const losses: Record<string, number> = {
+      breakdown: 0,
+      changeover: 0,
+      planned_stop: 0,
+      idle: 0,
+      maintenance: 0,
+      quality_hold: 0,
+    };
+
+    // Group events by workstation, calculate durations
+    const byWorkstation: Record<string, typeof events> = {};
+    for (const e of events) {
+      if (!byWorkstation[e.workstationId]) byWorkstation[e.workstationId] = [];
+      byWorkstation[e.workstationId].push(e);
+    }
+
+    for (const wsEvents of Object.values(byWorkstation)) {
+      for (let i = 0; i < wsEvents.length - 1; i++) {
+        const current = wsEvents[i];
+        const next = wsEvents[i + 1];
+        if (current.status && current.status !== 'running') {
+          const durationMs = new Date(next.timestamp).getTime() - new Date(current.timestamp).getTime();
+          const hours = durationMs / (1000 * 60 * 60);
+          if (losses[current.status] !== undefined) {
+            losses[current.status] += hours;
+          }
+        }
+      }
+    }
+
+    // Round losses
+    for (const key of Object.keys(losses)) {
+      losses[key] = Math.round(losses[key] * 10) / 10;
+    }
+    const totalLossHours = Object.values(losses).reduce((a, b) => a + b, 0);
+
+    // Production runs this week
+    const runs = await this.prisma.productionRun.findMany({
+      where: {
+        workstation: { siteId },
+        startedAt: { gte: weekAgo },
+        status: 'completed',
+      },
+    });
+    const totalProduced = runs.reduce((sum, r) => sum + r.producedQuantity, 0);
+    const totalScrap = runs.reduce((sum, r) => sum + r.scrapQuantity, 0);
+    const scrapRate = totalProduced > 0 ? Math.round((totalScrap / totalProduced) * 1000) / 10 : 0;
+
+    // Open muda signals
+    const mudaCount = await this.prisma.gembaObservation.count({
+      where: {
+        walk: { siteId },
+        status: { in: ['open', 'investigating'] },
+      },
+    });
+
+    // POs behind schedule
+    const posBehind = await this.prisma.productionOrder.count({
       where: {
         siteId,
-        status: 'completed',
-        completedAt: { gte: thirtyDaysAgo },
+        status: { in: ['released', 'in_progress'] },
+        dueDate: { lt: now },
       },
-      _avg: { percentage: true },
+    });
+
+    // Active POs
+    const activePOs = await this.prisma.productionOrder.count({
+      where: { siteId, status: 'in_progress' },
     });
 
     return {
-      users: userCount,
-      audits: {
-        total: auditCount,
-        averageScore: Math.round(recentScores._avg.percentage || 0),
-        recent: recentAudits,
+      losses: {
+        ...losses,
+        totalHours: Math.round(totalLossHours * 10) / 10,
       },
-      kaizen: {
-        total: kaizenTotal,
-        completed: kaizenCompleted,
-        completionRate: kaizenTotal > 0
-          ? Math.round((kaizenCompleted / kaizenTotal) * 100)
-          : 0,
+      production: {
+        totalProduced,
+        totalScrap,
+        scrapRate,
+      },
+      attention: {
+        machinesDown,
+        mudaSignals: mudaCount,
+        posBehind,
+        activePOs,
+        totalWorkstations: workstations.length,
       },
     };
   }
