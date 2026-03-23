@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { KAIZEN_STATUSES } from '../../../common/constants';
+import { KAIZEN_STATUSES } from '../../common/constants';
 import { KaizenService } from './kaizen.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
