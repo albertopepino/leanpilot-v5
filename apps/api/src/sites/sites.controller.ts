@@ -1,0 +1,48 @@
+import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { SitesService } from './sites.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CreateSiteDto } from './dto/create-site.dto';
+import { UpdateSiteDto } from './dto/update-site.dto';
+
+@ApiTags('Sites')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('sites')
+export class SitesController {
+  constructor(private sites: SitesService) {}
+
+  @Get()
+  @Roles('manager')
+  @ApiOperation({ summary: 'List sites for current corporate' })
+  async findAll(@CurrentUser('corporateId') corporateId: string) {
+    return this.sites.findAllByCorporate(corporateId);
+  }
+
+  @Get(':id')
+  @Roles('viewer')
+  @ApiOperation({ summary: 'Get site details' })
+  async findById(@Param('id') id: string) {
+    return this.sites.findById(id);
+  }
+
+  @Post()
+  @Roles('corporate_admin')
+  @ApiOperation({ summary: 'Create a new site' })
+  async create(
+    @Body() dto: CreateSiteDto,
+    @CurrentUser('corporateId') corporateId: string,
+  ) {
+    return this.sites.create(dto, corporateId);
+  }
+
+  @Patch(':id')
+  @Roles('site_admin')
+  @ApiOperation({ summary: 'Update site' })
+  async update(@Param('id') id: string, @Body() dto: UpdateSiteDto) {
+    return this.sites.update(id, dto);
+  }
+}

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: leanpilot
+          POSTGRES_PASSWORD: leanpilot
+          POSTGRES_DB: leanpilot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: apps/api
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://leanpilot:leanpilot@localhost:5432/leanpilot_test
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test API
+        run: npm run test --workspace=apps/api --if-present
+        env:
+          DATABASE_URL: postgresql://leanpilot:leanpilot@localhost:5432/leanpilot_test
+          JWT_SECRET: test-secret-for-ci
+
+      - name: Build Web
+        run: npm run build --workspace=apps/web
+        env:
+          API_URL: http://localhost:3001

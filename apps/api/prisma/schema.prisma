@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== HIERARCHY: Corporate → Site → User =====
+
+model Corporate {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sites Site[]
+  users User[]
+
+  @@map("corporates")
+}
+
+model Site {
+  id          String   @id @default(cuid())
+  corporateId String
+  name        String
+  slug        String
+  location    String?
+  timezone    String   @default("Europe/Rome")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  corporate Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  users     User[]
+
+  fiveSAudits FiveSAudit[]
+  kaizenItems KaizenItem[]
+
+  @@unique([corporateId, slug])
+  @@map("sites")
+}
+
+// ===== AUTH & USERS =====
+// Role values: corporate_admin | site_admin | manager | operator | viewer
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  role        String    @default("viewer")
+  siteId      String
+  corporateId String
+  isActive    Boolean   @default(true)
+  lastLogin   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  corporate Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+
+  fiveSAudits       FiveSAudit[]
+  kaizenSubmissions KaizenItem[]   @relation("KaizenSubmitter")
+  kaizenReviews     KaizenItem[]   @relation("KaizenReviewer")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// ===== LEAN TOOLS: Phase 1 =====
+
+// ----- 5S / 6S Audit -----
+// FiveSCategory values: sort | set_in_order | shine | standardize | sustain | safety
+
+model FiveSAudit {
+  id          String    @id @default(cuid())
+  siteId      String
+  auditorId   String
+  area        String
+  totalScore  Float     @default(0)
+  maxScore    Float     @default(0)
+  percentage  Float     @default(0)
+  status      String    @default("draft")
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  site    Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  auditor User         @relation(fields: [auditorId], references: [id])
+  scores  FiveSScore[]
+
+  @@map("five_s_audits")
+}
+
+model FiveSScore {
+  id       String @id @default(cuid())
+  auditId  String
+  category String
+  score    Int    @default(0)
+  notes    String?
+  photoUrl String?
+
+  audit FiveSAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@unique([auditId, category])
+  @@map("five_s_scores")
+}
+
+// ----- Kaizen Board -----
+// KaizenStatus values: submitted | under_review | approved | in_progress | completed | rejected
+// KaizenImpact values: low | medium | high
+
+model KaizenItem {
+  id             String    @id @default(cuid())
+  siteId         String
+  submittedById  String
+  title          String
+  problem        String
+  suggestion     String
+  expectedImpact String    @default("medium")
+  area           String
+  status         String    @default("submitted")
+  reviewedById   String?
+  reviewNotes    String?
+  implementedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  site        Site  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  submittedBy User  @relation("KaizenSubmitter", fields: [submittedById], references: [id])
+  reviewedBy  User? @relation("KaizenReviewer", fields: [reviewedById], references: [id])
+
+  @@map("kaizen_items")
+}
