@@ -27,7 +27,7 @@ export class UploadsController {
     @CurrentUser('siteId') siteId: string,
   ) {
     if (!file) throw new BadRequestException('No file provided');
-    const validFunctions = ['quality', 'five-s', 'kaizen', 'gemba'];
+    const validFunctions = ['quality', 'five-s', 'kaizen', 'gemba', 'documents'];
     if (!validFunctions.includes(func)) {
       func = 'general';
     }

@@ -16,6 +16,7 @@ import { KaizenModule } from './tools/kaizen/kaizen.module';
 import { QualityModule } from './quality/quality.module';
 import { AuditModule } from './audit/audit.module';
 import { ReportsModule } from './reports/reports.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ReportsModule } from './reports/reports.module';
     KaizenModule,
     QualityModule,
     ReportsModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}

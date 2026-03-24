@@ -7,10 +7,17 @@ import { extname } from 'path';
 import * as FileType from 'file-type';
 
 const MAX_STORAGE_BYTES = 1024 * 1024 * 1024; // 1 GB per site
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.gif'];
+const ALLOWED_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.webp', '.pdf', '.gif',
+  '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.csv',
+];
 const ALLOWED_MIMES = [
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain', 'text/csv',
 ];
 
 @Injectable()

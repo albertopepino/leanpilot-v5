@@ -6,7 +6,7 @@ import { auth } from '@/lib/api';
 import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
   Lightbulb, Settings, LogOut, Menu, X,
-  Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge,
+  Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator' },
   { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator' },
   { href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator' },
+  { href: '/quality/documents', label: 'Documents', icon: FileText, minRole: 'viewer' },
   { href: '/dashboard/oee', label: 'OEE', icon: Gauge, minRole: 'viewer' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer' },
   { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true },
