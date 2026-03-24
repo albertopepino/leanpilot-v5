@@ -18,25 +18,27 @@ type NavItem = {
   minRole: string;
   external?: boolean;
   children?: NavItem[];
+  iconGradient?: string;
+  section?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer' },
-  { href: '/corporate', label: 'Corporate', icon: Building2, minRole: 'corporate_admin' },
-  { href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager' },
-  { href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin' },
-  { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator' },
-  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer', iconGradient: 'from-blue-600 to-indigo-600' },
+  { href: '/corporate', label: 'Corporate', icon: Building2, minRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
+  { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager', iconGradient: 'from-cyan-600 to-blue-500' },
+  { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator', iconGradient: 'from-orange-500 to-amber-500' },
+  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator', iconGradient: 'from-violet-600 to-purple-500' },
   {
-    href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator',
+    href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator', iconGradient: 'from-emerald-600 to-teal-500',
     children: [
       { href: '/quality/documents', label: 'Documents', icon: FileText, minRole: 'viewer' },
     ],
   },
-  { href: '/dashboard/oee', label: 'OEE', icon: Gauge, minRole: 'viewer' },
-  { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer' },
-  { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true },
-  { href: '/andon', label: 'Andon Board', icon: Radio, minRole: 'viewer', external: true },
+  { section: 'Analytics', href: '/dashboard/oee', label: 'OEE', icon: Gauge, minRole: 'viewer', iconGradient: 'from-blue-500 to-cyan-500' },
+  { section: 'System', href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true, iconGradient: 'from-indigo-500 to-blue-500' },
+  { href: '/andon', label: 'Andon Board', icon: Radio, minRole: 'viewer', external: true, iconGradient: 'from-red-500 to-orange-500' },
 ];
 
 const ROLE_LEVEL: Record<string, number> = {
@@ -137,65 +139,72 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav links */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {visibleNav.map(item => {
+          {visibleNav.map((item, idx) => {
             const Icon = item.icon;
             const children = item.children?.filter(c => userLevel >= ROLE_LEVEL[c.minRole]);
             const hasChildren = children && children.length > 0;
 
-            // Parent is active only if exact match (not child match)
             const childActive = hasChildren && children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'));
             const active = item.href === '/dashboard'
               ? pathname === '/dashboard'
               : !childActive && (pathname === item.href || pathname.startsWith(item.href + '/'));
-            // Expand section when parent or any child is active
             const expanded = active || childActive;
 
             const isExternal = item.external;
+
+            // Section header
+            const sectionHeader = item.section ? (
+              <p className={`text-[10px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600
+                            ${idx > 0 ? 'mt-5' : ''} mb-2 px-3`}>
+                {item.section}
+              </p>
+            ) : null;
+
+            // Icon element — gradient bg when active, muted otherwise
+            const iconEl = (
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200
+                ${active && item.iconGradient
+                  ? `bg-gradient-to-br ${item.iconGradient} shadow-sm`
+                  : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'}`}>
+                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
+              </div>
+            );
+
             const linkClass = `
-              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+              group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200
               ${active
-                ? 'bg-gradient-to-r from-brand-50 to-brand-100/50 dark:from-brand-900/30 dark:to-brand-800/20 text-brand-700 dark:text-brand-300 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/40 hover:text-gray-900 dark:hover:text-gray-200'
               }
             `;
 
             const navLink = isExternal ? (
               <a key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={linkClass}>
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                {iconEl}
                 {item.label}
               </a>
             ) : (
               <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={linkClass}>
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                {iconEl}
                 {item.label}
               </Link>
             );
 
-            if (!hasChildren) return navLink;
-
-            // Parent with children — render as group
-            return (
+            const content = !hasChildren ? navLink : (
               <div key={item.href}>
                 {navLink}
                 {expanded && (
-                  <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
+                  <div className="ml-5 mt-1 space-y-0.5 border-l-2 border-gray-200/60 dark:border-gray-700/60 pl-3">
                     {children.map(child => {
                       const ChildIcon = child.icon;
                       const childIsActive = pathname === child.href || pathname.startsWith(child.href + '/');
                       return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={() => setSidebarOpen(false)}
-                          className={`
-                            flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        <Link key={child.href} href={child.href} onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] transition-all
                             ${childIsActive
-                              ? 'text-brand-700 dark:text-brand-300 font-medium bg-brand-50/50 dark:bg-brand-900/20'
-                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200'
-                            }
-                          `}
-                        >
-                          <ChildIcon className="w-4 h-4 flex-shrink-0" />
+                              ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/20'
+                              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                          <ChildIcon className="w-3.5 h-3.5 flex-shrink-0" />
                           {child.label}
                         </Link>
                       );
@@ -204,6 +213,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               </div>
             );
+
+            return sectionHeader ? (
+              <div key={item.href}>
+                {sectionHeader}
+                {content}
+              </div>
+            ) : content;
           })}
         </nav>
 

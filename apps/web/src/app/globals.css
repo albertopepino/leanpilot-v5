@@ -25,7 +25,12 @@
 }
 
 body {
-  @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100;
+  @apply text-gray-900 dark:text-gray-100;
+  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 30%, #f0fdfa 60%, #fefce8 100%);
+}
+
+.dark body, body.dark, html.dark body {
+  background: linear-gradient(135deg, #030712 0%, #0c0a1a 50%, #030712 100%);
 }
 
 /* ── Animations ─────────────────────────────────────── */
