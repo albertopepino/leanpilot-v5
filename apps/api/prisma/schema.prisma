@@ -48,7 +48,8 @@ model Site {
   kaizenIdeas  KaizenIdea[]
   qualityTemplates QualityTemplate[]
   qualityInspections QualityInspection[]
-  ncrs         NonConformanceReport[]
+  ncrs             NonConformanceReport[]
+  reportTemplate   ReportTemplate?
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -494,4 +495,23 @@ model NcrAttachment {
   ncr NonConformanceReport @relation(fields: [ncrId], references: [id], onDelete: Cascade)
 
   @@map("ncr_attachments")
+}
+
+// ===== REPORTS =====
+
+model ReportTemplate {
+  id          String   @id @default(cuid())
+  siteId      String
+  logoUrl     String?
+  companyName String
+  headerText  String?
+  accentColor String   @default("#2563eb")
+  footerText  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId])
+  @@map("report_templates")
 }

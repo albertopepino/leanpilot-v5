@@ -15,6 +15,7 @@ import { FiveSModule } from './tools/five-s/five-s.module';
 import { KaizenModule } from './tools/kaizen/kaizen.module';
 import { QualityModule } from './quality/quality.module';
 import { AuditModule } from './audit/audit.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AuditModule } from './audit/audit.module';
     FiveSModule,
     KaizenModule,
     QualityModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

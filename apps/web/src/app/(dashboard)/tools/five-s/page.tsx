@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
-import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star } from 'lucide-react';
+import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -517,6 +517,12 @@ export default function FiveSPage() {
             }`}>
               {selected.status === 'completed' ? 'Completed' : 'In Progress'}
             </span>
+            <button
+              onClick={() => api.downloadPdf(`/reports/five-s/${selected.id}`, `5s-audit-${selected.area}.pdf`).catch(() => toast('error', 'Failed to export PDF'))}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Download className="w-4 h-4" /> Export PDF
+            </button>
             {selected.status !== 'completed' && (
               <button
                 onClick={() => setView('scoring')}

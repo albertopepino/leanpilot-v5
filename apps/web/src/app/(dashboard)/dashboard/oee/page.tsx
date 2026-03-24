@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Gauge, TrendingUp, Clock, Zap, CheckCircle } from 'lucide-react';
+import { Gauge, TrendingUp, Clock, Zap, CheckCircle, Download } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 import { SkeletonList } from '@/components/ui/Skeleton';
 
 interface WSData {
@@ -108,6 +109,7 @@ export default function OEEPage() {
   const [data, setData] = useState<OEEData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     api.get<OEEApiResponse>('/dashboard/oee')
@@ -136,14 +138,22 @@ export default function OEEPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Gauge className="w-7 h-7 text-brand-600" />
-          OEE Dashboard
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-          Overall Equipment Effectiveness — current shift
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Gauge className="w-7 h-7 text-brand-600" />
+            OEE Dashboard
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Overall Equipment Effectiveness — current shift
+          </p>
+        </div>
+        <button
+          onClick={() => api.downloadPdf('/reports/oee?period=week', 'oee-summary.pdf').catch(() => toast('error', 'Failed to export PDF'))}
+          className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <Download className="w-4 h-4" /> Export PDF
+        </button>
       </div>
 
       {/* Main OEE gauge + A/P/Q breakdown */}

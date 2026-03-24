@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import {
   Eye, Plus, CheckCircle2, Clock, ChevronRight, X, Send,
-  AlertTriangle, Loader2, ArrowLeft,
+  AlertTriangle, Loader2, ArrowLeft, Download,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -243,20 +243,30 @@ export default function GembaPage() {
             <Plus className="w-4 h-4" /> Start Walk
           </button>
         )}
-        {view === 'detail' && selectedWalk?.status === 'in_progress' && (
+        {view === 'detail' && selectedWalk && (
           <div className="flex gap-2">
             <button
-              onClick={() => setView('add-obs')}
-              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm"
+              onClick={() => api.downloadPdf(`/reports/gemba/${selectedWalk.id}`, `gemba-walk-${selectedWalk.date}.pdf`).catch(() => toast('error', 'Failed to export PDF'))}
+              className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add Observation
+              <Download className="w-4 h-4" /> Export PDF
             </button>
-            <button
-              onClick={completeWalk}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
-            >
-              <CheckCircle2 className="w-4 h-4" /> Complete
-            </button>
+            {selectedWalk.status === 'in_progress' && (
+              <>
+                <button
+                  onClick={() => setView('add-obs')}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm"
+                >
+                  <Plus className="w-4 h-4" /> Add Observation
+                </button>
+                <button
+                  onClick={completeWalk}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Complete
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
