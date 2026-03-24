@@ -100,9 +100,11 @@ export class FiveSService {
     const audit = await this.prisma.fiveSAudit.findFirst({ where: { id: auditId, siteId } });
     if (!audit) throw new NotFoundException('Audit not found');
 
-    return this.prisma.fiveSAudit.update({
+    await this.prisma.fiveSAudit.update({
       where: { id: auditId },
       data: { status: 'completed', completedAt: new Date() },
     });
+
+    return this.findById(auditId, siteId);
   }
 }
