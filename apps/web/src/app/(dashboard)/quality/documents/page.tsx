@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import {
@@ -84,6 +84,14 @@ export default function DocumentsPage() {
   // Filters
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimer = useRef<NodeJS.Timeout>();
+
+  // Debounce search input
+  useEffect(() => {
+    searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(searchTimer.current);
+  }, [search]);
 
   // Create form
   const [newTitle, setNewTitle] = useState('');
@@ -105,7 +113,7 @@ export default function DocumentsPage() {
     try {
       const params = new URLSearchParams();
       if (category !== 'all') params.set('category', category);
-      if (search.trim()) params.set('search', search.trim());
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       const qs = params.toString();
       const data = await api.get<Document[]>(`/documents${qs ? `?${qs}` : ''}`);
       setDocs(Array.isArray(data) ? data : []);
@@ -114,7 +122,7 @@ export default function DocumentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [category, search]);
+  }, [category, debouncedSearch]);
 
   useEffect(() => { loadDocs(); }, [loadDocs]);
 
@@ -395,14 +403,14 @@ export default function DocumentsPage() {
             <Card>
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Details</h3>
               <dl className="space-y-2 text-sm">
-                <div className="flex justify-between"><dt className="text-gray-500">Category</dt><dd className="text-gray-900 dark:text-white capitalize">{selected.category}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500">Version</dt><dd className="text-gray-900 dark:text-white">v{selected.currentVersion}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500">Revisions</dt><dd className="text-gray-900 dark:text-white">{selected.revisions?.length || 0}</dd></div>
+                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Category</dt><dd className="text-gray-900 dark:text-white capitalize">{selected.category}</dd></div>
+                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Version</dt><dd className="text-gray-900 dark:text-white">v{selected.currentVersion}</dd></div>
+                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Revisions</dt><dd className="text-gray-900 dark:text-white">{selected.revisions?.length || 0}</dd></div>
                 {selected.approvedBy && (
-                  <div className="flex justify-between"><dt className="text-gray-500">Approved by</dt><dd className="text-gray-900 dark:text-white">{selected.approvedBy.firstName} {selected.approvedBy.lastName}</dd></div>
+                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Approved by</dt><dd className="text-gray-900 dark:text-white">{selected.approvedBy.firstName} {selected.approvedBy.lastName}</dd></div>
                 )}
                 {selected.approvedAt && (
-                  <div className="flex justify-between"><dt className="text-gray-500">Approved</dt><dd className="text-gray-900 dark:text-white">{new Date(selected.approvedAt).toLocaleDateString()}</dd></div>
+                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Approved</dt><dd className="text-gray-900 dark:text-white">{new Date(selected.approvedAt).toLocaleDateString()}</dd></div>
                 )}
               </dl>
             </Card>
@@ -508,8 +516,6 @@ export default function DocumentsPage() {
     );
   }
 
-  // Fallback
-  setView('list');
-  setSelected(null);
+  // Fallback — should never reach here
   return null;
 }

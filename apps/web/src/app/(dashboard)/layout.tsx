@@ -121,9 +121,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 px-3 py-4 space-y-1">
           {visibleNav.map(item => {
             const Icon = item.icon;
+            // Check if a more specific nav item matches (e.g., /quality/documents vs /quality)
+            const hasMoreSpecificMatch = visibleNav.some(
+              other => other.href !== item.href && other.href.startsWith(item.href + '/') && (pathname === other.href || pathname.startsWith(other.href + '/'))
+            );
             const active = item.href === '/dashboard'
               ? pathname === '/dashboard'
-              : pathname === item.href || pathname.startsWith(item.href + '/');
+              : !hasMoreSpecificMatch && (pathname === item.href || pathname.startsWith(item.href + '/'));
             const isExternal = (item as any).external;
             const className = `
               flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors

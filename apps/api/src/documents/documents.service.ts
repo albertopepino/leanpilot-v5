@@ -26,9 +26,14 @@ export class DocumentsService {
       where.status = filters.status;
     }
     if (filters?.search) {
+      // SQLite: contains is case-sensitive, so search both cases
+      const s = filters.search;
       where.OR = [
-        { title: { contains: filters.search } },
-        { description: { contains: filters.search } },
+        { title: { contains: s } },
+        { title: { contains: s.toLowerCase() } },
+        { title: { contains: s.toUpperCase() } },
+        { description: { contains: s } },
+        { description: { contains: s.toLowerCase() } },
       ];
     }
 
@@ -136,6 +141,7 @@ export class DocumentsService {
   }) {
     const doc = await this.prisma.document.findFirst({ where: { id, siteId } });
     if (!doc) throw new NotFoundException('Document not found');
+    if (doc.status === 'obsolete') throw new BadRequestException('Cannot add revisions to an obsolete document');
 
     const newVersion = doc.currentVersion + 1;
 
