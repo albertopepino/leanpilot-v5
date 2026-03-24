@@ -14,7 +14,17 @@ export class MaintenanceService {
   async findPlans(siteId: string, filters?: { workstationId?: string }) {
     const where: any = { siteId, isActive: true };
     if (filters?.workstationId) {
-      where.workstationId = filters.workstationId;
+      // Also include plans from the parent workstation (line-level plans)
+      // so that machines inherit their line's maintenance plans
+      const ws = await this.prisma.workstation.findFirst({
+        where: { id: filters.workstationId, siteId },
+        select: { id: true, parentId: true },
+      });
+      if (ws?.parentId) {
+        where.workstationId = { in: [filters.workstationId, ws.parentId] };
+      } else {
+        where.workstationId = filters.workstationId;
+      }
     }
 
     return this.prisma.maintenancePlan.findMany({

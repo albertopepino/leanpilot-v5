@@ -167,6 +167,11 @@ model Workstation {
   equipmentStatus String   @default("operational") // operational | degraded | down | decommissioned
   photoUrl        String?
 
+  // Parent-child tree: Line → Machines
+  parentId        String?
+  parent          Workstation?  @relation("WorkstationTree", fields: [parentId], references: [id])
+  children        Workstation[] @relation("WorkstationTree")
+
   site            Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   phases          ProductionOrderPhase[]
   productionRuns  ProductionRun[]

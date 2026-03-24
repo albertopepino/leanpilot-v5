@@ -7,7 +7,7 @@ import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
   Lightbulb, Settings, LogOut, Menu, X,
   Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
-  Wrench, ShieldAlert, Search,
+  Wrench, ShieldAlert, Search, PackageCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,6 +25,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer', iconGradient: 'from-blue-600 to-indigo-600' },
+  { href: '/orders', label: 'Orders', icon: PackageCheck, minRole: 'operator', iconGradient: 'from-blue-500 to-indigo-500' },
   { href: '/corporate', label: 'Corporate', icon: Building2, minRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager', iconGradient: 'from-cyan-600 to-blue-500' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator', iconGradient: 'from-orange-500 to-amber-500' },
@@ -38,7 +39,6 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, minRole: 'operator', iconGradient: 'from-red-500 to-orange-500' },
-  { section: 'Analytics', href: '/dashboard/oee', label: 'OEE', icon: Gauge, minRole: 'viewer', iconGradient: 'from-blue-500 to-cyan-500' },
   { section: 'System', href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true, iconGradient: 'from-indigo-500 to-blue-500' },

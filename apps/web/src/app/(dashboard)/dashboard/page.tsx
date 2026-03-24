@@ -16,6 +16,20 @@ import Link from 'next/link';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
+interface OeeWorkstation {
+  workstationId: string;
+  name: string;
+  availability: number;
+  performance: number;
+  quality: number;
+  oee: number;
+}
+
+interface OeeData {
+  siteOee: { availability: number; performance: number; quality: number; oee: number };
+  workstations: OeeWorkstation[];
+}
+
 interface DashboardOverview {
   losses: {
     breakdown: number;
@@ -112,6 +126,7 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardOverview | null>(null);
   const [mudaSignals, setMudaSignals] = useState<MudaSignal[]>([]);
+  const [oee, setOee] = useState<OeeData | null>(null);
   const [loading, setLoading] = useState(true);
   const user = auth.getUser();
 
@@ -119,9 +134,11 @@ export default function DashboardPage() {
     Promise.all([
       api.get<DashboardOverview>('/dashboard/overview').catch(() => null),
       api.get<MudaSignal[]>('/gemba/muda-signals').catch(() => []),
-    ]).then(([overview, signals]) => {
+      api.get<OeeData>('/dashboard/oee').catch(() => null),
+    ]).then(([overview, signals, oeeData]) => {
       setData(overview);
       setMudaSignals(Array.isArray(signals) ? signals : []);
+      setOee(oeeData);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -235,6 +252,93 @@ export default function DashboardPage() {
           delay={225}
         />
       </div>
+
+      {/* ── OEE Section ─────────────────────────────────────────── */}
+      {oee?.siteOee && (
+        <GlassCard>
+          <div className="flex items-center gap-2.5 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500
+                            flex items-center justify-center shadow-sm shadow-blue-500/20">
+              <Gauge className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                OEE — Overall Equipment Effectiveness
+              </h3>
+              <p className="text-[11px] text-gray-400">Site-level metrics this period</p>
+            </div>
+          </div>
+
+          {/* OEE Rings */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="flex flex-col items-center gap-2">
+              <ProgressRing value={oee.siteOee.availability * 100} size={100} strokeWidth={8} color="#3b82f6">
+                <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
+                  {(oee.siteOee.availability * 100).toFixed(1)}%
+                </span>
+              </ProgressRing>
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Availability</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <ProgressRing value={oee.siteOee.performance * 100} size={100} strokeWidth={8} color="#10b981">
+                <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
+                  {(oee.siteOee.performance * 100).toFixed(1)}%
+                </span>
+              </ProgressRing>
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Performance</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <ProgressRing value={oee.siteOee.quality * 100} size={100} strokeWidth={8} color="#8b5cf6">
+                <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
+                  {(oee.siteOee.quality * 100).toFixed(1)}%
+                </span>
+              </ProgressRing>
+              <span className="text-xs font-medium text-purple-600 dark:text-purple-400">Quality</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <ProgressRing value={oee.siteOee.oee * 100} size={100} strokeWidth={8} color="#f59e0b">
+                <span className="text-lg font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent tabular-nums">
+                  {(oee.siteOee.oee * 100).toFixed(1)}%
+                </span>
+              </ProgressRing>
+              <span className="text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">Overall OEE</span>
+            </div>
+          </div>
+
+          {/* Workstation Breakdown Table */}
+          {oee.workstations && oee.workstations.length > 0 && (
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
+                Per Workstation
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400">
+                      <th className="pb-2 font-medium">Workstation</th>
+                      <th className="pb-2 font-medium text-right">Availability</th>
+                      <th className="pb-2 font-medium text-right">Performance</th>
+                      <th className="pb-2 font-medium text-right">Quality</th>
+                      <th className="pb-2 font-medium text-right">OEE</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                    {oee.workstations.map((ws) => (
+                      <tr key={ws.workstationId} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">
+                        <td className="py-2 font-medium text-gray-700 dark:text-gray-200">{ws.name}</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.availability * 100).toFixed(1)}%</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.performance * 100).toFixed(1)}%</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.quality * 100).toFixed(1)}%</td>
+                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-white tabular-nums">{(ws.oee * 100).toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </GlassCard>
+      )}
 
       {/* ── Charts Row ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
