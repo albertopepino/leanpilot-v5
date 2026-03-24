@@ -4,6 +4,16 @@ import { PrismaService } from '../../prisma/prisma.service';
 const VALID_STATUSES = ['submitted', 'under_review', 'approved', 'in_progress', 'completed', 'rejected'];
 const VALID_IMPACTS = ['low', 'medium', 'high'];
 
+// Server-side state machine — only these transitions are allowed
+const NEXT_STATUS: Record<string, string[]> = {
+  submitted: ['under_review', 'rejected'],
+  under_review: ['approved', 'rejected'],
+  approved: ['in_progress', 'rejected'],
+  in_progress: ['completed'],
+  completed: [],
+  rejected: ['submitted'],
+};
+
 @Injectable()
 export class KaizenService {
   constructor(private prisma: PrismaService) {}
@@ -92,6 +102,12 @@ export class KaizenService {
 
     const idea = await this.prisma.kaizenIdea.findFirst({ where: { id, siteId } });
     if (!idea) throw new NotFoundException('Kaizen idea not found');
+
+    // Validate state transition
+    const allowed = NEXT_STATUS[idea.status] || [];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(`Cannot transition from "${idea.status}" to "${status}". Allowed: ${allowed.join(', ') || 'none'}`);
+    }
 
     const data: any = { status };
     if (reviewedById) data.reviewedById = reviewedById;

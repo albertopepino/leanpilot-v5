@@ -81,10 +81,11 @@ export default function FiveSPage() {
   useEffect(() => { loadAudits(); }, [loadAudits]);
 
   // Load workstations for area dropdown
+  const [wsFailed, setWsFailed] = useState(false);
   useEffect(() => {
     api.get<Workstation[]>('/workstations')
-      .then(data => setWorkstations(Array.isArray(data) ? data : []))
-      .catch(() => setWorkstations([]))
+      .then(data => { setWorkstations(Array.isArray(data) ? data : []); setWsFailed(false); })
+      .catch(() => { setWorkstations([]); setWsFailed(true); })
       .finally(() => setWsLoaded(true));
   }, []);
 
@@ -361,7 +362,7 @@ export default function FiveSPage() {
               onChange={e => setNewArea(e.target.value)}
               className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             >
-              <option value="">Select workstation or area...</option>
+              <option value="">{wsFailed ? 'Workstations unavailable — use custom' : 'Select workstation or area...'}</option>
               {workstations.map(ws => (
                 <option key={ws.id} value={ws.name}>
                   {ws.name}{ws.area ? ` (${ws.area})` : ''}

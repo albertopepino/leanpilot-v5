@@ -281,34 +281,33 @@ export class ReportsService {
   // ===== OEE SUMMARY REPORT =====
 
   async generateOeeReport(siteId: string, period = 'week'): Promise<Buffer> {
-    const oeeData = await this.dashboard.getOee(siteId, undefined, period);
-    const arr = Array.isArray(oeeData) ? oeeData : [];
+    const oeeData = await this.dashboard.getOee(siteId, undefined, period) as any;
+    // getOee returns { period, since, workstations: [...], siteOee }
+    const arr = Array.isArray(oeeData?.workstations) ? oeeData.workstations : [];
     const hf = await this.getHeaderFooter(siteId);
 
-    // Compute aggregate
-    let totalOp = 0, sumA = 0, sumP = 0, sumQ = 0, totalProd = 0, totalScrap = 0;
+    // Values from dashboard are already percentages (e.g. 85.0 = 85%)
+    let totalProd = 0, totalScrap = 0;
     for (const ws of arr) {
-      const op = ws.operatingMinutes || 1;
-      totalOp += op;
-      sumA += ws.availability * op;
-      sumP += ws.performance * op;
-      sumQ += ws.quality * op;
       totalProd += ws.totalProduced;
       totalScrap += ws.totalScrap;
     }
-    const avgA = totalOp > 0 ? Math.round((sumA / totalOp) * 10000) / 100 : 0;
-    const avgP = totalOp > 0 ? Math.round((sumP / totalOp) * 10000) / 100 : 0;
-    const avgQ = totalOp > 0 ? Math.round((sumQ / totalOp) * 10000) / 100 : 0;
-    const oee = totalOp > 0 ? Math.round(avgA * avgP * avgQ / 10000) / 100 : 0;
+    const oee = oeeData?.siteOee ?? 0;
 
+    // Values are already percentages (e.g. 85.0 = 85%)
     const wsRows = arr.map(ws => [
       ws.workstationName,
-      `${Math.round(ws.oee * 100)}%`,
-      `${Math.round(ws.availability * 100)}%`,
-      `${Math.round(ws.performance * 100)}%`,
-      `${Math.round(ws.quality * 100)}%`,
+      `${ws.oee}%`,
+      `${ws.availability}%`,
+      `${ws.performance}%`,
+      `${ws.quality}%`,
       `${ws.totalProduced}`,
     ]);
+
+    // Compute weighted averages for the summary line
+    const avgA = arr.length > 0 ? Math.round(arr.reduce((s, w) => s + w.availability, 0) / arr.length * 10) / 10 : 0;
+    const avgP = arr.length > 0 ? Math.round(arr.reduce((s, w) => s + w.performance, 0) / arr.length * 10) / 10 : 0;
+    const avgQ = arr.length > 0 ? Math.round(arr.reduce((s, w) => s + w.quality, 0) / arr.length * 10) / 10 : 0;
 
     const docDef = {
       content: [

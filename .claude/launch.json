@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["C:/Users/grass/Nextcloud4/Centro Studi Grassi/AI/leanpilot-v4/apps/web/dev.js"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "--turbopack", "--port", "4001"],
       "port": 4001
     }
   ]

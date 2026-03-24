@@ -129,9 +129,9 @@ export class CorporateService {
 
     for (const site of sites) {
       try {
-        const wsData = await this.dashboard.getOee(site.id, undefined, period);
-        // wsData is an array of per-workstation results
-        const arr = Array.isArray(wsData) ? wsData : [];
+        const oeeResult = await this.dashboard.getOee(site.id, undefined, period) as any;
+        // getOee returns { period, since, workstations: [...], siteOee }
+        const arr = Array.isArray(oeeResult?.workstations) ? oeeResult.workstations : [];
         if (arr.length === 0) {
           siteOees.push({
             siteId: site.id, siteName: site.name, location: site.location,
@@ -141,6 +141,7 @@ export class CorporateService {
           continue;
         }
 
+        // Values from dashboard are already percentages (e.g. 85.0 = 85%)
         // Weighted average by operating minutes
         let totalOp = 0, sumA = 0, sumP = 0, sumQ = 0, totalProd = 0, totalScrap = 0;
         for (const ws of arr) {
@@ -157,14 +158,16 @@ export class CorporateService {
           siteId: site.id,
           siteName: site.name,
           location: site.location,
-          oee: totalOp > 0 ? Math.round((sumA / totalOp) * (sumP / totalOp) * (sumQ / totalOp) * 10000) / 100 : 0,
-          availability: totalOp > 0 ? Math.round((sumA / totalOp) * 10000) / 100 : 0,
-          performance: totalOp > 0 ? Math.round((sumP / totalOp) * 10000) / 100 : 0,
-          quality: totalOp > 0 ? Math.round((sumQ / totalOp) * 10000) / 100 : 0,
+          // Values are already percentages, just compute weighted average
+          oee: oeeResult?.siteOee ?? 0,
+          availability: totalOp > 0 ? Math.round((sumA / totalOp) * 10) / 10 : 0,
+          performance: totalOp > 0 ? Math.round((sumP / totalOp) * 10) / 10 : 0,
+          quality: totalOp > 0 ? Math.round((sumQ / totalOp) * 10) / 10 : 0,
           totalProduced: totalProd,
           totalScrap: totalScrap,
         });
-      } catch {
+      } catch (e) {
+        console.error(`OEE calculation failed for site ${site.id}:`, e);
         siteOees.push({
           siteId: site.id, siteName: site.name, location: site.location,
           oee: 0, availability: 0, performance: 0, quality: 0,
@@ -176,8 +179,10 @@ export class CorporateService {
     // Overall weighted average
     const totalProd = siteOees.reduce((s, o) => s + o.totalProduced, 0);
     const totalScrap = siteOees.reduce((s, o) => s + o.totalScrap, 0);
-    const avgOee = siteOees.length > 0
-      ? Math.round(siteOees.reduce((s, o) => s + o.oee, 0) / siteOees.length * 100) / 100
+    // Only include sites with actual production data in the average
+    const activeSites = siteOees.filter(s => s.totalProduced > 0 || s.oee > 0);
+    const avgOee = activeSites.length > 0
+      ? Math.round(activeSites.reduce((s, o) => s + o.oee, 0) / activeSites.length * 100) / 100
       : 0;
 
     return {

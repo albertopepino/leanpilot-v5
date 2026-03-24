@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
   Users, Wrench, ClipboardCheck, Lightbulb, MapPin, Building2,
@@ -35,6 +35,7 @@ type Tab = 'overview' | 'users' | 'workstations';
 
 export default function SiteDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const siteId = params.siteId as string;
   const [site, setSite] = useState<SiteDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,7 @@ export default function SiteDetailPage() {
   return (
     <div>
       <Breadcrumb items={[
-        { label: 'Corporate', onClick: () => window.history.back() },
+        { label: 'Corporate', onClick: () => router.push('/corporate') },
         { label: site.name },
       ]} />
 
