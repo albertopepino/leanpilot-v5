@@ -180,20 +180,20 @@ export default function RootCausePage() {
       ]);
 
       const unified: UnifiedRca[] = [
-        ...(Array.isArray(fiveWhys) ? fiveWhys : []).map((fw): UnifiedRca => ({
-          id: fw.id, method: 'five-why', title: fw.title, problemStatement: fw.problemStatement,
-          status: fw.status, category: fw.category, linkedNcrId: fw.linkedNcrId,
-          linkedIncidentId: fw.linkedIncidentId, createdBy: fw.createdBy, createdAt: fw.createdAt, raw: fw,
+        ...(Array.isArray(fiveWhys) ? fiveWhys : []).map((fw: any): UnifiedRca => ({
+          id: fw.id, method: 'five-why', title: fw.title, problemStatement: fw.rootCauseSummary || '',
+          status: fw.status, category: fw.categoryTag || '', linkedNcrId: fw.ncrId,
+          linkedIncidentId: fw.incidentId, createdBy: fw.analyst || { firstName: '?', lastName: '' }, createdAt: fw.createdAt, raw: fw,
         })),
-        ...(Array.isArray(ishikawas) ? ishikawas : []).map((ish): UnifiedRca => ({
-          id: ish.id, method: 'ishikawa', title: ish.title, problemStatement: ish.problemStatement,
-          status: ish.status, category: ish.category, linkedNcrId: ish.linkedNcrId,
-          linkedIncidentId: ish.linkedIncidentId, createdBy: ish.createdBy, createdAt: ish.createdAt, raw: ish,
+        ...(Array.isArray(ishikawas) ? ishikawas : []).map((ish: any): UnifiedRca => ({
+          id: ish.id, method: 'ishikawa', title: ish.title, problemStatement: ish.rootCauseSummary || '',
+          status: ish.status, category: ish.categoryTag || '', linkedNcrId: ish.ncrId,
+          linkedIncidentId: ish.incidentId, createdBy: ish.analyst || { firstName: '?', lastName: '' }, createdAt: ish.createdAt, raw: ish,
         })),
-        ...(Array.isArray(eightDs) ? eightDs : []).map((ed): UnifiedRca => ({
-          id: ed.id, method: 'eight-d', title: ed.title, problemStatement: ed.problemStatement,
-          status: ed.status, category: ed.category, linkedNcrId: ed.linkedNcrId,
-          linkedIncidentId: ed.linkedIncidentId, createdBy: ed.createdBy, createdAt: ed.createdAt, raw: ed,
+        ...(Array.isArray(eightDs) ? eightDs : []).map((ed: any): UnifiedRca => ({
+          id: ed.id, method: 'eight-d', title: ed.title, problemStatement: ed.d4RootCauseSummary || '',
+          status: ed.status, category: ed.categoryTag || '', linkedNcrId: ed.ncrId,
+          linkedIncidentId: ed.incidentId, createdBy: ed.teamLeader || { firstName: '?', lastName: '' }, createdAt: ed.createdAt, raw: ed,
         })),
       ];
 

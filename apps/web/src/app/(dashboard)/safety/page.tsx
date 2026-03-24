@@ -38,9 +38,14 @@ interface SafetyIncident {
 
 interface SafetyMetrics {
   daysSinceLastIncident: number;
-  totalIncidentsThisYear: number;
-  nearMissRatio: number;
+  totalIncidents: number;
+  nearMissRatioPercent: number;
   totalDaysLost: number;
+  trirRawCount: number;
+  ltirRawCount: number;
+  recordableIncidents: number;
+  lostTimeIncidents: number;
+  nearMisses: number;
 }
 
 // ===== CONSTANTS =====
@@ -233,8 +238,8 @@ export default function SafetyPage() {
         {metrics && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <GradientStatCard label="Days Since Last Incident" value={metrics.daysSinceLastIncident} variant="green" icon={ShieldAlert} />
-            <GradientStatCard label="Incidents This Year" value={metrics.totalIncidentsThisYear} variant="orange" icon={AlertOctagon} />
-            <GradientStatCard label="Near-Miss Ratio" value={metrics.nearMissRatio} suffix="%" variant="blue" icon={AlertTriangle} decimals={1} />
+            <GradientStatCard label="Incidents This Year" value={metrics.totalIncidents || 0} variant="orange" icon={AlertOctagon} />
+            <GradientStatCard label="Near-Miss Ratio" value={metrics.nearMissRatioPercent || 0} suffix="%" variant="blue" icon={AlertTriangle} decimals={1} />
             <GradientStatCard label="Total Days Lost" value={metrics.totalDaysLost} variant="slate" icon={Calendar} />
           </div>
         )}
