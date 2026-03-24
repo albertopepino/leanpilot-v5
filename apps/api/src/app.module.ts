@@ -17,6 +17,9 @@ import { QualityModule } from './quality/quality.module';
 import { AuditModule } from './audit/audit.module';
 import { ReportsModule } from './reports/reports.module';
 import { DocumentsModule } from './documents/documents.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
+import { RootCauseModule } from './root-cause/root-cause.module';
+import { SafetyModule } from './safety/safety.module';
 
 @Module({
   imports: [
@@ -38,6 +41,9 @@ import { DocumentsModule } from './documents/documents.module';
     QualityModule,
     ReportsModule,
     DocumentsModule,
+    MaintenanceModule,
+    RootCauseModule,
+    SafetyModule,
   ],
 })
 export class AppModule {}

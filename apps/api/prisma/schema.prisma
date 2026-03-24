@@ -51,6 +51,13 @@ model Site {
   ncrs             NonConformanceReport[]
   reportTemplate   ReportTemplate?
   documents        Document[]
+  maintenancePlans MaintenancePlan[]
+  maintenanceLogs  MaintenanceLog[]
+  ciltChecks       CiltCheck[]
+  fiveWhyAnalyses  FiveWhyAnalysis[]
+  ishikawaAnalyses IshikawaAnalysis[]
+  eightDReports    EightDReport[]
+  safetyIncidents  SafetyIncident[]
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -91,6 +98,14 @@ model User {
   documentsCreated   Document[]           @relation("DocumentCreator")
   documentsApproved  Document[]           @relation("DocumentApprover")
   documentRevisions  DocumentRevision[]   @relation("RevisionUploader")
+  maintenancePlansAssigned MaintenancePlan[] @relation("PlanAssignee")
+  maintenanceLogsPerformed MaintenanceLog[] @relation("MaintenancePerformer")
+  ciltChecksPerformed      CiltCheck[]
+  fiveWhyAnalyses    FiveWhyAnalysis[]    @relation("FiveWhyAnalyst")
+  ishikawaAnalyses   IshikawaAnalysis[]   @relation("IshikawaAnalyst")
+  eightDReportsLead  EightDReport[]       @relation("EightDLead")
+  safetyReported     SafetyIncident[]     @relation("SafetyReporter")
+  safetyInvestigated SafetyIncident[]     @relation("SafetyInvestigator")
 
   @@map("users")
 }
@@ -141,12 +156,27 @@ model Workstation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Asset management fields (TPM / ISO 55001)
+  serialNumber    String?
+  manufacturer    String?
+  modelNumber     String?
+  acquisitionDate DateTime?
+  warrantyExpiry  DateTime?
+  criticality     String   @default("B")  // A=critical, B=important, C=general
+  assetTag        String?                 // unique per site, for QR/barcode scan
+  equipmentStatus String   @default("operational") // operational | degraded | down | decommissioned
+  photoUrl        String?
+
   site            Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   phases          ProductionOrderPhase[]
   productionRuns  ProductionRun[]
   events          WorkstationEvent[]
   qualityInspections QualityInspection[]
   ncrs            NonConformanceReport[]
+  maintenancePlans  MaintenancePlan[]
+  maintenanceLogs   MaintenanceLog[]
+  ciltChecks        CiltCheck[]
+  safetyIncidents   SafetyIncident[]
 
   @@unique([siteId, code])
   @@map("workstations")
@@ -562,4 +592,287 @@ model DocumentRevision {
 
   @@unique([documentId, version])
   @@map("document_revisions")
+}
+
+// ===== EQUIPMENT & MAINTENANCE (TPM / ISO 55001) =====
+
+model MaintenancePlan {
+  id              String    @id @default(cuid())
+  siteId          String
+  workstationId   String
+  name            String    // "Weekly lubrication", "Annual calibration"
+  type            String    @default("preventive") // preventive | predictive | condition_based | calibration
+  frequencyDays   Int       // repeat every N days
+  frequencyHours  Int?      // hour-based PMs (e.g., every 500 running hours)
+  estimatedMinutes Int?
+  instructions    String?
+  assignedToId    String?
+  isActive        Boolean   @default(true)
+  nextDueDate     DateTime
+  lastCompletedDate DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  site        Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  workstation Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  assignedTo  User?       @relation("PlanAssignee", fields: [assignedToId], references: [id])
+  logs        MaintenanceLog[]
+
+  @@index([siteId])
+  @@index([nextDueDate])
+  @@map("maintenance_plans")
+}
+
+model MaintenanceLog {
+  id              String   @id @default(cuid())
+  siteId          String
+  workstationId   String
+  planId          String?  // null = corrective/unplanned
+  type            String   // preventive | corrective | emergency
+  performedById   String
+  description     String
+  partsUsed       String?  // JSON array of parts
+  failureCode     String?  // standardized failure code for Pareto
+  durationMinutes Int?     // labor time
+  downtimeMinutes Int?     // production time lost
+  cost            Float?
+  status          String   @default("completed") // completed | partial | deferred
+  performedAt     DateTime @default(now())
+
+  site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  workstation Workstation      @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  plan        MaintenancePlan? @relation(fields: [planId], references: [id])
+  performedBy User             @relation("MaintenancePerformer", fields: [performedById], references: [id])
+  ciltEscalation CiltCheck?
+
+  @@index([siteId])
+  @@index([workstationId, performedAt])
+  @@map("maintenance_logs")
+}
+
+// TPM Pillar 1: Autonomous Maintenance — CILT (Clean, Inspect, Lubricate, Tighten)
+model CiltCheck {
+  id              String   @id @default(cuid())
+  siteId          String
+  workstationId   String
+  operatorId      String
+  date            String   // "2026-03-24"
+  shift           String?  // "morning" | "afternoon" | "night"
+  cleaningDone    Boolean  @default(false)
+  cleaningNotes   String?
+  inspectionDone  Boolean  @default(false)
+  inspectionNotes String?
+  lubricationDone Boolean  @default(false)
+  lubricationNotes String?
+  tighteningDone  Boolean  @default(false)
+  tighteningNotes String?
+  abnormalityFound Boolean @default(false)
+  abnormalityDescription String?
+  photoUrl        String?
+  maintenanceLogId String? @unique // escalate to corrective maintenance
+  createdAt       DateTime @default(now())
+
+  site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  workstation    Workstation     @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  operator       User            @relation(fields: [operatorId], references: [id])
+  maintenanceLog MaintenanceLog? @relation(fields: [maintenanceLogId], references: [id])
+
+  @@index([siteId])
+  @@index([workstationId, date])
+  @@map("cilt_checks")
+}
+
+// ===== ROOT CAUSE ANALYSIS (5-Why, Fishbone/Ishikawa, 8D) =====
+
+model FiveWhyAnalysis {
+  id               String    @id @default(cuid())
+  siteId           String
+  title            String
+  status           String    @default("open") // open | in_progress | completed | verified
+  ncrId            String?
+  incidentId       String?
+  analystId        String
+  rootCauseSummary String?
+  categoryTag      String?   // mechanical | electrical | procedural | human_error | material_defect | environmental | design | software
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
+
+  site    Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  analyst User           @relation("FiveWhyAnalyst", fields: [analystId], references: [id])
+  steps   FiveWhyStep[]
+  eightDReports EightDReport[] @relation("EightDFiveWhy")
+
+  @@index([siteId])
+  @@map("five_why_analyses")
+}
+
+model FiveWhyStep {
+  id         String @id @default(cuid())
+  analysisId String
+  stepNumber Int    // 1-5
+  question   String
+  answer     String
+
+  analysis FiveWhyAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisId, stepNumber])
+  @@map("five_why_steps")
+}
+
+model IshikawaAnalysis {
+  id               String    @id @default(cuid())
+  siteId           String
+  title            String
+  status           String    @default("open") // open | in_progress | completed | verified
+  ncrId            String?
+  incidentId       String?
+  analystId        String
+  rootCauseSummary String?
+  categoryTag      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
+
+  site    Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  analyst User             @relation("IshikawaAnalyst", fields: [analystId], references: [id])
+  causes  IshikawaCause[]
+  eightDReports EightDReport[] @relation("EightDIshikawa")
+
+  @@index([siteId])
+  @@map("ishikawa_analyses")
+}
+
+model IshikawaCause {
+  id          String  @id @default(cuid())
+  analysisId  String
+  category    String  // man | machine | method | material | measurement | environment
+  description String
+  isRootCause Boolean @default(false)
+
+  analysis IshikawaAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@map("ishikawa_causes")
+}
+
+model EightDReport {
+  id             String    @id @default(cuid())
+  siteId         String
+  title          String
+  ncrId          String?
+  incidentId     String?
+  status         String    @default("d0_initiated")
+  // d0_initiated | d1_team | d2_problem | d3_containment | d4_root_cause | d5_corrective | d6_implemented | d7_prevention | d8_closed
+  teamLeaderId   String
+  teamMembers    String?   // JSON array of user IDs
+
+  // D2: Problem Description
+  d2ProblemDescription String?
+  d2IsIsNot            String?  // JSON: IS/IS NOT analysis
+
+  // D3: Interim Containment
+  d3ContainmentActions   String?
+  d3ContainmentEffective Boolean?
+
+  // D4: Root Cause
+  d4FiveWhyId      String?
+  d4IshikawaId     String?
+  d4RootCauseSummary String?
+
+  // D5-D6: Corrective Actions
+  d5CorrectiveActions     String?
+  d6ImplementationNotes   String?
+
+  // D7: Prevention
+  d7SystemicChanges  String?
+  d7LessonsLearned   String?
+
+  // D8: Closure
+  d8ClosedAt         DateTime?
+  d8CustomerResponse String?
+
+  categoryTag String? // mechanical | electrical | procedural | human_error | material_defect | environmental
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  site       Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  teamLeader User              @relation("EightDLead", fields: [teamLeaderId], references: [id])
+  fiveWhy    FiveWhyAnalysis?  @relation("EightDFiveWhy", fields: [d4FiveWhyId], references: [id])
+  ishikawa   IshikawaAnalysis? @relation("EightDIshikawa", fields: [d4IshikawaId], references: [id])
+
+  @@index([siteId])
+  @@index([status])
+  @@map("eight_d_reports")
+}
+
+// ===== SAFETY INCIDENTS (ISO 45001) =====
+
+model SafetyIncident {
+  id              String    @id @default(cuid())
+  siteId          String
+  reporterId      String
+  workstationId   String?
+
+  // Classification
+  type            String    // injury | near_miss | property_damage | environmental | first_aid
+  severity        String    @default("minor") // minor | moderate | serious | critical
+  outcome         String    @default("no_injury") // no_injury | first_aid | medical_treatment | restricted_work | lost_time | fatality
+  date            DateTime
+  time            String?   // "14:30"
+  location        String    // area/zone description
+
+  // Details
+  title           String
+  description     String
+  injuredPerson   String?
+  injuryType      String?   // laceration | burn | crush | strain | chemical_exposure | fall | other
+  bodyPart        String?   // hand | arm | leg | head | back | eye | other
+  treatmentGiven  String?
+  daysLost        Int       @default(0)
+  potentialSeverity String? // for near-misses: what COULD have happened
+  isOshaRecordable Boolean @default(false)
+
+  // Investigation
+  immediateAction  String?
+  witnessNames     String?  // JSON array
+  status           String   @default("reported")
+  // reported | investigating | root_cause_identified | corrective_action | verification | closed
+  investigatorId   String?
+  investigationDate DateTime?
+  investigationNotes String?
+
+  // RCA links
+  fiveWhyId        String?
+  ishikawaId       String?
+  eightDReportId   String?
+
+  photoUrl         String?
+  closedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  site          Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  reporter      User              @relation("SafetyReporter", fields: [reporterId], references: [id])
+  workstation   Workstation?      @relation(fields: [workstationId], references: [id])
+  investigator  User?             @relation("SafetyInvestigator", fields: [investigatorId], references: [id])
+  attachments   SafetyAttachment[]
+
+  @@index([siteId])
+  @@index([siteId, type, date])
+  @@index([severity, date])
+  @@map("safety_incidents")
+}
+
+model SafetyAttachment {
+  id           String   @id @default(cuid())
+  incidentId   String
+  fileName     String
+  fileUrl      String
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  incident SafetyIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@map("safety_attachments")
 }
