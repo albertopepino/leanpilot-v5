@@ -65,7 +65,8 @@ export function ProgressRing({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setOffset(circumference - (value / 100) * circumference);
+      const safeValue = Math.min(100, Math.max(0, isNaN(value) ? 0 : value));
+      setOffset(circumference - (safeValue / 100) * circumference);
     }, 100);
     return () => clearTimeout(timer);
   }, [value, circumference]);

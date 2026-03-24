@@ -269,36 +269,36 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* OEE Rings */}
+          {/* OEE Rings — API returns values already as percentages (e.g. 82.3) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div className="flex flex-col items-center gap-2">
-              <ProgressRing value={oee.siteOee.availability * 100} size={100} strokeWidth={8} color="#3b82f6">
+              <ProgressRing value={oee.siteOee.availability || 0} size={100} strokeWidth={8} color="#3b82f6">
                 <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
-                  {(oee.siteOee.availability * 100).toFixed(1)}%
+                  {(oee.siteOee.availability || 0).toFixed(1)}%
                 </span>
               </ProgressRing>
               <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Availability</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <ProgressRing value={oee.siteOee.performance * 100} size={100} strokeWidth={8} color="#10b981">
+              <ProgressRing value={oee.siteOee.performance || 0} size={100} strokeWidth={8} color="#10b981">
                 <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
-                  {(oee.siteOee.performance * 100).toFixed(1)}%
+                  {(oee.siteOee.performance || 0).toFixed(1)}%
                 </span>
               </ProgressRing>
               <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Performance</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <ProgressRing value={oee.siteOee.quality * 100} size={100} strokeWidth={8} color="#8b5cf6">
+              <ProgressRing value={oee.siteOee.quality || 0} size={100} strokeWidth={8} color="#8b5cf6">
                 <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
-                  {(oee.siteOee.quality * 100).toFixed(1)}%
+                  {(oee.siteOee.quality || 0).toFixed(1)}%
                 </span>
               </ProgressRing>
               <span className="text-xs font-medium text-purple-600 dark:text-purple-400">Quality</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <ProgressRing value={oee.siteOee.oee * 100} size={100} strokeWidth={8} color="#f59e0b">
+              <ProgressRing value={oee.siteOee.oee || 0} size={100} strokeWidth={8} color="#f59e0b">
                 <span className="text-lg font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent tabular-nums">
-                  {(oee.siteOee.oee * 100).toFixed(1)}%
+                  {(oee.siteOee.oee || 0).toFixed(1)}%
                 </span>
               </ProgressRing>
               <span className="text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">Overall OEE</span>
@@ -326,10 +326,10 @@ export default function DashboardPage() {
                     {oee.workstations.map((ws) => (
                       <tr key={ws.workstationId} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">
                         <td className="py-2 font-medium text-gray-700 dark:text-gray-200">{ws.name}</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.availability * 100).toFixed(1)}%</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.performance * 100).toFixed(1)}%</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.quality * 100).toFixed(1)}%</td>
-                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-white tabular-nums">{(ws.oee * 100).toFixed(1)}%</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.availability || 0).toFixed(1)}%</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.performance || 0).toFixed(1)}%</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.quality || 0).toFixed(1)}%</td>
+                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-white tabular-nums">{(ws.oee || 0).toFixed(1)}%</td>
                       </tr>
                     ))}
                   </tbody>
