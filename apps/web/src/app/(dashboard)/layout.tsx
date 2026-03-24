@@ -7,6 +7,7 @@ import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
   Lightbulb, Settings, LogOut, Menu, X,
   Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
+  Wrench, ShieldAlert, Search,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -28,12 +29,15 @@ const NAV_ITEMS: NavItem[] = [
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager', iconGradient: 'from-cyan-600 to-blue-500' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator', iconGradient: 'from-orange-500 to-amber-500' },
   { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator', iconGradient: 'from-violet-600 to-purple-500' },
+  { href: '/equipment', label: 'Equipment', icon: Wrench, minRole: 'operator', iconGradient: 'from-slate-600 to-slate-500' },
   {
     href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator', iconGradient: 'from-emerald-600 to-teal-500',
     children: [
       { href: '/quality/documents', label: 'Documents', icon: FileText, minRole: 'viewer' },
+      { href: '/quality/root-cause', label: 'Root Cause', icon: Search, minRole: 'operator' },
     ],
   },
+  { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, minRole: 'operator', iconGradient: 'from-red-500 to-orange-500' },
   { section: 'Analytics', href: '/dashboard/oee', label: 'OEE', icon: Gauge, minRole: 'viewer', iconGradient: 'from-blue-500 to-cyan-500' },
   { section: 'System', href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer', iconGradient: 'from-gray-500 to-gray-400' },
