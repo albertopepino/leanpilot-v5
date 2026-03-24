@@ -187,8 +187,11 @@ export class DashboardService {
       // Sum shift hours per day × days in period
       let dailyShiftHours = 0;
       for (const s of shifts) {
-        const [sh, sm] = s.startTime.split(':').map(Number);
-        const [eh, em] = s.endTime.split(':').map(Number);
+        const parts = (s.startTime || '').split(':').map(Number);
+        const eParts = (s.endTime || '').split(':').map(Number);
+        const sh = parts[0] || 0, sm = parts[1] || 0;
+        const eh = eParts[0] || 0, em = eParts[1] || 0;
+        if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue; // skip malformed shifts
         let shiftDuration = (eh + em / 60) - (sh + sm / 60);
         if (shiftDuration < 0) shiftDuration += 24; // crosses midnight (night shift)
         dailyShiftHours += shiftDuration;

@@ -124,6 +124,8 @@ export class QualityService {
       data: { siteId, inspectorId, ...data },
       include: {
         template: { include: { checkpoints: { orderBy: { sequence: 'asc' } } } },
+        inspector: { select: { firstName: true, lastName: true } },
+        results: { include: { checkpoint: true } },
       },
     });
   }

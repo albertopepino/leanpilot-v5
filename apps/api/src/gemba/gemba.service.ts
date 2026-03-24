@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -34,6 +34,10 @@ export class GembaService {
         siteId,
         walkerId,
         date: new Date().toISOString().split('T')[0],
+      },
+      include: {
+        walker: { select: { firstName: true, lastName: true } },
+        _count: { select: { observations: true } },
       },
     });
   }
@@ -73,6 +77,10 @@ export class GembaService {
   }
 
   async updateObservationStatus(id: string, siteId: string, status: string) {
+    const VALID_OBS_STATUSES = ['open', 'investigating', 'addressed', 'closed'];
+    if (!VALID_OBS_STATUSES.includes(status)) {
+      throw new BadRequestException(`Invalid status. Must be: ${VALID_OBS_STATUSES.join(', ')}`);
+    }
     const obs = await this.prisma.gembaObservation.findFirst({
       where: { id, walk: { siteId } },
     });

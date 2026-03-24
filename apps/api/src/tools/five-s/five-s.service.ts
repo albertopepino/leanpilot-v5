@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const CATEGORIES = ['sort', 'set_in_order', 'shine', 'standardize', 'sustain', 'safety'];
@@ -56,9 +56,10 @@ export class FiveSService {
     siteId: string,
     scores: Array<{ category: string; score: number; notes?: string; photoUrl?: string }>,
   ) {
-    // Verify ownership
+    // Verify ownership and immutability
     const audit = await this.prisma.fiveSAudit.findFirst({ where: { id: auditId, siteId } });
     if (!audit) throw new NotFoundException('Audit not found');
+    if (audit.status === 'completed') throw new BadRequestException('Cannot edit a completed audit — create a new one instead');
 
     // Filter to valid categories and reject empty submissions
     const validScores = scores.filter(s => CATEGORIES.includes(s.category));
