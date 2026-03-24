@@ -169,40 +169,56 @@ export class MaintenanceService {
     });
     if (!ws) throw new BadRequestException('Workstation not found in this site');
 
-    // If planId provided, validate it and auto-advance nextDueDate
+    // If planId provided, validate it belongs to same site
+    let planFrequencyDays = 0;
     if (data.planId) {
       const plan = await this.prisma.maintenancePlan.findFirst({
         where: { id: data.planId, siteId },
       });
       if (!plan) throw new BadRequestException('Maintenance plan not found in this site');
+      planFrequencyDays = plan.frequencyDays;
+    }
 
+    // Use transaction: create log + advance plan atomically
+    const logData = {
+      siteId,
+      workstationId: data.workstationId,
+      planId: data.planId,
+      type: data.type,
+      performedById: userId,
+      description: data.description,
+      partsUsed: data.partsUsed,
+      failureCode: data.failureCode,
+      durationMinutes: data.durationMinutes,
+      downtimeMinutes: data.downtimeMinutes,
+      cost: data.cost,
+      status: data.status || 'completed',
+    };
+
+    if (data.planId && planFrequencyDays > 0) {
       const now = new Date();
-      const nextDue = new Date(now.getTime() + plan.frequencyDays * 24 * 60 * 60 * 1000);
+      const nextDue = new Date(now.getTime() + planFrequencyDays * 24 * 60 * 60 * 1000);
 
-      await this.prisma.maintenancePlan.update({
-        where: { id: data.planId },
-        data: {
-          lastCompletedDate: now,
-          nextDueDate: nextDue,
+      const [log] = await this.prisma.$transaction([
+        this.prisma.maintenanceLog.create({ data: logData }),
+        this.prisma.maintenancePlan.update({
+          where: { id: data.planId },
+          data: { lastCompletedDate: now, nextDueDate: nextDue },
+        }),
+      ]);
+
+      return this.prisma.maintenanceLog.findUnique({
+        where: { id: log.id },
+        include: {
+          workstation: { select: { id: true, name: true } },
+          performedBy: { select: { id: true, firstName: true, lastName: true } },
+          plan: { select: { id: true, name: true } },
         },
       });
     }
 
     return this.prisma.maintenanceLog.create({
-      data: {
-        siteId,
-        workstationId: data.workstationId,
-        planId: data.planId,
-        type: data.type,
-        performedById: userId,
-        description: data.description,
-        partsUsed: data.partsUsed,
-        failureCode: data.failureCode,
-        durationMinutes: data.durationMinutes,
-        downtimeMinutes: data.downtimeMinutes,
-        cost: data.cost,
-        status: data.status || 'completed',
-      },
+      data: logData,
       include: {
         workstation: { select: { id: true, name: true } },
         performedBy: { select: { id: true, firstName: true, lastName: true } },
