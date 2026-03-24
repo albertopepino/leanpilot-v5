@@ -68,6 +68,15 @@ Review every feature through a Lean lens: Is the methodology correct? Would this
 ### /coderabbit:code-review
 Automated code review on every significant change. Check for bugs, security, performance, code quality, and adherence to project conventions.
 
+### /compliance-audit
+**MANDATORY on every feature that touches user data, quality records, or production data.** Certified DPO + ISO 9001 Lead Auditor. Checks GDPR (Arts. 5-35), ZZLP (Serbian data protection), ISO 9001:2015 clauses, audit logging completeness, data classification, and technical security. Produces a structured compliance report.
+
+### /audit-log-check
+Verify every data-modifying endpoint has proper audit logging: who, what, when, where, which entity, result. Checks immutability of quality records. Ensures authentication events are logged. Run after adding any new endpoint.
+
+### /iso-review
+Review features through ISO 9001:2015 and IATF 16949 lens: document control, traceability, monitoring/measurement accuracy, nonconformity flow, competence gating, continual improvement evidence. Flags certification risks.
+
 ## File Structure
 
 ```
@@ -155,6 +164,10 @@ leanpilot-v4/
 - **Theme**: Tailwind dark mode via `class` strategy. Use shadcn/ui theming system
 - **No dead code**: If it's not used, delete it. No commented-out blocks.
 - **No over-engineering**: Minimum viable solution first. Refactor when complexity is earned.
+- **Compliance gate**: Every feature that creates, modifies, or deletes data MUST have audit logging. Run `/compliance-audit` before merging. No exceptions.
+- **Audit logging**: All state-changing operations log: userId, action, entityType, entityId, timestamp, IP, result. Logs are append-only, immutable, minimum 2-year retention.
+- **Data classification**: Every new field is classified: Public / Internal / Confidential / Restricted. PII fields are documented in the processing register.
+- **Quality record immutability**: Completed inspections, closed NCRs, and completed 5S audits cannot be modified — only amended with a new record linking to the original.
 
 ## Phase 1 Scope (MVP for Demo)
 
