@@ -4,6 +4,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Card } from '@/components/ui/Card';
+
+interface Workstation {
+  id: string;
+  name: string;
+  area: string | null;
+}
 
 interface FiveSScore {
   id: string;
@@ -42,9 +53,15 @@ export default function FiveSPage() {
   const [view, setView] = useState<View>('list');
   const [selected, setSelected] = useState<FiveSAudit | null>(null);
   const [error, setError] = useState('');
+  const { toast } = useToast();
+
+  // Workstations for dropdown
+  const [workstations, setWorkstations] = useState<Workstation[]>([]);
+  const [wsLoaded, setWsLoaded] = useState(false);
 
   // Create form
   const [newArea, setNewArea] = useState('');
+  const [customArea, setCustomArea] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -63,13 +80,23 @@ export default function FiveSPage() {
 
   useEffect(() => { loadAudits(); }, [loadAudits]);
 
+  // Load workstations for area dropdown
+  useEffect(() => {
+    api.get<Workstation[]>('/workstations')
+      .then(data => setWorkstations(Array.isArray(data) ? data : []))
+      .catch(() => setWorkstations([]))
+      .finally(() => setWsLoaded(true));
+  }, []);
+
+  const resolvedArea = newArea === '__custom__' ? customArea.trim() : newArea;
+
   const createAudit = async () => {
-    if (!newArea.trim()) return;
+    if (!resolvedArea) return;
     setCreating(true);
     setError('');
     try {
       const audit = await api.post<FiveSAudit>('/tools/five-s', {
-        area: newArea.trim(),
+        area: resolvedArea,
         notes: newNotes.trim() || undefined,
       });
       setAudits(prev => [audit, ...prev]);
@@ -89,7 +116,9 @@ export default function FiveSPage() {
       setScorePhotos(p);
       setView('scoring');
       setNewArea('');
+      setCustomArea('');
       setNewNotes('');
+      toast('success', 'Audit created — start scoring');
     } catch (e: any) {
       setError(e.message || 'Failed to create audit');
     } finally {
@@ -134,6 +163,7 @@ export default function FiveSPage() {
       const updated = await api.patch<FiveSAudit>(`/tools/five-s/${selected.id}/scores`, { scores: payload });
       setSelected(updated);
       setAudits(prev => prev.map(a => a.id === updated.id ? updated : a));
+      toast('success', 'Scores saved');
     } catch (e: any) {
       setError(e.message || 'Failed to save scores');
     } finally {
@@ -261,25 +291,20 @@ export default function FiveSPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="w-6 h-6 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
-          </div>
+          <SkeletonList count={3} />
         ) : audits.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <ClipboardCheck className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No audits yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">
-              Start your first 5S audit to assess workplace organization.
-            </p>
-          </div>
+          <EmptyState
+            icon={ClipboardCheck}
+            title="No audits yet"
+            description="Start your first 5S audit to assess workplace organization."
+            actionLabel="New Audit"
+            onAction={() => setView('create')}
+          />
         ) : (
           <div className="grid gap-3">
             {audits.map(audit => (
-              <button
-                key={audit.id}
-                onClick={() => openDetail(audit)}
-                className="w-full text-left bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex items-center justify-between hover:shadow-sm hover:border-brand-300 dark:hover:border-brand-600 transition-all"
-              >
+              <Card key={audit.id} onClick={() => openDetail(audit)}>
+                <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white">{audit.area}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -304,7 +329,8 @@ export default function FiveSPage() {
                     {audit.status === 'completed' ? 'Completed' : 'In Progress'}
                   </span>
                 </div>
-              </button>
+                </div>
+              </Card>
             ))}
           </div>
         )}
@@ -316,9 +342,10 @@ export default function FiveSPage() {
   if (view === 'create') {
     return (
       <div>
-        <button onClick={() => setView('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
-          <ChevronLeft className="w-4 h-4" /> Back to audits
-        </button>
+        <Breadcrumb items={[
+          { label: '5S Audits', onClick: () => setView('list') },
+          { label: 'New Audit' },
+        ]} />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">New 5S Audit</h1>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-lg">
           {error && (
@@ -329,14 +356,32 @@ export default function FiveSPage() {
           )}
           <label className="block mb-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Area / Zone *</span>
-            <input
-              type="text"
+            <select
               value={newArea}
               onChange={e => setNewArea(e.target.value)}
-              placeholder="e.g. Assembly Line 1, Warehouse Bay C"
               className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            />
+            >
+              <option value="">Select workstation or area...</option>
+              {workstations.map(ws => (
+                <option key={ws.id} value={ws.name}>
+                  {ws.name}{ws.area ? ` (${ws.area})` : ''}
+                </option>
+              ))}
+              <option value="__custom__">Custom location...</option>
+            </select>
           </label>
+          {newArea === '__custom__' && (
+            <label className="block mb-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Custom Location *</span>
+              <input
+                type="text"
+                value={customArea}
+                onChange={e => setCustomArea(e.target.value)}
+                placeholder="e.g. Warehouse Bay C, Loading Dock"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              />
+            </label>
+          )}
           <label className="block mb-6">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (optional)</span>
             <textarea
@@ -349,7 +394,7 @@ export default function FiveSPage() {
           </label>
           <button
             onClick={createAudit}
-            disabled={creating || !newArea.trim()}
+            disabled={creating || !resolvedArea}
             className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
             {creating ? 'Creating...' : 'Start Audit & Score'}
@@ -367,9 +412,11 @@ export default function FiveSPage() {
 
     return (
       <div>
-        <button onClick={() => setView('detail')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
-          <ChevronLeft className="w-4 h-4" /> Back to detail
-        </button>
+        <Breadcrumb items={[
+          { label: '5S Audits', onClick: () => { setView('list'); setSelected(null); } },
+          { label: selected.area, onClick: () => setView('detail') },
+          { label: 'Scoring' },
+        ]} />
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Score: {selected.area}</h1>
@@ -451,9 +498,10 @@ export default function FiveSPage() {
   if (view === 'detail' && selected) {
     return (
       <div>
-        <button onClick={() => { setView('list'); setSelected(null); }} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
-          <ChevronLeft className="w-4 h-4" /> Back to audits
-        </button>
+        <Breadcrumb items={[
+          { label: '5S Audits', onClick: () => { setView('list'); setSelected(null); } },
+          { label: selected.area },
+        ]} />
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selected.area}</h1>

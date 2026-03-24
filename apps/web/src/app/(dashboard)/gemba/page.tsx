@@ -7,6 +7,11 @@ import {
   Eye, Plus, CheckCircle2, Clock, ChevronRight, X, Send,
   AlertTriangle, Loader2, ArrowLeft,
 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Card } from '@/components/ui/Card';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -94,6 +99,7 @@ export default function GembaPage() {
   const [obsPhoto, setObsPhoto] = useState('');
   const [obsQuote, setObsQuote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const loadWalks = useCallback(async () => {
     setLoading(true);
@@ -144,6 +150,7 @@ export default function GembaPage() {
       setView('list');
       setSelectedWalk(null);
       await loadWalks();
+      toast('success', 'Gemba walk completed');
     } catch (e: any) {
       setError(e.message);
     }
@@ -170,6 +177,7 @@ export default function GembaPage() {
       // Go back to detail view and refresh
       setView('detail');
       await openWalk(selectedWalk.id);
+      toast('success', 'Observation recorded');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -203,26 +211,28 @@ export default function GembaPage() {
 
   return (
     <div>
+      {/* Breadcrumb */}
+      {view !== 'list' && (
+        <Breadcrumb items={[
+          { label: 'Gemba Walk', onClick: () => { setView('list'); setSelectedWalk(null); setSelectedObs(null); } },
+          ...(view === 'detail' || view === 'add-obs' || view === 'obs-detail'
+            ? [{ label: selectedWalk?.date || 'Walk', onClick: view !== 'detail' ? () => { setView('detail'); setSelectedObs(null); } : undefined }]
+            : []),
+          ...(view === 'add-obs' ? [{ label: 'Add Observation' }] : []),
+          ...(view === 'obs-detail' ? [{ label: 'Observation Detail' }] : []),
+        ]} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {view !== 'list' && (
-            <button onClick={goBack} aria-label="Go back" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-              <ArrowLeft className="w-5 h-5 text-gray-500" />
-            </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Eye className="w-6 h-6 text-brand-600" />
+            {view === 'list' ? 'Gemba Walk' : view === 'detail' ? `Walk — ${selectedWalk?.date}` : view === 'add-obs' ? 'Add Observation' : 'Observation Detail'}
+          </h1>
+          {view === 'list' && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">Go see, ask why, show respect</p>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Eye className="w-6 h-6 text-brand-600" />
-              Gemba Walk
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {view === 'list' && 'Go see, ask why, show respect'}
-              {view === 'detail' && `Walk — ${selectedWalk?.date}`}
-              {view === 'add-obs' && 'Add Observation'}
-              {view === 'obs-detail' && 'Observation Detail'}
-            </p>
-          </div>
         </div>
         {view === 'list' && (
           <button
@@ -258,45 +268,42 @@ export default function GembaPage() {
         </div>
       )}
 
-      {loading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 text-brand-600 animate-spin" />
-        </div>
-      )}
+      {loading && <SkeletonList count={3} />}
 
       {/* ── Walk List ─────────────────────────────────────────────── */}
       {view === 'list' && !loading && (
         <div className="space-y-2">
           {walks.length === 0 ? (
-            <div className="text-center py-16">
-              <Eye className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500">No Gemba walks yet. Start your first walk!</p>
-            </div>
+            <EmptyState
+              icon={Eye}
+              title="No Gemba walks yet"
+              description="Go to the shop floor, observe processes, and document improvement opportunities."
+              actionLabel="Start Walk"
+              onAction={startNewWalk}
+            />
           ) : (
             walks.map(walk => (
-              <button
-                key={walk.id}
-                onClick={() => openWalk(walk.id)}
-                className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    walk.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
-                  }`}>
-                    {walk.status === 'completed'
-                      ? <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      : <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    }
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{walk.date}</div>
-                    <div className="text-sm text-gray-500">
-                      {walk.walker.firstName} {walk.walker.lastName} · {walk._count.observations} observation{walk._count.observations !== 1 ? 's' : ''}
+              <Card key={walk.id} onClick={() => openWalk(walk.id)} padding="sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      walk.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
+                    }`}>
+                      {walk.status === 'completed'
+                        ? <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        : <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      }
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">{walk.date}</div>
+                      <div className="text-sm text-gray-500">
+                        {walk.walker.firstName} {walk.walker.lastName} · {walk._count.observations} observation{walk._count.observations !== 1 ? 's' : ''}
+                      </div>
                     </div>
                   </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
+              </Card>
             ))
           )}
         </div>

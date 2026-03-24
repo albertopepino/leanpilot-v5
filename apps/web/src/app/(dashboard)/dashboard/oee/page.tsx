@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Gauge, TrendingUp, Clock, Zap, CheckCircle } from 'lucide-react';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 interface WSData {
   workstationId: string;
@@ -117,9 +118,7 @@ export default function OEEPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
-      </div>
+      <SkeletonList count={4} />
     );
   }
 

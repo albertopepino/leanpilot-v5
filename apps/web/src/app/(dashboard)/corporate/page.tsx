@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Building2, Users, ClipboardCheck, Lightbulb, MapPin } from 'lucide-react';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 interface CorporateOverview {
   id: string;
@@ -33,9 +34,7 @@ export default function CorporatePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
-      </div>
+      <SkeletonList count={3} />
     );
   }
 

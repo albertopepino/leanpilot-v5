@@ -6,6 +6,7 @@ import {
   AlertTriangle, Wrench, Pause, Clock, CalendarOff, ShieldAlert,
   Activity, Eye, PackageX, Boxes, CircleAlert, Loader2,
 } from 'lucide-react';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -86,9 +87,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-brand-600 animate-spin" />
-      </div>
+      <SkeletonList count={4} />
     );
   }
 

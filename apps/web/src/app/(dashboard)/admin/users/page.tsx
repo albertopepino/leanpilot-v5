@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { api, auth } from '@/lib/api';
 import { UserPlus, Search, Shield, X, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 const ROLE_COLORS: Record<string, string> = {
   corporate_admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -28,6 +30,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'operator' });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const { toast } = useToast();
 
   const currentUser = auth.getUser();
 
@@ -66,6 +69,7 @@ export default function UsersPage() {
       setShowModal(false);
       setForm({ firstName: '', lastName: '', email: '', password: '', role: 'operator' });
       loadUsers();
+      toast('success', 'User created');
     } catch (e: any) {
       setCreateError(e.message || 'Failed to create user');
     } finally {
@@ -108,9 +112,7 @@ export default function UsersPage() {
       {/* Users table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="w-6 h-6 text-brand-600 animate-spin" />
-          </div>
+          <SkeletonList count={3} />
         ) : (
           <table className="w-full text-sm">
             <thead>

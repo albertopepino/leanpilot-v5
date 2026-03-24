@@ -1,8 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Plus, Lightbulb, ChevronLeft, X, ArrowRight, Edit2 } from 'lucide-react';
+import { Plus, Lightbulb, ChevronLeft, X, ArrowRight, Edit2, GripVertical } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 interface KaizenIdea {
   id: string;
@@ -61,6 +65,11 @@ export default function KaizenPage() {
   // Edit mode
   const [editing, setEditing] = useState(false);
 
+  // Toast + DnD
+  const { toast } = useToast();
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
   const loadItems = useCallback(() => {
     api.get<KaizenIdea[]>('/tools/kaizen')
       .then(data => setItems(Array.isArray(data) ? data : []))
@@ -85,6 +94,7 @@ export default function KaizenPage() {
       setItems(prev => [idea, ...prev]);
       setView('board');
       setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea('');
+      toast('success', 'Kaizen idea submitted');
     } catch (e: any) {
       setError(e.message || 'Failed to create idea');
     } finally {
@@ -107,6 +117,7 @@ export default function KaizenPage() {
       setSelected(updated);
       setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
       setEditing(false);
+      toast('success', 'Idea updated');
     } catch (e: any) {
       setError(e.message || 'Failed to update idea');
     } finally {
@@ -119,8 +130,10 @@ export default function KaizenPage() {
       const updated = await api.patch<KaizenIdea>(`/tools/kaizen/${id}/status`, { status: newStatus });
       setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
       if (selected?.id === id) setSelected(updated);
+      const col = STATUS_COLS.find(c => c.key === newStatus);
+      toast('success', `Moved to ${col?.label || newStatus}`);
     } catch (e: any) {
-      setError(e.message || 'Failed to update status');
+      toast('error', e.message || 'Failed to update status');
     }
   };
 
@@ -172,23 +185,45 @@ export default function KaizenPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="w-6 h-6 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
-          </div>
+          <SkeletonList count={3} />
         ) : items.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <Lightbulb className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Kaizen suggestions yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">
-              Submit your first improvement idea — even small changes compound into big results.
-            </p>
-          </div>
+          <EmptyState
+            icon={Lightbulb}
+            title="No Kaizen suggestions yet"
+            description="Submit your first improvement idea — even small changes compound into big results."
+            actionLabel="New Idea"
+            onAction={() => { setView('create'); setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea(''); setError(''); }}
+          />
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4">
             {STATUS_COLS.map(col => {
               const colItems = items.filter(i => i.status === col.key);
+              // Check if any dragged item can be dropped here
+              const draggedItem = draggedId ? items.find(i => i.id === draggedId) : null;
+              const canDrop = draggedItem
+                ? (NEXT_STATUS[draggedItem.status] || []).includes(col.key) && draggedItem.status !== col.key
+                : false;
+              const isOver = dragOverCol === col.key;
+
               return (
-                <div key={col.key} className="flex-shrink-0 w-72">
+                <div
+                  key={col.key}
+                  className="flex-shrink-0 w-72"
+                  onDragOver={e => {
+                    if (!canDrop) return;
+                    e.preventDefault();
+                    setDragOverCol(col.key);
+                  }}
+                  onDragLeave={() => setDragOverCol(null)}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setDragOverCol(null);
+                    if (draggedId && canDrop) {
+                      changeStatus(draggedId, col.key);
+                    }
+                    setDraggedId(null);
+                  }}
+                >
                   <div className={`border-t-4 ${col.color} ${col.bg} rounded-t-lg px-3 py-2.5`}>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{col.label}</span>
@@ -197,28 +232,47 @@ export default function KaizenPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2 mt-2 min-h-[100px]">
+                  <div className={`space-y-2 mt-2 min-h-[100px] rounded-b-lg transition-colors ${
+                    isOver && canDrop
+                      ? 'bg-brand-50 dark:bg-brand-900/20 ring-2 ring-brand-300 dark:ring-brand-600 ring-dashed'
+                      : draggedId && canDrop
+                        ? 'bg-gray-50 dark:bg-gray-800/50'
+                        : ''
+                  }`}>
                     {colItems.map(item => (
-                      <button
+                      <div
                         key={item.id}
+                        draggable
+                        onDragStart={e => {
+                          setDraggedId(item.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
                         onClick={() => openDetail(item)}
-                        className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md hover:border-brand-300 dark:hover:border-brand-600 transition-all"
+                        className={`w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-grab hover:shadow-md hover:border-brand-300 dark:hover:border-brand-600 transition-all select-none ${
+                          draggedId === item.id ? 'opacity-40 scale-95' : ''
+                        }`}
                       >
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1 line-clamp-2">
-                          {item.title}
-                        </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
-                          {item.problem}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${IMPACT_BADGE[item.expectedImpact] || ''}`}>
-                            {item.expectedImpact}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {item.submittedBy ? `${item.submittedBy.firstName} ${item.submittedBy.lastName?.[0] || ''}.` : '—'}
-                          </span>
+                        <div className="flex items-start gap-2">
+                          <GripVertical className="w-4 h-4 text-gray-300 dark:text-gray-600 mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1 line-clamp-2">
+                              {item.title}
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
+                              {item.problem}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${IMPACT_BADGE[item.expectedImpact] || ''}`}>
+                                {item.expectedImpact}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {item.submittedBy ? `${item.submittedBy.firstName} ${item.submittedBy.lastName?.[0] || ''}.` : '—'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -234,9 +288,10 @@ export default function KaizenPage() {
   if (view === 'create') {
     return (
       <div>
-        <button onClick={() => setView('board')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
-          <ChevronLeft className="w-4 h-4" /> Back to board
-        </button>
+        <Breadcrumb items={[
+          { label: 'Kaizen Board', onClick: () => setView('board') },
+          { label: 'New Idea' },
+        ]} />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">New Kaizen Idea</h1>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-xl">
           {error && (
@@ -303,9 +358,11 @@ export default function KaizenPage() {
     if (editing) {
       return (
         <div>
-          <button onClick={() => setEditing(false)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
-            <ChevronLeft className="w-4 h-4" /> Cancel editing
-          </button>
+          <Breadcrumb items={[
+            { label: 'Kaizen Board', onClick: () => { setView('board'); setSelected(null); setEditing(false); } },
+            { label: selected.title, onClick: () => setEditing(false) },
+            { label: 'Edit' },
+          ]} />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Edit: {selected.title}</h1>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-xl">
             {error && (
@@ -362,9 +419,10 @@ export default function KaizenPage() {
 
     return (
       <div>
-        <button onClick={() => { setView('board'); setSelected(null); }} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
-          <ChevronLeft className="w-4 h-4" /> Back to board
-        </button>
+        <Breadcrumb items={[
+          { label: 'Kaizen Board', onClick: () => { setView('board'); setSelected(null); } },
+          { label: selected.title },
+        ]} />
 
         <div className="flex items-start justify-between mb-6">
           <div>

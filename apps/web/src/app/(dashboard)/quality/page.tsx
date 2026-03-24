@@ -7,6 +7,10 @@ import {
   Plus, ChevronLeft, X, CheckCircle, AlertTriangle,
   FileText, ClipboardList, BarChart3, AlertOctagon,
 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 // ===== TYPES =====
 interface Checkpoint {
@@ -80,6 +84,7 @@ export default function QualityPage() {
   const [tab, setTab] = useState<Tab>('inspections');
   const [view, setView] = useState<View>('list');
   const [error, setError] = useState('');
+  const { toast } = useToast();
 
   // Inspections
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -154,6 +159,7 @@ export default function QualityPage() {
       });
       setResults(r);
       setView('inspect');
+      toast('success', 'Inspection started');
     } catch (e: any) {
       setError(e.message || 'Failed to create inspection');
     } finally {
@@ -177,6 +183,7 @@ export default function QualityPage() {
       setSelectedInsp(updated);
       setInspections(prev => prev.map(i => i.id === updated.id ? updated : i));
       setView('detail');
+      toast('success', 'Results submitted');
     } catch (e: any) {
       setError(e.message || 'Failed to submit results');
     } finally {
@@ -208,6 +215,7 @@ export default function QualityPage() {
       setTemplates(prev => [tmpl, ...prev]);
       setView('list');
       setTmplName(''); setTmplDesc(''); setTmplFamily(''); setTmplCheckpoints([]);
+      toast('success', 'Template created');
     } catch (e: any) {
       setError(e.message || 'Failed to create template');
     } finally {
@@ -229,6 +237,7 @@ export default function QualityPage() {
       setNcrs(prev => [ncr, ...prev]);
       setView('list');
       setNcrTitle(''); setNcrDesc(''); setNcrSeverity('minor');
+      toast('success', 'NCR created');
     } catch (e: any) {
       setError(e.message || 'Failed to create NCR');
     } finally {
@@ -293,11 +302,7 @@ export default function QualityPage() {
         </div>
       )}
 
-      {loading && (
-        <div className="flex items-center justify-center h-32">
-          <div className="w-6 h-6 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
-        </div>
-      )}
+      {loading && <SkeletonList count={3} />}
 
       {/* ===== INSPECTIONS TAB ===== */}
       {!loading && tab === 'inspections' && view === 'list' && (
