@@ -7,10 +7,10 @@ const VALID_IMPACTS = ['low', 'medium', 'high'];
 // Server-side state machine — only these transitions are allowed
 const NEXT_STATUS: Record<string, string[]> = {
   submitted: ['under_review', 'rejected'],
-  under_review: ['approved', 'rejected'],
-  approved: ['in_progress', 'rejected'],
-  in_progress: ['completed'],
-  completed: [],
+  under_review: ['submitted', 'approved', 'rejected'],
+  approved: ['under_review', 'in_progress', 'rejected'],
+  in_progress: ['approved', 'completed'],
+  completed: ['in_progress'],
   rejected: ['submitted'],
 };
 
