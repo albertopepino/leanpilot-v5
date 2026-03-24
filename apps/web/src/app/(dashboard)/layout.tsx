@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           border-r border-gray-200/50 dark:border-gray-700/50
           shadow-xl shadow-gray-200/20 dark:shadow-none
           transform transition-transform duration-300 ease-out
-          lg:translate-x-0
+          lg:translate-x-0 flex flex-col
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
@@ -227,8 +227,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* User footer */}
-        <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-4">
+        {/* User footer — pinned to bottom */}
+        <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 px-4 py-4">
           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-500
                             flex items-center justify-center shadow-sm">
