@@ -25,8 +25,10 @@
 }
 
 body {
-  @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+  @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100;
 }
+
+/* ── Animations ─────────────────────────────────────── */
 
 @keyframes slide-in-from-right {
   from { transform: translateX(100%); opacity: 0; }
@@ -35,4 +37,33 @@ body {
 
 .animate-in.slide-in-from-right {
   animation: slide-in-from-right 0.2s ease-out;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out backwards;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out backwards;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-scale-in,
+  .animate-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
