@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CorporateService } from './corporate.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,5 +18,25 @@ export class CorporateController {
   @ApiOperation({ summary: 'Corporate overview with all sites' })
   async getOverview(@CurrentUser('corporateId') corporateId: string) {
     return this.corporate.getOverview(corporateId);
+  }
+
+  @Get('sites/:id')
+  @Roles('corporate_admin')
+  @ApiOperation({ summary: 'Site detail with users, workstations, recent activity' })
+  async getSiteDetail(
+    @Param('id') siteId: string,
+    @CurrentUser('corporateId') corporateId: string,
+  ) {
+    return this.corporate.getSiteDetail(siteId, corporateId);
+  }
+
+  @Get('oee')
+  @Roles('corporate_admin')
+  @ApiOperation({ summary: 'Consolidated OEE across all sites' })
+  async getConsolidatedOee(
+    @CurrentUser('corporateId') corporateId: string,
+    @Query('period') period?: string,
+  ) {
+    return this.corporate.getConsolidatedOee(corporateId, period || 'week');
   }
 }
