@@ -17,6 +17,9 @@ interface KaizenIdea {
   expectedImpact: string;
   actualResult: string | null;
   area: string | null;
+  expectedSavings: number | null;
+  actualSavings: number | null;
+  savingsType: string | null;
   createdAt: string;
   submittedBy: { firstName: string; lastName: string };
 }
@@ -60,6 +63,8 @@ export default function KaizenPage() {
   const [solution, setSolution] = useState('');
   const [impact, setImpact] = useState('medium');
   const [area, setArea] = useState('');
+  const [expectedSavings, setExpectedSavings] = useState('');
+  const [savingsType, setSavingsType] = useState('cost');
   const [creating, setCreating] = useState(false);
 
   // Edit mode
@@ -90,10 +95,13 @@ export default function KaizenPage() {
         proposedSolution: solution.trim() || undefined,
         expectedImpact: impact,
         area: area.trim() || undefined,
+        expectedSavings: expectedSavings ? Number(expectedSavings) : undefined,
+        savingsType: savingsType || undefined,
       });
       setItems(prev => [idea, ...prev]);
       setView('board');
       setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea('');
+      setExpectedSavings(''); setSavingsType('cost');
       toast('success', 'Kaizen idea submitted');
     } catch (e: any) {
       setError(e.message || 'Failed to create idea');
@@ -176,6 +184,38 @@ export default function KaizenPage() {
             New Idea
           </button>
         </div>
+
+        {/* Savings Counter */}
+        {(() => {
+          const completed = items.filter(i => i.status === 'completed');
+          const totalActual = completed.reduce((sum, i) => sum + (i.actualSavings || 0), 0);
+          const totalExpected = items.reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
+          const pipeline = items.filter(i => !['completed','rejected'].includes(i.status));
+          const pipelineExpected = pipeline.reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
+          if (totalExpected <= 0 && totalActual <= 0) return null;
+          return (
+            <div className="mb-4 grid grid-cols-3 gap-3">
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800 rounded-xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                  &euro;{totalActual.toLocaleString()}
+                </p>
+                <p className="text-[11px] font-medium text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-wider mt-0.5">Verified Savings</p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800 rounded-xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 tabular-nums">
+                  &euro;{pipelineExpected.toLocaleString()}
+                </p>
+                <p className="text-[11px] font-medium text-blue-600/70 dark:text-blue-400/70 uppercase tracking-wider mt-0.5">Pipeline (Expected)</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700 rounded-xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-gray-700 dark:text-gray-300 tabular-nums">
+                  &euro;{totalExpected.toLocaleString()}
+                </p>
+                <p className="text-[11px] font-medium text-gray-500/70 dark:text-gray-400/70 uppercase tracking-wider mt-0.5">Total Expected</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
@@ -262,6 +302,18 @@ export default function KaizenPage() {
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
                               {item.problem}
                             </p>
+                            {item.expectedSavings != null && item.expectedSavings > 0 && (
+                              <div className="flex items-center gap-1 mb-1.5">
+                                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                  {item.status === 'completed' && item.actualSavings != null
+                                    ? `€${item.actualSavings.toLocaleString()} saved`
+                                    : `€${item.expectedSavings.toLocaleString()} est.`}
+                                </span>
+                                {item.savingsType && (
+                                  <span className="text-[10px] text-gray-400 capitalize">({item.savingsType})</span>
+                                )}
+                              </div>
+                            )}
                             <div className="flex items-center justify-between">
                               <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${IMPACT_BADGE[item.expectedImpact] || ''}`}>
                                 {item.expectedImpact}
@@ -339,6 +391,26 @@ export default function KaizenPage() {
                 className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               />
             </label>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Expected Savings (EUR)</span>
+                <input type="number" min="0" step="100" value={expectedSavings} onChange={e => setExpectedSavings(e.target.value)}
+                  placeholder="e.g. 5000"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Savings Type</span>
+                <select value={savingsType} onChange={e => setSavingsType(e.target.value)}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <option value="cost">Cost Reduction</option>
+                  <option value="time">Time Saving</option>
+                  <option value="quality">Quality Improvement</option>
+                  <option value="safety">Safety Improvement</option>
+                  <option value="productivity">Productivity Gain</option>
+                </select>
+              </label>
+            </div>
           </div>
           <button onClick={createIdea} disabled={creating || !title.trim() || !problem.trim()}
             className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"

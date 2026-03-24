@@ -31,6 +31,9 @@ export class KaizenController {
       expectedImpact?: string;
       area?: string;
       photoUrl?: string;
+      expectedSavings?: number;
+      actualSavings?: number;
+      savingsType?: string;
       gembaObservationId?: string;
     },
   ) {
@@ -56,6 +59,9 @@ export class KaizenController {
       area?: string;
       result?: string;
       photoUrl?: string;
+      expectedSavings?: number;
+      actualSavings?: number;
+      savingsType?: string;
     },
   ) {
     return this.kaizen.update(id, siteId, body);

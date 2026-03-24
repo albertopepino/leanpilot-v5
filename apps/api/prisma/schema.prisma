@@ -400,6 +400,9 @@ model KaizenIdea {
   implementedAt      DateTime?
   result             String?
   photoUrl           String?
+  expectedSavings    Float?    // estimated cost reduction in EUR
+  actualSavings      Float?    // verified savings after implementation
+  savingsType        String?   // time | cost | quality | safety | productivity
   gembaObservationId String?   @unique
   createdAt          DateTime  @default(now())
 

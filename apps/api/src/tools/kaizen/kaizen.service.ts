@@ -49,6 +49,9 @@ export class KaizenService {
     expectedImpact?: string;
     area?: string;
     photoUrl?: string;
+    expectedSavings?: number;
+    actualSavings?: number;
+    savingsType?: string;
     gembaObservationId?: string;
   }) {
     if (data.expectedImpact && !VALID_IMPACTS.includes(data.expectedImpact)) {
@@ -77,6 +80,9 @@ export class KaizenService {
     area?: string;
     result?: string;
     photoUrl?: string;
+    expectedSavings?: number;
+    actualSavings?: number;
+    savingsType?: string;
   }) {
     const idea = await this.prisma.kaizenIdea.findFirst({ where: { id, siteId } });
     if (!idea) throw new NotFoundException('Kaizen idea not found');
