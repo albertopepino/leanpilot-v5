@@ -464,8 +464,8 @@ export default function EquipmentPage() {
                           className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
                           <option value="preventive">Preventive</option>
                           <option value="predictive">Predictive</option>
-                          <option value="corrective">Corrective</option>
-                          <option value="autonomous">Autonomous</option>
+                          <option value="condition_based">Condition Based</option>
+                          <option value="calibration">Calibration</option>
                         </select>
                       </label>
                       <label className="block">
@@ -559,10 +559,8 @@ export default function EquipmentPage() {
                         <select value={logType} onChange={e => setLogType(e.target.value)}
                           className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
                           <option value="preventive">Preventive</option>
-                          <option value="predictive">Predictive</option>
                           <option value="corrective">Corrective</option>
-                          <option value="autonomous">Autonomous</option>
-                          <option value="breakdown">Breakdown</option>
+                          <option value="emergency">Emergency</option>
                         </select>
                       </label>
                       <label className="block">

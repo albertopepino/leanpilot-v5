@@ -148,7 +148,7 @@ export default function DashboardPage() {
   const production = data?.production;
   const attention = data?.attention;
 
-  const qualityRate = production ? Math.max(0, 100 - production.scrapRate) : 0;
+  const qualityRate = production && typeof production.scrapRate === 'number' ? Math.max(0, 100 - production.scrapRate) : 0;
   const summaryPills: string[] = [];
   if (attention?.machinesDown) summaryPills.push(`${attention.machinesDown} machine${attention.machinesDown > 1 ? 's' : ''} down`);
   if (attention?.posBehind) summaryPills.push(`${attention.posBehind} PO${attention.posBehind > 1 ? 's' : ''} behind`);

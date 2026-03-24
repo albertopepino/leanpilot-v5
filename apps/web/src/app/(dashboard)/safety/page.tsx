@@ -19,7 +19,7 @@ import { GradientStatCard } from '@/components/ui/GradientStatCard';
 interface SafetyIncident {
   id: string;
   type: 'injury' | 'near_miss' | 'property_damage';
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: 'minor' | 'moderate' | 'serious' | 'critical';
   title: string;
   description: string;
   location: string;
@@ -266,9 +266,9 @@ export default function SafetyPage() {
           <select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)}
             className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white">
             <option value="all">All Severity</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value="minor">Minor</option>
+            <option value="moderate">Moderate</option>
+            <option value="serious">Serious</option>
             <option value="critical">Critical</option>
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}

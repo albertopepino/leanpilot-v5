@@ -61,6 +61,7 @@ interface GradientStatCardProps {
 function useCountUp(target: number, duration = 800, decimals = 0, delay = 0) {
   const [current, setCurrent] = useState(0);
   const rafRef = useRef<number>();
+  const safeTarget = typeof target === 'number' && !isNaN(target) ? target : 0;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -69,7 +70,7 @@ function useCountUp(target: number, duration = 800, decimals = 0, delay = 0) {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
         const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-        setCurrent(parseFloat((eased * target).toFixed(decimals)));
+        setCurrent(parseFloat((eased * safeTarget).toFixed(decimals)));
         if (progress < 1) {
           rafRef.current = requestAnimationFrame(animate);
         }
@@ -81,7 +82,7 @@ function useCountUp(target: number, duration = 800, decimals = 0, delay = 0) {
       clearTimeout(timeout);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [target, duration, decimals, delay]);
+  }, [safeTarget, duration, decimals, delay]);
 
   return current;
 }
