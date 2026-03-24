@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import FileUpload from '@/components/FileUpload';
 import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star } from 'lucide-react';
 
 interface FiveSScore {
@@ -50,6 +51,7 @@ export default function FiveSPage() {
   // Scoring state
   const [scores, setScores] = useState<Record<string, number>>({});
   const [scoreNotes, setScoreNotes] = useState<Record<string, string>>({});
+  const [scorePhotos, setScorePhotos] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const loadAudits = useCallback(() => {
@@ -75,13 +77,16 @@ export default function FiveSPage() {
       // Pre-fill scores
       const s: Record<string, number> = {};
       const n: Record<string, string> = {};
+      const p: Record<string, string> = {};
       (audit.scores || []).forEach(sc => {
         s[sc.category] = sc.score;
         n[sc.category] = sc.notes || '';
+        if (sc.photoUrl) p[sc.category] = sc.photoUrl;
       });
       CATEGORIES.forEach(c => { if (s[c.key] === undefined) s[c.key] = 0; });
       setScores(s);
       setScoreNotes(n);
+      setScorePhotos(p);
       setView('scoring');
       setNewArea('');
       setNewNotes('');
@@ -100,13 +105,16 @@ export default function FiveSPage() {
         setSelected(full);
         const s: Record<string, number> = {};
         const n: Record<string, string> = {};
+        const p: Record<string, string> = {};
         (full.scores || []).forEach(sc => {
           s[sc.category] = sc.score;
           n[sc.category] = sc.notes || '';
+          if (sc.photoUrl) p[sc.category] = sc.photoUrl;
         });
         CATEGORIES.forEach(c => { if (s[c.key] === undefined) s[c.key] = 0; });
         setScores(s);
         setScoreNotes(n);
+        setScorePhotos(p);
       })
       .catch(() => {});
     setView('detail');
@@ -121,6 +129,7 @@ export default function FiveSPage() {
         category: c.key,
         score: scores[c.key] || 0,
         notes: scoreNotes[c.key] || undefined,
+        photoUrl: scorePhotos[c.key] || undefined,
       }));
       const updated = await api.patch<FiveSAudit>(`/tools/five-s/${selected.id}/scores`, { scores: payload });
       setSelected(updated);
@@ -398,6 +407,16 @@ export default function FiveSPage() {
                 placeholder="Notes for this category..."
                 className="w-full px-3 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-brand-500"
               />
+              <div className="mt-2">
+                <FileUpload
+                  func="five-s"
+                  label="Photo evidence"
+                  compact
+                  value={scorePhotos[cat.key]}
+                  onUpload={(url) => setScorePhotos(p => ({ ...p, [cat.key]: url }))}
+                  onClear={() => setScorePhotos(p => { const copy = { ...p }; delete copy[cat.key]; return copy; })}
+                />
+              </div>
             </div>
           ))}
         </div>

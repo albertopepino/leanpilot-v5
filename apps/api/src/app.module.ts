@@ -14,11 +14,13 @@ import { UploadsModule } from './uploads/uploads.module';
 import { FiveSModule } from './tools/five-s/five-s.module';
 import { KaizenModule } from './tools/kaizen/kaizen.module';
 import { QualityModule } from './quality/quality.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     SitesModule,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import FileUpload from '@/components/FileUpload';
 import {
   Eye, Plus, CheckCircle2, Clock, ChevronRight, X, Send,
   AlertTriangle, Loader2, ArrowLeft,
@@ -157,7 +158,7 @@ export default function GembaPage() {
         severity: obsSeverity,
         description: obsDesc,
         ...(obsWs ? { workstationId: obsWs } : {}),
-        ...(obsPhoto.trim() && /^https?:\/\//i.test(obsPhoto) ? { photoUrl: obsPhoto } : {}),
+        ...(obsPhoto ? { photoUrl: obsPhoto } : {}),
         ...(obsQuote.trim() ? { operatorQuote: obsQuote } : {}),
       });
       // Reset form
@@ -418,13 +419,13 @@ export default function GembaPage() {
 
           {/* Photo URL */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Photo URL (optional)</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Photo (optional)</label>
+            <FileUpload
+              func="gemba"
+              label="Upload photo"
               value={obsPhoto}
-              onChange={e => setObsPhoto(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-              placeholder="https://..."
+              onUpload={(url) => setObsPhoto(url)}
+              onClear={() => setObsPhoto('')}
             />
           </div>
 

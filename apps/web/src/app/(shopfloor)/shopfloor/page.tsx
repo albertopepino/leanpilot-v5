@@ -178,6 +178,31 @@ export default function ShopFloorPage() {
     return () => clearInterval(t);
   }, []);
 
+  // ── Browser back button support ────────────────────────────────────
+  useEffect(() => {
+    const onPopState = () => {
+      // Browser back pressed — go to previous step instead of leaving page
+      setStep(prev => {
+        if (prev === 'close') return 'board';
+        if (prev === 'board' || prev === 'po') {
+          setSelectedWs(null);
+          setActiveRun(null);
+          return 'workstation';
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Push history state on step changes so browser back works
+  useEffect(() => {
+    if (step !== 'workstation') {
+      window.history.pushState({ step }, '', '/shopfloor');
+    }
+  }, [step]);
+
   // ── Actions ────────────────────────────────────────────────────────
 
   const selectWorkstation = (ws: Workstation) => {

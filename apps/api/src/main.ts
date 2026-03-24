@@ -13,9 +13,15 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.NODE_ENV === 'production'
       ? ['https://leanpilot.me', 'https://www.leanpilot.me']
-      : ['http://localhost:3000'],
+      : ['http://localhost:3000', 'http://localhost:4001'],
     credentials: true,
   });
+
+  // Global audit interceptor — logs all POST/PATCH/DELETE requests
+  const auditInterceptor = app.get(
+    (await import('./audit/audit.interceptor')).AuditInterceptor,
+  );
+  app.useGlobalInterceptors(auditInterceptor);
 
   // Validation pipe — auto-validate DTOs
   app.useGlobalPipes(

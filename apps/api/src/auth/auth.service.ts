@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -12,6 +13,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private audit: AuditService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -21,11 +23,13 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
+      this.audit.log({ userEmail: dto.email, action: 'login_failed', entityType: 'auth', result: 'failure', metadata: { reason: 'invalid_credentials' } });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const passwordValid = await bcrypt.compare(dto.password, user.password);
     if (!passwordValid) {
+      this.audit.log({ userId: user.id, userEmail: dto.email, action: 'login_failed', entityType: 'auth', result: 'failure', metadata: { reason: 'wrong_password' } });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -36,6 +40,8 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user);
+
+    this.audit.log({ userId: user.id, userEmail: user.email, action: 'login', entityType: 'auth', entityId: user.id });
 
     return {
       ...tokens,

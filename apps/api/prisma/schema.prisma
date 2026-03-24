@@ -102,6 +102,27 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// ===== AUDIT LOG (GDPR Art. 30/32, ISO 9001 Clause 7.5) =====
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userEmail  String?
+  action     String   // create, update, delete, login, login_failed, logout, export
+  entityType String   // user, inspection, ncr, audit_5s, kaizen, gemba, order, run, file
+  entityId   String?
+  metadata   String?  // JSON: before/after diff, extra context
+  ipAddress  String?
+  userAgent  String?
+  result     String   @default("success") // success, failure
+  timestamp  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
 // ===== PRODUCTION: Shop Floor =====
 
 model Workstation {
@@ -438,6 +459,7 @@ model NonConformanceReport {
   reporterId       String
   orderId          String?
   workstationId    String?
+  title            String    @default("")
   severity         String    @default("minor") // minor | major | critical
   description      String
   defectQuantity   Int       @default(0)

@@ -107,6 +107,7 @@ export class QualityController {
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') reporterId: string,
     @Body() body: {
+      title?: string;
       severity: string;
       description: string;
       defectQuantity?: number;

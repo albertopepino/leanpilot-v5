@@ -207,6 +207,7 @@ export class QualityService {
   }
 
   async createNcr(siteId: string, reporterId: string, data: {
+    title?: string;
     severity: string;
     description: string;
     defectQuantity?: number;

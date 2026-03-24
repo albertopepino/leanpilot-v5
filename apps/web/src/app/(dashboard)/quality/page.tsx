@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import FileUpload from '@/components/FileUpload';
 import {
   Plus, ChevronLeft, X, CheckCircle, AlertTriangle,
   FileText, ClipboardList, BarChart3, AlertOctagon,
@@ -713,6 +714,36 @@ export default function QualityPage() {
                 <p className="text-sm text-gray-800 dark:text-gray-200">{selectedNcr.correctiveAction}</p>
               </div>
             )}
+            {/* Attachments */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Attachments</h3>
+              {(selectedNcr as any).attachments?.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {((selectedNcr as any).attachments || []).map((att: any) => (
+                    <div key={att.id} className="flex items-center gap-2 text-sm">
+                      <a href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline truncate">
+                        {att.fileName}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <FileUpload
+                func="quality"
+                label="Add attachment"
+                accept="image/*,.pdf,.doc,.docx"
+                onUpload={async (url, fileName) => {
+                  try {
+                    await api.post(`/quality/ncr/${selectedNcr.id}/attachments`, { fileUrl: url, fileName });
+                    // Refresh NCR detail
+                    const fresh = await api.get<NCR>(`/quality/ncr/${selectedNcr.id}`);
+                    setSelectedNcr(fresh);
+                    setNcrs(prev => prev.map(n => n.id === fresh.id ? fresh : n));
+                  } catch {}
+                }}
+              />
+            </div>
+
             {/* Status transitions */}
             {selectedNcr.status !== 'verified' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
