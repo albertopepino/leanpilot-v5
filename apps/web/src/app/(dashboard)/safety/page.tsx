@@ -155,7 +155,8 @@ export default function SafetyPage() {
         location: newLocation.trim(),
         date: newDate,
         injuredPerson: newType === 'injury' && newInjuredPerson.trim() ? newInjuredPerson.trim() : undefined,
-        injuryDescription: newType === 'injury' && newInjuryDesc.trim() ? newInjuryDesc.trim() : undefined,
+        injuryType: newType === 'injury' && newInjuryDesc.trim() ? newInjuryDesc.trim() : undefined,
+        immediateAction: undefined,
         photoUrl: newPhotoUrl || undefined,
       });
       setIncidents(prev => [incident, ...prev]);

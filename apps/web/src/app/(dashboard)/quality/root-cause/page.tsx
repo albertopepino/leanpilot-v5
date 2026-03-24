@@ -219,12 +219,19 @@ export default function RootCausePage() {
     setFwSaving(true);
     try {
       const filledSteps = fwSteps.filter(s => s.answer.trim());
+      // Step 1: Create the analysis
       const fw = await api.post<FiveWhy>('/rca/five-why', {
         title: fwTitle.trim(),
-        problemStatement: fwProblem.trim(),
-        category: fwCategory.trim() || undefined,
-        steps: filledSteps.map((s, i) => ({ stepNumber: i + 1, question: s.question, answer: s.answer.trim() })),
+        categoryTag: fwCategory.trim() || undefined,
       });
+      // Step 2: Add each step via separate endpoint
+      for (const [i, s] of filledSteps.entries()) {
+        await api.post(`/rca/five-why/${fw.id}/steps`, {
+          stepNumber: i + 1,
+          question: s.question,
+          answer: s.answer.trim(),
+        });
+      }
       const unified: UnifiedRca = {
         id: fw.id, method: 'five-why', title: fw.title, problemStatement: fw.problemStatement,
         status: fw.status, category: fw.category, linkedNcrId: fw.linkedNcrId,
@@ -248,12 +255,15 @@ export default function RootCausePage() {
       const allCauses = Object.entries(ishCauses).flatMap(([cat, causes]) =>
         causes.map(c => ({ category: cat, description: c.description, isRootCause: c.isRootCause }))
       );
+      // Step 1: Create the analysis
       const ish = await api.post<Ishikawa>('/rca/ishikawa', {
         title: ishTitle.trim(),
-        problemStatement: ishProblem.trim(),
-        category: ishCategory.trim() || undefined,
-        causes: allCauses,
+        categoryTag: ishCategory.trim() || undefined,
       });
+      // Step 2: Add each cause via separate endpoint
+      for (const cause of allCauses) {
+        await api.post(`/rca/ishikawa/${ish.id}/causes`, cause);
+      }
       const unified: UnifiedRca = {
         id: ish.id, method: 'ishikawa', title: ish.title, problemStatement: ish.problemStatement,
         status: ish.status, category: ish.category, linkedNcrId: ish.linkedNcrId,
@@ -274,12 +284,18 @@ export default function RootCausePage() {
     if (!edTitle.trim() || !edProblem.trim()) return;
     setEdSaving(true);
     try {
+      // Step 1: Create the 8D report
       const ed = await api.post<EightD>('/rca/eight-d', {
         title: edTitle.trim(),
-        problemStatement: edProblem.trim(),
-        category: edCategory.trim() || undefined,
-        ...edFields,
+        categoryTag: edCategory.trim() || undefined,
       });
+      // Step 2: Update with D-fields via PATCH
+      const dFields = Object.fromEntries(
+        Object.entries(edFields).filter(([, v]) => v && String(v).trim())
+      );
+      if (Object.keys(dFields).length > 0) {
+        await api.patch(`/rca/eight-d/${ed.id}`, dFields);
+      }
       const unified: UnifiedRca = {
         id: ed.id, method: 'eight-d', title: ed.title, problemStatement: ed.problemStatement,
         status: ed.status, category: ed.category, linkedNcrId: ed.linkedNcrId,

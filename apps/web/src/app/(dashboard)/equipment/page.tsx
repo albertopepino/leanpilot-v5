@@ -219,8 +219,8 @@ export default function EquipmentPage() {
       const plan = await api.post<MaintenancePlan>('/maintenance/plans', {
         workstationId: selected.id,
         type: planType,
-        description: planDesc.trim(),
-        frequency: planFreq,
+        name: planDesc.trim(),
+        frequencyDays: Number(planFreq),
         nextDueDate: planDue,
       });
       setPlans(prev => [plan, ...prev]);
@@ -242,7 +242,7 @@ export default function EquipmentPage() {
         workstationId: selected.id,
         type: logType,
         description: logDesc.trim(),
-        duration: Number(logDuration),
+        durationMinutes: Number(logDuration),
         cost: logCost ? Number(logCost) : undefined,
       });
       setLogs(prev => [log, ...prev]);
@@ -260,14 +260,16 @@ export default function EquipmentPage() {
     if (!selected) return;
     setCiltSaving(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
       const check = await api.post<CiltCheck>('/maintenance/cilt', {
         workstationId: selected.id,
-        cleaning: ciltCleaning,
-        inspection: ciltInspection,
-        lubrication: ciltLubrication,
-        tightening: ciltTightening,
-        abnormality: ciltAbnormality,
-        notes: ciltNotes.trim() || undefined,
+        date: today,
+        cleaningDone: ciltCleaning,
+        inspectionDone: ciltInspection,
+        lubricationDone: ciltLubrication,
+        tighteningDone: ciltTightening,
+        abnormalityFound: ciltAbnormality,
+        abnormalityDescription: ciltAbnormality && ciltNotes.trim() ? ciltNotes.trim() : undefined,
       });
       setCiltChecks(prev => [check, ...prev]);
       setCiltCleaning(false); setCiltInspection(false);
