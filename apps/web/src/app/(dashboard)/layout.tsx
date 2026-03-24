@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/api';
 import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
-  Lightbulb, Settings, LogOut, Menu, X, ChevronDown,
+  Lightbulb, Settings, LogOut, Menu, X,
+  Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,10 +14,15 @@ import { usePathname } from 'next/navigation';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer' },
   { href: '/corporate', label: 'Corporate', icon: Building2, minRole: 'corporate_admin' },
+  { href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager' },
   { href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator' },
   { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator' },
+  { href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator' },
+  { href: '/dashboard/oee', label: 'OEE', icon: Gauge, minRole: 'viewer' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer' },
+  { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true },
+  { href: '/andon', label: 'Andon Board', icon: Radio, minRole: 'viewer', external: true },
 ];
 
 const ROLE_LEVEL: Record<string, number> = {
@@ -31,18 +37,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const u = auth.getUser();
     if (!u) {
       router.push('/login');
-      return;
+    } else {
+      setUser(u);
     }
-    setUser(u);
+    setHydrated(true);
   }, [router]);
 
-  if (!user) return null;
+  if (!hydrated || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const userLevel = ROLE_LEVEL[user.role] || 0;
   const visibleNav = NAV_ITEMS.filter(item => userLevel >= ROLE_LEVEL[item.minRole]);
@@ -106,19 +120,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 px-3 py-4 space-y-1">
           {visibleNav.map(item => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(item.href + '/');
+            const active = item.href === '/dashboard'
+              ? pathname === '/dashboard'
+              : pathname === item.href || pathname.startsWith(item.href + '/');
+            const isExternal = (item as any).external;
+            const className = `
+              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+              ${active
+                ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }
+            `;
+            // External links (shopfloor, andon) use <a> to do full page navigation
+            // out of the (dashboard) layout group
+            if (isExternal) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={className}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {item.label}
+                </a>
+              );
+            }
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                  ${active
-                    ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }
-                `}
+                className={className}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {item.label}
@@ -140,7 +173,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {user.firstName} {user.lastName}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                {user.role?.replace('_', ' ')}
+                {user.role?.replace(/_/g, ' ')}
               </p>
             </div>
             <button

@@ -1,15 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { Plus, Lightbulb, ArrowRight } from 'lucide-react';
+import { Plus, Lightbulb, ChevronLeft, X, ArrowRight, Edit2 } from 'lucide-react';
+
+interface KaizenIdea {
+  id: string;
+  title: string;
+  problem: string;
+  proposedSolution: string | null;
+  status: string;
+  expectedImpact: string;
+  actualResult: string | null;
+  area: string | null;
+  createdAt: string;
+  submittedBy: { firstName: string; lastName: string };
+}
 
 const STATUS_COLS = [
-  { key: 'submitted', label: 'Submitted', color: 'border-gray-300' },
-  { key: 'under_review', label: 'Under Review', color: 'border-blue-400' },
-  { key: 'approved', label: 'Approved', color: 'border-green-400' },
-  { key: 'in_progress', label: 'In Progress', color: 'border-yellow-400' },
-  { key: 'completed', label: 'Completed', color: 'border-emerald-500' },
+  { key: 'submitted', label: 'Submitted', color: 'border-gray-400', bg: 'bg-gray-50 dark:bg-gray-800/50' },
+  { key: 'under_review', label: 'Under Review', color: 'border-blue-400', bg: 'bg-blue-50/50 dark:bg-blue-900/10' },
+  { key: 'approved', label: 'Approved', color: 'border-green-400', bg: 'bg-green-50/50 dark:bg-green-900/10' },
+  { key: 'in_progress', label: 'In Progress', color: 'border-yellow-400', bg: 'bg-yellow-50/50 dark:bg-yellow-900/10' },
+  { key: 'completed', label: 'Completed', color: 'border-emerald-500', bg: 'bg-emerald-50/50 dark:bg-emerald-900/10' },
+  { key: 'rejected', label: 'Rejected', color: 'border-red-400', bg: 'bg-red-50/50 dark:bg-red-900/10' },
 ];
 
 const IMPACT_BADGE: Record<string, string> = {
@@ -18,89 +32,417 @@ const IMPACT_BADGE: Record<string, string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
-export default function KaizenPage() {
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+const NEXT_STATUS: Record<string, string[]> = {
+  submitted: ['under_review', 'rejected'],
+  under_review: ['approved', 'rejected'],
+  approved: ['in_progress', 'rejected'],
+  in_progress: ['completed'],
+  completed: [],
+  rejected: ['submitted'],
+};
 
-  useEffect(() => {
-    api.get<any[]>('/tools/kaizen')
-      .then(setItems)
-      .catch(console.error)
+type View = 'board' | 'create' | 'detail';
+
+export default function KaizenPage() {
+  const [items, setItems] = useState<KaizenIdea[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<View>('board');
+  const [selected, setSelected] = useState<KaizenIdea | null>(null);
+  const [error, setError] = useState('');
+
+  // Create form
+  const [title, setTitle] = useState('');
+  const [problem, setProblem] = useState('');
+  const [solution, setSolution] = useState('');
+  const [impact, setImpact] = useState('medium');
+  const [area, setArea] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+
+  const loadItems = useCallback(() => {
+    api.get<KaizenIdea[]>('/tools/kaizen')
+      .then(data => setItems(Array.isArray(data) ? data : []))
+      .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kaizen Board</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Continuous improvement: submit ideas, review, implement, verify
-          </p>
-        </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">
-          <Plus className="w-4 h-4" />
-          New Idea
-        </button>
-      </div>
+  useEffect(() => { loadItems(); }, [loadItems]);
 
-      {loading ? (
-        <div className="flex items-center justify-center h-32">
-          <div className="w-6 h-6 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+  const createIdea = async () => {
+    if (!title.trim() || !problem.trim()) return;
+    setCreating(true);
+    setError('');
+    try {
+      const idea = await api.post<KaizenIdea>('/tools/kaizen', {
+        title: title.trim(),
+        problem: problem.trim(),
+        proposedSolution: solution.trim() || undefined,
+        expectedImpact: impact,
+        area: area.trim() || undefined,
+      });
+      setItems(prev => [idea, ...prev]);
+      setView('board');
+      setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea('');
+    } catch (e: any) {
+      setError(e.message || 'Failed to create idea');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const updateIdea = async () => {
+    if (!selected || !title.trim() || !problem.trim()) return;
+    setCreating(true);
+    setError('');
+    try {
+      const updated = await api.patch<KaizenIdea>(`/tools/kaizen/${selected.id}`, {
+        title: title.trim(),
+        problem: problem.trim(),
+        proposedSolution: solution.trim() || undefined,
+        expectedImpact: impact,
+        area: area.trim() || undefined,
+      });
+      setSelected(updated);
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+      setEditing(false);
+    } catch (e: any) {
+      setError(e.message || 'Failed to update idea');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const changeStatus = async (id: string, newStatus: string) => {
+    try {
+      const updated = await api.patch<KaizenIdea>(`/tools/kaizen/${id}/status`, { status: newStatus });
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+      if (selected?.id === id) setSelected(updated);
+    } catch (e: any) {
+      setError(e.message || 'Failed to update status');
+    }
+  };
+
+  const openDetail = (idea: KaizenIdea) => {
+    setSelected(idea);
+    setEditing(false);
+    setView('detail');
+    const currentId = idea.id;
+    api.get<KaizenIdea>(`/tools/kaizen/${currentId}`)
+      .then(full => setSelected(prev => prev?.id === currentId ? full : prev))
+      .catch(() => {});
+  };
+
+  const startEditing = () => {
+    if (!selected) return;
+    setTitle(selected.title);
+    setProblem(selected.problem);
+    setSolution(selected.proposedSolution || '');
+    setImpact(selected.expectedImpact);
+    setArea(selected.area || '');
+    setEditing(true);
+  };
+
+  // ===== BOARD VIEW =====
+  if (view === 'board') {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kaizen Board</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Continuous improvement: submit ideas, review, implement, verify
+            </p>
+          </div>
+          <button
+            onClick={() => { setView('create'); setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea(''); setError(''); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Idea
+          </button>
         </div>
-      ) : items.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-          <Lightbulb className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No Kaizen suggestions yet
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">
-            Kaizen means "change for better." Submit your first improvement idea — even small changes compound into big results.
-          </p>
-        </div>
-      ) : (
-        /* Kanban-style board */
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {STATUS_COLS.map(col => {
-            const colItems = items.filter(i => i.status === col.key);
-            return (
-              <div key={col.key} className="flex-shrink-0 w-64">
-                <div className={`border-t-2 ${col.color} bg-gray-50 dark:bg-gray-800/50 rounded-t-lg px-3 py-2`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{col.label}</span>
-                    <span className="text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">
-                      {colItems.length}
-                    </span>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+            <span className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</span>
+            <button onClick={() => setError('')} aria-label="Dismiss error"><X className="w-4 h-4 text-red-400" /></button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="w-6 h-6 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <Lightbulb className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Kaizen suggestions yet</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">
+              Submit your first improvement idea — even small changes compound into big results.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {STATUS_COLS.map(col => {
+              const colItems = items.filter(i => i.status === col.key);
+              return (
+                <div key={col.key} className="flex-shrink-0 w-72">
+                  <div className={`border-t-4 ${col.color} ${col.bg} rounded-t-lg px-3 py-2.5`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{col.label}</span>
+                      <span className="text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full font-medium">
+                        {colItems.length}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mt-2 min-h-[100px]">
+                    {colItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => openDetail(item)}
+                        className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md hover:border-brand-300 dark:hover:border-brand-600 transition-all"
+                      >
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1 line-clamp-2">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
+                          {item.problem}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${IMPACT_BADGE[item.expectedImpact] || ''}`}>
+                            {item.expectedImpact}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {item.submittedBy ? `${item.submittedBy.firstName} ${item.submittedBy.lastName?.[0] || ''}.` : '—'}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="space-y-2 mt-2">
-                  {colItems.map(item => (
-                    <div
-                      key={item.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-sm transition-shadow"
-                    >
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1 line-clamp-2">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
-                        {item.problem}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${IMPACT_BADGE[item.expectedImpact] || ''}`}>
-                          {item.expectedImpact}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {item.submittedBy.firstName} {item.submittedBy.lastName?.[0]}.
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ===== CREATE VIEW =====
+  if (view === 'create') {
+    return (
+      <div>
+        <button onClick={() => setView('board')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
+          <ChevronLeft className="w-4 h-4" /> Back to board
+        </button>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">New Kaizen Idea</h1>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-xl">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+              <span className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</span>
+              <button onClick={() => setError('')} aria-label="Dismiss error"><X className="w-4 h-4 text-red-400" /></button>
+            </div>
+          )}
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Title *</span>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+              placeholder="Short description of improvement"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
+            />
+          </label>
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Problem / Current State *</span>
+            <textarea value={problem} onChange={e => setProblem(e.target.value)} rows={3}
+              placeholder="What is wrong today? What waste do you see?"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
+            />
+          </label>
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Proposed Solution</span>
+            <textarea value={solution} onChange={e => setSolution(e.target.value)} rows={3}
+              placeholder="How would you fix it?"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Expected Impact</span>
+              <select value={impact} onChange={e => setImpact(e.target.value)}
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Area (optional)</span>
+              <input type="text" value={area} onChange={e => setArea(e.target.value)}
+                placeholder="e.g. Assembly, Shipping"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              />
+            </label>
+          </div>
+          <button onClick={createIdea} disabled={creating || !title.trim() || !problem.trim()}
+            className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            {creating ? 'Submitting...' : 'Submit Idea'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== DETAIL VIEW =====
+  if (view === 'detail' && selected) {
+    const nextStatuses = NEXT_STATUS[selected.status] || [];
+    const statusCol = STATUS_COLS.find(c => c.key === selected.status);
+
+    if (editing) {
+      return (
+        <div>
+          <button onClick={() => setEditing(false)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
+            <ChevronLeft className="w-4 h-4" /> Cancel editing
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Edit: {selected.title}</h1>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-xl">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                <span className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</span>
+                <button onClick={() => setError('')} aria-label="Dismiss error"><X className="w-4 h-4 text-red-400" /></button>
+              </div>
+            )}
+            <label className="block mb-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Title *</span>
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              />
+            </label>
+            <label className="block mb-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Problem *</span>
+              <textarea value={problem} onChange={e => setProblem(e.target.value)} rows={3}
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              />
+            </label>
+            <label className="block mb-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Proposed Solution</span>
+              <textarea value={solution} onChange={e => setSolution(e.target.value)} rows={3}
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Impact</span>
+                <select value={impact} onChange={e => setImpact(e.target.value)}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Area</span>
+                <input type="text" value={area} onChange={e => setArea(e.target.value)}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+              </label>
+            </div>
+            <button onClick={updateIdea} disabled={creating || !title.trim() || !problem.trim()}
+              className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium"
+            >
+              {creating ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <button onClick={() => { setView('board'); setSelected(null); }} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4">
+          <ChevronLeft className="w-4 h-4" /> Back to board
+        </button>
+
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selected.title}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              {selected.submittedBy?.firstName} {selected.submittedBy?.lastName} — {new Date(selected.createdAt).toLocaleDateString()}
+              {selected.area && <> — <span className="text-gray-600 dark:text-gray-300">{selected.area}</span></>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-sm font-medium border-t-2 ${statusCol?.color || ''} ${statusCol?.bg || ''} text-gray-700 dark:text-gray-300`}>
+              {statusCol?.label || selected.status}
+            </span>
+            <button onClick={startEditing} className="p-2 text-gray-400 hover:text-brand-600 transition-colors" aria-label="Edit idea">
+              <Edit2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Problem</h3>
+              <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap">{selected.problem}</p>
+            </div>
+            {selected.proposedSolution && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Proposed Solution</h3>
+                <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap">{selected.proposedSolution}</p>
+              </div>
+            )}
+            {selected.actualResult && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Actual Result</h3>
+                <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap">{selected.actualResult}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Impact</h3>
+              <span className={`px-3 py-1 rounded-full text-sm capitalize ${IMPACT_BADGE[selected.expectedImpact] || ''}`}>
+                {selected.expectedImpact}
+              </span>
+            </div>
+
+            {nextStatuses.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Move To</h3>
+                <div className="flex flex-wrap gap-2">
+                  {nextStatuses.map(ns => {
+                    const col = STATUS_COLS.find(c => c.key === ns);
+                    return (
+                      <button
+                        key={ns}
+                        onClick={() => changeStatus(selected.id, ns)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-sm ${
+                          ns === 'rejected'
+                            ? 'border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        {col?.label || ns}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  setView('board');
+  setSelected(null);
+  return null;
 }

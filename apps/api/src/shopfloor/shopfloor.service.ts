@@ -5,8 +5,16 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ShopfloorService {
   constructor(private prisma: PrismaService) {}
 
+  /** Verify workstation belongs to caller's site */
+  private async verifyWorkstationSite(workstationId: string, siteId: string) {
+    const ws = await this.prisma.workstation.findFirst({ where: { id: workstationId, siteId } });
+    if (!ws) throw new NotFoundException('Workstation not found or does not belong to your site');
+    return ws;
+  }
+
   /** Get POs available for a workstation (phases assigned to this machine) */
-  async getAvailablePOs(workstationId: string) {
+  async getAvailablePOs(workstationId: string, siteId: string) {
+    await this.verifyWorkstationSite(workstationId, siteId);
     const phases = await this.prisma.productionOrderPhase.findMany({
       where: {
         workstationId,
@@ -43,7 +51,8 @@ export class ShopfloorService {
   }
 
   /** Start a production run (operator scans PO) */
-  async startRun(phaseId: string, workstationId: string, operatorId: string) {
+  async startRun(phaseId: string, workstationId: string, operatorId: string, siteId: string) {
+    await this.verifyWorkstationSite(workstationId, siteId);
     // Check no active run on this workstation
     const activeRun = await this.prisma.productionRun.findFirst({
       where: { workstationId, status: 'active' },
@@ -52,11 +61,11 @@ export class ShopfloorService {
       throw new BadRequestException('Workstation already has an active production run. Close it first.');
     }
 
-    const phase = await this.prisma.productionOrderPhase.findUnique({
-      where: { id: phaseId },
+    const phase = await this.prisma.productionOrderPhase.findFirst({
+      where: { id: phaseId, order: { siteId } },
       include: { order: true },
     });
-    if (!phase) throw new NotFoundException('Phase not found');
+    if (!phase) throw new NotFoundException('Phase not found or does not belong to your site');
 
     // Update phase and order status
     await this.prisma.productionOrderPhase.update({
@@ -95,11 +104,16 @@ export class ShopfloorService {
   }
 
   /** Change workstation status (operator taps button) */
-  async changeStatus(workstationId: string, operatorId: string, data: {
+  async changeStatus(workstationId: string, operatorId: string, siteId: string, data: {
     status: string;
     reasonCode?: string;
     notes?: string;
   }) {
+    const VALID_STATUSES = ['running', 'breakdown', 'changeover', 'quality_hold', 'idle', 'maintenance', 'planned_stop'];
+    if (!VALID_STATUSES.includes(data.status)) {
+      throw new BadRequestException(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+    }
+    await this.verifyWorkstationSite(workstationId, siteId);
     const activeRun = await this.prisma.productionRun.findFirst({
       where: { workstationId, status: 'active' },
     });
@@ -118,7 +132,8 @@ export class ShopfloorService {
   }
 
   /** Flag (note without status change) */
-  async flag(workstationId: string, operatorId: string, notes: string) {
+  async flag(workstationId: string, operatorId: string, siteId: string, notes: string) {
+    await this.verifyWorkstationSite(workstationId, siteId);
     const activeRun = await this.prisma.productionRun.findFirst({
       where: { workstationId, status: 'active' },
     });
@@ -135,13 +150,17 @@ export class ShopfloorService {
   }
 
   /** Close production run (end of shift / end of PO) */
-  async closeRun(runId: string, operatorId: string, data: {
+  async closeRun(runId: string, operatorId: string, siteId: string, data: {
     producedQuantity: number;
     scrapQuantity: number;
     notes?: string;
   }) {
-    const run = await this.prisma.productionRun.findUnique({ where: { id: runId } });
+    const run = await this.prisma.productionRun.findFirst({
+      where: { id: runId },
+      include: { workstation: { select: { siteId: true } } },
+    });
     if (!run) throw new NotFoundException('Production run not found');
+    if (run.workstation.siteId !== siteId) throw new NotFoundException('Production run not found');
     if (run.status !== 'active') throw new BadRequestException('Run is not active');
 
     // Update run
@@ -180,7 +199,8 @@ export class ShopfloorService {
   }
 
   /** Get active run for a workstation */
-  async getActiveRun(workstationId: string) {
+  async getActiveRun(workstationId: string, siteId: string) {
+    await this.verifyWorkstationSite(workstationId, siteId);
     return this.prisma.productionRun.findFirst({
       where: { workstationId, status: 'active' },
       include: {

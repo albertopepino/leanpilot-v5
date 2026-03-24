@@ -10,6 +10,10 @@ import { WorkstationsModule } from './workstations/workstations.module';
 import { OrdersModule } from './orders/orders.module';
 import { ShopfloorModule } from './shopfloor/shopfloor.module';
 import { GembaModule } from './gemba/gemba.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { FiveSModule } from './tools/five-s/five-s.module';
+import { KaizenModule } from './tools/kaizen/kaizen.module';
+import { QualityModule } from './quality/quality.module';
 
 @Module({
   imports: [
@@ -24,7 +28,10 @@ import { GembaModule } from './gemba/gemba.module';
     OrdersModule,
     ShopfloorModule,
     GembaModule,
-    // Phase 2: FiveSModule, KaizenModule
+    UploadsModule,
+    FiveSModule,
+    KaizenModule,
+    QualityModule,
   ],
 })
 export class AppModule {}

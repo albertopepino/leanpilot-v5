@@ -21,8 +21,8 @@ export class OrdersController {
 
   @Get(':id')
   @Roles('viewer')
-  async findById(@Param('id') id: string) {
-    return this.orders.findById(id);
+  async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
+    return this.orders.findById(id, siteId);
   }
 
   @Post()

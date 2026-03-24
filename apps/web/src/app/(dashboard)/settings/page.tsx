@@ -25,7 +25,7 @@ export default function SettingsPage() {
           <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">Role</span>
             <span className="text-gray-900 dark:text-white capitalize">
-              {user?.role?.replace('_', ' ')}
+              {user?.role?.replace(/_/g, ' ')}
             </span>
           </div>
           <div className="flex justify-between">

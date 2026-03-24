@@ -47,9 +47,9 @@ export class UsersService {
     });
   }
 
-  async findById(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+  async findById(id: string, callerCorporateId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, corporateId: callerCorporateId },
       select: {
         id: true,
         email: true,
@@ -70,8 +70,8 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto, currentUser: { role: string }) {
-    const target = await this.prisma.user.findUnique({ where: { id } });
+  async update(id: string, dto: UpdateUserDto, currentUser: { role: string; corporateId: string }) {
+    const target = await this.prisma.user.findFirst({ where: { id, corporateId: currentUser.corporateId } });
     if (!target) throw new NotFoundException('User not found');
 
     // Cannot promote someone to a role higher than your own
@@ -101,7 +101,9 @@ export class UsersService {
     });
   }
 
-  async deactivate(id: string) {
+  async deactivate(id: string, callerCorporateId: string) {
+    const user = await this.prisma.user.findFirst({ where: { id, corporateId: callerCorporateId } });
+    if (!user) throw new NotFoundException('User not found');
     return this.prisma.user.update({
       where: { id },
       data: { isActive: false },

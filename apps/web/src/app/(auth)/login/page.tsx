@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,27 +17,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ message: 'Login failed' }));
-        throw new Error(body.message || 'Login failed');
-      }
-
-      const data = await res.json();
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      if (data.user.role === 'corporate_admin') {
-        router.push('/corporate');
-      } else {
-        router.push('/dashboard');
-      }
+      const user = await auth.login(email, password);
+      router.push(user.role === 'corporate_admin' ? '/corporate' : '/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

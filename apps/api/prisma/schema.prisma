@@ -35,6 +35,8 @@ model Site {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  storageUsedBytes BigInt @default(0)
+
   corporate    Corporate          @relation(fields: [corporateId], references: [id], onDelete: Cascade)
   users        User[]
   workstations Workstation[]
@@ -42,6 +44,11 @@ model Site {
   reasonCodes  ReasonCode[]
   shifts       ShiftDefinition[]
   gembaWalks   GembaWalk[]
+  fiveSAudits  FiveSAudit[]
+  kaizenIdeas  KaizenIdea[]
+  qualityTemplates QualityTemplate[]
+  qualityInspections QualityInspection[]
+  ncrs         NonConformanceReport[]
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -71,6 +78,14 @@ model User {
   workstationEvents  WorkstationEvent[]
   gembaWalks         GembaWalk[]        @relation("GembaWalker")
   gembaObservations  GembaObservation[]
+  fiveSAudits        FiveSAudit[]
+  kaizenIdeas        KaizenIdea[]       @relation("KaizenSubmitter")
+  kaizenReviews      KaizenIdea[]       @relation("KaizenReviewer")
+  qualityTemplates   QualityTemplate[]
+  qualityInspections QualityInspection[]
+  ncrsReported       NonConformanceReport[] @relation("NcrReporter")
+  ncrsVerified       NonConformanceReport[] @relation("NcrVerifier")
+  refreshTokens      RefreshToken[]
 
   @@map("users")
 }
@@ -81,6 +96,8 @@ model RefreshToken {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
 }
@@ -102,6 +119,8 @@ model Workstation {
   phases          ProductionOrderPhase[]
   productionRuns  ProductionRun[]
   events          WorkstationEvent[]
+  qualityInspections QualityInspection[]
+  ncrs            NonConformanceReport[]
 
   @@unique([siteId, code])
   @@map("workstations")
@@ -222,6 +241,7 @@ model WorkstationEvent {
   productionRun ProductionRun? @relation(fields: [productionRunId], references: [id])
   operator      User           @relation(fields: [operatorId], references: [id])
 
+  @@index([workstationId, timestamp])
   @@map("workstation_events")
 }
 
@@ -260,6 +280,196 @@ model GembaObservation {
 
   walk     GembaWalk @relation(fields: [walkId], references: [id], onDelete: Cascade)
   observer User      @relation(fields: [observerId], references: [id])
+  kaizenIdea KaizenIdea?
 
   @@map("gemba_observations")
+}
+
+// ===== 5S / 6S AUDIT =====
+
+model FiveSAudit {
+  id          String    @id @default(cuid())
+  siteId      String
+  area        String
+  auditorId   String
+  status      String    @default("draft") // draft | completed
+  totalScore  Int       @default(0)
+  maxScore    Int       @default(30) // 6 categories × 5 max
+  percentage  Float     @default(0)
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  site    Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  auditor User        @relation(fields: [auditorId], references: [id])
+  scores  FiveSScore[]
+
+  @@index([siteId])
+  @@map("five_s_audits")
+}
+
+model FiveSScore {
+  id       String  @id @default(cuid())
+  auditId  String
+  category String  // sort | set_in_order | shine | standardize | sustain | safety
+  score    Int     @default(0) // 0-5
+  notes    String?
+  photoUrl String?
+
+  audit FiveSAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@unique([auditId, category])
+  @@map("five_s_scores")
+}
+
+// ===== KAIZEN BOARD =====
+
+model KaizenIdea {
+  id                 String    @id @default(cuid())
+  siteId             String
+  submittedById      String
+  title              String
+  problem            String
+  proposedSolution   String?
+  expectedImpact     String    @default("medium") // low | medium | high
+  area               String?
+  status             String    @default("submitted") // submitted | under_review | approved | in_progress | completed | rejected
+  reviewedById       String?
+  reviewNotes        String?
+  implementedAt      DateTime?
+  result             String?
+  photoUrl           String?
+  gembaObservationId String?   @unique
+  createdAt          DateTime  @default(now())
+
+  site              Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  submittedBy       User              @relation("KaizenSubmitter", fields: [submittedById], references: [id])
+  reviewedBy        User?             @relation("KaizenReviewer", fields: [reviewedById], references: [id])
+  gembaObservation  GembaObservation? @relation(fields: [gembaObservationId], references: [id])
+
+  @@index([siteId])
+  @@index([status])
+  @@map("kaizen_ideas")
+}
+
+// ===== QUALITY MODULE =====
+
+model QualityTemplate {
+  id          String  @id @default(cuid())
+  siteId      String
+  name        String
+  productName String?
+  phase       String?
+  createdById String
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+
+  site        Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdBy   User                @relation(fields: [createdById], references: [id])
+  checkpoints QualityCheckpoint[]
+  inspections QualityInspection[]
+
+  @@index([siteId])
+  @@map("quality_templates")
+}
+
+model QualityCheckpoint {
+  id              String  @id @default(cuid())
+  templateId      String
+  sequence        Int
+  description     String
+  measurementType String  @default("pass_fail") // pass_fail | measurement | visual
+  unit            String? // mm, kg, etc.
+  lowerLimit      Float?
+  upperLimit      Float?
+  targetValue     Float?
+  isRequired      Boolean @default(true)
+
+  template QualityTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  results  QualityResult[]
+
+  @@unique([templateId, sequence])
+  @@map("quality_checkpoints")
+}
+
+model QualityInspection {
+  id            String    @id @default(cuid())
+  siteId        String
+  templateId    String
+  orderId       String?
+  phaseId       String?
+  workstationId String
+  inspectorId   String
+  status        String    @default("in_progress") // in_progress | passed | failed | conditional
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  site        Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  template    QualityTemplate   @relation(fields: [templateId], references: [id])
+  workstation Workstation       @relation(fields: [workstationId], references: [id])
+  inspector   User              @relation(fields: [inspectorId], references: [id])
+  results     QualityResult[]
+
+  @@index([siteId])
+  @@index([templateId])
+  @@map("quality_inspections")
+}
+
+model QualityResult {
+  id           String  @id @default(cuid())
+  inspectionId String
+  checkpointId String
+  value        String  // measurement value or "pass"/"fail"
+  passed       Boolean
+  notes        String?
+  photoUrl     String?
+
+  inspection QualityInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checkpoint QualityCheckpoint @relation(fields: [checkpointId], references: [id])
+
+  @@unique([inspectionId, checkpointId])
+  @@map("quality_results")
+}
+
+model NonConformanceReport {
+  id               String    @id @default(cuid())
+  siteId           String
+  reporterId       String
+  orderId          String?
+  workstationId    String?
+  severity         String    @default("minor") // minor | major | critical
+  description      String
+  defectQuantity   Int       @default(0)
+  rootCause        String?
+  containmentAction String?
+  correctiveAction  String?
+  preventiveAction  String?
+  verifiedById     String?
+  status           String    @default("open") // open | containment | investigation | corrective | verification | closed
+  closedAt         DateTime?
+  createdAt        DateTime  @default(now())
+
+  site        Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  reporter    User         @relation("NcrReporter", fields: [reporterId], references: [id])
+  verifiedBy  User?        @relation("NcrVerifier", fields: [verifiedById], references: [id])
+  workstation Workstation? @relation(fields: [workstationId], references: [id])
+  attachments NcrAttachment[]
+
+  @@index([siteId])
+  @@index([status])
+  @@map("non_conformance_reports")
+}
+
+model NcrAttachment {
+  id           String   @id @default(cuid())
+  ncrId        String
+  fileName     String
+  fileUrl      String
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  ncr NonConformanceReport @relation(fields: [ncrId], references: [id], onDelete: Cascade)
+
+  @@map("ncr_attachments")
 }

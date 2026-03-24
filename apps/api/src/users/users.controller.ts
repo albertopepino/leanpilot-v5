@@ -24,8 +24,8 @@ export class UsersController {
   @Get(':id')
   @Roles('manager')
   @ApiOperation({ summary: 'Get user by ID' })
-  async findById(@Param('id') id: string) {
-    return this.users.findById(id);
+  async findById(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
+    return this.users.findById(id, corporateId);
   }
 
   @Patch(':id')
@@ -42,7 +42,7 @@ export class UsersController {
   @Delete(':id')
   @Roles('site_admin')
   @ApiOperation({ summary: 'Deactivate user (soft delete)' })
-  async deactivate(@Param('id') id: string) {
-    return this.users.deactivate(id);
+  async deactivate(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
+    return this.users.deactivate(id, corporateId);
   }
 }

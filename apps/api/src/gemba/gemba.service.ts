@@ -16,9 +16,9 @@ export class GembaService {
     });
   }
 
-  async findById(id: string) {
-    const walk = await this.prisma.gembaWalk.findUnique({
-      where: { id },
+  async findById(id: string, siteId: string) {
+    const walk = await this.prisma.gembaWalk.findFirst({
+      where: { id, siteId },
       include: {
         walker: { select: { firstName: true, lastName: true } },
         observations: { orderBy: { createdAt: 'desc' } },
@@ -38,14 +38,16 @@ export class GembaService {
     });
   }
 
-  async completeWalk(id: string) {
+  async completeWalk(id: string, siteId: string) {
+    const walk = await this.prisma.gembaWalk.findFirst({ where: { id, siteId } });
+    if (!walk) throw new NotFoundException('Gemba walk not found');
     return this.prisma.gembaWalk.update({
       where: { id },
       data: { status: 'completed', endedAt: new Date() },
     });
   }
 
-  async addObservation(walkId: string, observerId: string, data: {
+  async addObservation(walkId: string, siteId: string, observerId: string, data: {
     workstationId?: string;
     wasteCategory: string;
     severity?: string;
@@ -53,6 +55,9 @@ export class GembaService {
     photoUrl?: string;
     operatorQuote?: string;
   }) {
+    // Verify walk belongs to caller's site
+    const walk = await this.prisma.gembaWalk.findFirst({ where: { id: walkId, siteId } });
+    if (!walk) throw new NotFoundException('Gemba walk not found');
     return this.prisma.gembaObservation.create({
       data: {
         walkId,
@@ -67,7 +72,11 @@ export class GembaService {
     });
   }
 
-  async updateObservationStatus(id: string, status: string) {
+  async updateObservationStatus(id: string, siteId: string, status: string) {
+    const obs = await this.prisma.gembaObservation.findFirst({
+      where: { id, walk: { siteId } },
+    });
+    if (!obs) throw new NotFoundException('Observation not found');
     return this.prisma.gembaObservation.update({
       where: { id },
       data: { status },

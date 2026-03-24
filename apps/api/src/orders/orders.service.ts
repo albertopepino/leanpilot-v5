@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -18,9 +18,9 @@ export class OrdersService {
     });
   }
 
-  async findById(id: string) {
-    const order = await this.prisma.productionOrder.findUnique({
-      where: { id },
+  async findById(id: string, siteId: string) {
+    const order = await this.prisma.productionOrder.findFirst({
+      where: { id, siteId },
       include: {
         phases: {
           include: {
@@ -47,6 +47,21 @@ export class OrdersService {
     priority?: string;
     phases?: { sequence: number; name: string; workstationId: string; cycleTimeSeconds: number }[];
   }) {
+    // Validate all workstationIds belong to this site
+    if (data.phases?.length) {
+      const wsIds = [...new Set(data.phases.map(p => p.workstationId))];
+      const valid = await this.prisma.workstation.findMany({
+        where: { id: { in: wsIds }, siteId },
+        select: { id: true },
+      });
+      const validIds = new Set(valid.map(w => w.id));
+      for (const p of data.phases) {
+        if (!validIds.has(p.workstationId)) {
+          throw new BadRequestException(`Workstation ${p.workstationId} does not belong to this site`);
+        }
+      }
+    }
+
     return this.prisma.productionOrder.create({
       data: {
         siteId,

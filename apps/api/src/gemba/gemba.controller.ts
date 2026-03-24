@@ -27,8 +27,8 @@ export class GembaController {
 
   @Get(':id')
   @Roles('manager')
-  async findById(@Param('id') id: string) {
-    return this.gemba.findById(id);
+  async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
+    return this.gemba.findById(id, siteId);
   }
 
   @Post()
@@ -39,8 +39,8 @@ export class GembaController {
 
   @Patch(':id/complete')
   @Roles('manager')
-  async completeWalk(@Param('id') id: string) {
-    return this.gemba.completeWalk(id);
+  async completeWalk(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
+    return this.gemba.completeWalk(id, siteId);
   }
 
   @Post(':id/observations')
@@ -48,6 +48,7 @@ export class GembaController {
   async addObservation(
     @Param('id') walkId: string,
     @CurrentUser('id') observerId: string,
+    @CurrentUser('siteId') siteId: string,
     @Body() body: {
       workstationId?: string;
       wasteCategory: string;
@@ -57,12 +58,16 @@ export class GembaController {
       operatorQuote?: string;
     },
   ) {
-    return this.gemba.addObservation(walkId, observerId, body);
+    return this.gemba.addObservation(walkId, siteId, observerId, body);
   }
 
   @Patch('observations/:id/status')
   @Roles('manager')
-  async updateObservationStatus(@Param('id') id: string, @Body() body: { status: string }) {
-    return this.gemba.updateObservationStatus(id, body.status);
+  async updateObservationStatus(
+    @Param('id') id: string,
+    @CurrentUser('siteId') siteId: string,
+    @Body() body: { status: string },
+  ) {
+    return this.gemba.updateObservationStatus(id, siteId, body.status);
   }
 }

@@ -7,7 +7,7 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, _retried = false): Promise<T> {
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('accessToken')
     : null;
@@ -15,17 +15,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
 
-  if (res.status === 401) {
-    // Try refresh token
+  if (res.status === 401 && !_retried) {
+    // Try refresh token (once only to prevent infinite loop)
     const refreshed = await tryRefresh();
     if (refreshed) {
-      return request<T>(path, options);
+      return request<T>(path, options, true);
     }
     // Redirect to login
     if (typeof window !== 'undefined') {
@@ -42,10 +42,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json();
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text);
 }
 
 async function tryRefresh(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
   const refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) return false;
 
@@ -59,6 +62,7 @@ async function tryRefresh(): Promise<boolean> {
     if (!res.ok) return false;
 
     const data = await res.json();
+    if (!data?.accessToken || !data?.refreshToken) return false;
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
     return true;
@@ -85,6 +89,10 @@ export const auth = {
       user: any;
     }>('/auth/login', { email, password });
 
+    if (!data?.accessToken || !data?.refreshToken || !data?.user) {
+      throw new Error('Invalid login response from server');
+    }
+
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
     localStorage.setItem('user', JSON.stringify(data.user));
@@ -93,6 +101,7 @@ export const auth = {
   },
 
   logout: () => {
+    if (typeof window === 'undefined') return;
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
@@ -102,6 +111,7 @@ export const auth = {
   getUser: () => {
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem('user');
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
   },
 };

@@ -15,14 +15,20 @@ export class ShopfloorController {
 
   @Get('workstation/:workstationId/pos')
   @Roles('operator')
-  async getAvailablePOs(@Param('workstationId') workstationId: string) {
-    return this.shopfloor.getAvailablePOs(workstationId);
+  async getAvailablePOs(
+    @Param('workstationId') workstationId: string,
+    @CurrentUser('siteId') siteId: string,
+  ) {
+    return this.shopfloor.getAvailablePOs(workstationId, siteId);
   }
 
   @Get('workstation/:workstationId/active-run')
   @Roles('operator')
-  async getActiveRun(@Param('workstationId') workstationId: string) {
-    return this.shopfloor.getActiveRun(workstationId);
+  async getActiveRun(
+    @Param('workstationId') workstationId: string,
+    @CurrentUser('siteId') siteId: string,
+  ) {
+    return this.shopfloor.getActiveRun(workstationId, siteId);
   }
 
   @Get('reason-codes')
@@ -36,8 +42,9 @@ export class ShopfloorController {
   async startRun(
     @Body() body: { phaseId: string; workstationId: string },
     @CurrentUser('id') operatorId: string,
+    @CurrentUser('siteId') siteId: string,
   ) {
-    return this.shopfloor.startRun(body.phaseId, body.workstationId, operatorId);
+    return this.shopfloor.startRun(body.phaseId, body.workstationId, operatorId, siteId);
   }
 
   @Post('status-change')
@@ -45,8 +52,9 @@ export class ShopfloorController {
   async changeStatus(
     @Body() body: { workstationId: string; status: string; reasonCode?: string; notes?: string },
     @CurrentUser('id') operatorId: string,
+    @CurrentUser('siteId') siteId: string,
   ) {
-    return this.shopfloor.changeStatus(body.workstationId, operatorId, body);
+    return this.shopfloor.changeStatus(body.workstationId, operatorId, siteId, body);
   }
 
   @Post('flag')
@@ -54,8 +62,9 @@ export class ShopfloorController {
   async flag(
     @Body() body: { workstationId: string; notes: string },
     @CurrentUser('id') operatorId: string,
+    @CurrentUser('siteId') siteId: string,
   ) {
-    return this.shopfloor.flag(body.workstationId, operatorId, body.notes);
+    return this.shopfloor.flag(body.workstationId, operatorId, siteId, body.notes);
   }
 
   @Post('close-run/:runId')
@@ -64,7 +73,8 @@ export class ShopfloorController {
     @Param('runId') runId: string,
     @Body() body: { producedQuantity: number; scrapQuantity: number; notes?: string },
     @CurrentUser('id') operatorId: string,
+    @CurrentUser('siteId') siteId: string,
   ) {
-    return this.shopfloor.closeRun(runId, operatorId, body);
+    return this.shopfloor.closeRun(runId, operatorId, siteId, body);
   }
 }

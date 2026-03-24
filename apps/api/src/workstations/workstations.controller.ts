@@ -21,8 +21,8 @@ export class WorkstationsController {
 
   @Get(':id')
   @Roles('viewer')
-  async findById(@Param('id') id: string) {
-    return this.workstations.findById(id);
+  async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
+    return this.workstations.findById(id, siteId);
   }
 
   @Post()
@@ -33,7 +33,7 @@ export class WorkstationsController {
 
   @Patch(':id')
   @Roles('site_admin')
-  async update(@Param('id') id: string, @Body() body: { name?: string; type?: string; area?: string; isActive?: boolean }) {
-    return this.workstations.update(id, body);
+  async update(@Param('id') id: string, @Body() body: { name?: string; type?: string; area?: string; isActive?: boolean }, @CurrentUser('siteId') siteId: string) {
+    return this.workstations.update(id, siteId, body);
   }
 }

@@ -42,8 +42,8 @@ export class WorkstationsService {
     return withStatus;
   }
 
-  async findById(id: string) {
-    const ws = await this.prisma.workstation.findUnique({ where: { id } });
+  async findById(id: string, siteId: string) {
+    const ws = await this.prisma.workstation.findFirst({ where: { id, siteId } });
     if (!ws) throw new NotFoundException('Workstation not found');
     return ws;
   }
@@ -52,7 +52,9 @@ export class WorkstationsService {
     return this.prisma.workstation.create({ data });
   }
 
-  async update(id: string, data: { name?: string; type?: string; area?: string; isActive?: boolean }) {
+  async update(id: string, siteId: string, data: { name?: string; type?: string; area?: string; isActive?: boolean }) {
+    const ws = await this.prisma.workstation.findFirst({ where: { id, siteId } });
+    if (!ws) throw new NotFoundException('Workstation not found');
     return this.prisma.workstation.update({ where: { id }, data });
   }
 }

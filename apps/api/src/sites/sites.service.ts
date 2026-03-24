@@ -17,9 +17,9 @@ export class SitesService {
     });
   }
 
-  async findById(id: string) {
-    const site = await this.prisma.site.findUnique({
-      where: { id },
+  async findById(id: string, corporateId: string) {
+    const site = await this.prisma.site.findFirst({
+      where: { id, corporateId },
       include: {
         _count: { select: { users: true, workstations: true, orders: true } },
         corporate: { select: { name: true } },
@@ -42,7 +42,9 @@ export class SitesService {
     });
   }
 
-  async update(id: string, dto: UpdateSiteDto) {
+  async update(id: string, corporateId: string, dto: UpdateSiteDto) {
+    const site = await this.prisma.site.findFirst({ where: { id, corporateId } });
+    if (!site) throw new NotFoundException('Site not found');
     return this.prisma.site.update({ where: { id }, data: dto });
   }
 }

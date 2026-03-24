@@ -25,8 +25,8 @@ export class SitesController {
   @Get(':id')
   @Roles('viewer')
   @ApiOperation({ summary: 'Get site details' })
-  async findById(@Param('id') id: string) {
-    return this.sites.findById(id);
+  async findById(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
+    return this.sites.findById(id, corporateId);
   }
 
   @Post()
@@ -42,7 +42,7 @@ export class SitesController {
   @Patch(':id')
   @Roles('site_admin')
   @ApiOperation({ summary: 'Update site' })
-  async update(@Param('id') id: string, @Body() dto: UpdateSiteDto) {
-    return this.sites.update(id, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateSiteDto, @CurrentUser('corporateId') corporateId: string) {
+    return this.sites.update(id, corporateId, dto);
   }
 }
