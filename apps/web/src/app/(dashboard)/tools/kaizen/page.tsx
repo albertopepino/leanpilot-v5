@@ -41,10 +41,10 @@ const IMPACT_BADGE: Record<string, string> = {
 
 const NEXT_STATUS: Record<string, string[]> = {
   submitted: ['under_review', 'rejected'],
-  under_review: ['approved', 'rejected'],
-  approved: ['in_progress', 'rejected'],
-  in_progress: ['completed'],
-  completed: [],
+  under_review: ['submitted', 'approved', 'rejected'],
+  approved: ['under_review', 'in_progress', 'rejected'],
+  in_progress: ['approved', 'completed'],
+  completed: ['in_progress'],
   rejected: ['submitted'],
 };
 
@@ -188,30 +188,37 @@ export default function KaizenPage() {
         {/* Savings Counter */}
         {(() => {
           const completed = items.filter(i => i.status === 'completed');
-          const totalActual = completed.reduce((sum, i) => sum + (i.actualSavings || 0), 0);
-          const totalExpected = items.reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
-          const pipeline = items.filter(i => !['completed','rejected'].includes(i.status));
-          const pipelineExpected = pipeline.reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
-          if (totalExpected <= 0 && totalActual <= 0) return null;
+          // Realized = actualSavings if set, otherwise expectedSavings for completed items
+          const realized = completed.reduce((sum, i) => sum + (i.actualSavings ?? i.expectedSavings ?? 0), 0);
+          const active = items.filter(i => !['completed','rejected'].includes(i.status));
+          const inPipeline = active.reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
+          const totalTarget = items.filter(i => i.status !== 'rejected').reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
+          if (totalTarget <= 0 && realized <= 0) return null;
           return (
             <div className="mb-4 grid grid-cols-3 gap-3">
               <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                  &euro;{totalActual.toLocaleString()}
+                  &euro;{realized.toLocaleString()}
                 </p>
-                <p className="text-[11px] font-medium text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-wider mt-0.5">Verified Savings</p>
+                <p className="text-[11px] font-medium text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-wider mt-0.5">
+                  Realized ({completed.length} completed)
+                </p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 tabular-nums">
-                  &euro;{pipelineExpected.toLocaleString()}
+                  &euro;{inPipeline.toLocaleString()}
                 </p>
-                <p className="text-[11px] font-medium text-blue-600/70 dark:text-blue-400/70 uppercase tracking-wider mt-0.5">Pipeline (Expected)</p>
+                <p className="text-[11px] font-medium text-blue-600/70 dark:text-blue-400/70 uppercase tracking-wider mt-0.5">
+                  In Pipeline ({active.length} active)
+                </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-gray-700 dark:text-gray-300 tabular-nums">
-                  &euro;{totalExpected.toLocaleString()}
+                  &euro;{totalTarget.toLocaleString()}
                 </p>
-                <p className="text-[11px] font-medium text-gray-500/70 dark:text-gray-400/70 uppercase tracking-wider mt-0.5">Total Expected</p>
+                <p className="text-[11px] font-medium text-gray-500/70 dark:text-gray-400/70 uppercase tracking-wider mt-0.5">
+                  Total Target
+                </p>
               </div>
             </div>
           );
