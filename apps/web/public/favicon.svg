@@ -5,8 +5,8 @@
       <stop offset="100%" stop-color="#7c3aed"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#g)"/>
-  <path d="M8 22V10l4 4 4-4 4 4 4-4v12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <circle cx="8" cy="22" r="1.5" fill="#fff"/>
-  <circle cx="24" cy="22" r="1.5" fill="#fff"/>
+  <rect width="32" height="32" rx="7" fill="url(#g)"/>
+  <!-- Stylized "L" with pilot wing -->
+  <text x="7" y="23" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="20" fill="#fff" letter-spacing="-1">L</text>
+  <path d="M17 11l7 5-7 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
 </svg>

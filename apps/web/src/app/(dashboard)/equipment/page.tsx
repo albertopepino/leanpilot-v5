@@ -618,7 +618,7 @@ export default function EquipmentPage() {
                             </div>
                             <p className="text-sm text-gray-900 dark:text-white">{log.description}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {log.performedBy.firstName} {log.performedBy.lastName} — {new Date(log.performedAt || log.createdAt).toLocaleString()}
+                              {log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : 'Unknown'} — {new Date(log.performedAt || log.createdAt).toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -720,7 +720,7 @@ export default function EquipmentPage() {
                               {check.notes && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">{check.notes}</span>}
                             </div>
                             <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                              {check.performedBy.firstName} {check.performedBy.lastName} — {new Date(check.performedAt).toLocaleDateString()}
+                              {check.performedBy ? `${check.performedBy.firstName} ${check.performedBy.lastName}` : 'Unknown'} — {new Date(check.performedAt).toLocaleDateString()}
                             </span>
                           </div>
                         </Card>
