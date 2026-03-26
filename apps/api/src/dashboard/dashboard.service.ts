@@ -514,13 +514,19 @@ export class DashboardService {
       defectLossHours += scrapMinutes / 60;
     }
 
+    // Cap idle + speed loss so total losses cannot exceed planned hours
+    const accountedLosses = breakdownHours + changeoverHours + plannedStopHours + defectLossHours;
+    const remainingPlanned = Math.max(0, totalPlannedHours - accountedLosses);
+    const cappedIdleHours = Math.min(idleHours, remainingPlanned);
+    const cappedSpeedLoss = Math.min(speedLossHours, Math.max(0, remainingPlanned - cappedIdleHours));
+
     // Build ranked array
     const losses = [
       { category: 'breakdown', label: 'Breakdown', hours: Math.round(breakdownHours * 10) / 10 },
       { category: 'changeover', label: 'Changeover', hours: Math.round(changeoverHours * 10) / 10 },
       { category: 'planned_stop', label: 'Planned stops', hours: Math.round(plannedStopHours * 10) / 10 },
-      { category: 'idle', label: 'Minor stops / Idle', hours: Math.round(idleHours * 10) / 10 },
-      { category: 'speed_loss', label: 'Speed loss', hours: Math.round(speedLossHours * 10) / 10 },
+      { category: 'idle', label: 'Minor stops / Idle', hours: Math.round(cappedIdleHours * 10) / 10 },
+      { category: 'speed_loss', label: 'Speed loss', hours: Math.round(cappedSpeedLoss * 10) / 10 },
       { category: 'defect_loss', label: 'Defect / Scrap loss', hours: Math.round(defectLossHours * 10) / 10 },
     ].sort((a, b) => b.hours - a.hours);
 
