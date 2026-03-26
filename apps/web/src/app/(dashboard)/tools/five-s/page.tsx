@@ -583,7 +583,7 @@ export default function FiveSPage() {
           >
             {saving ? 'Saving...' : 'Save Scores'}
           </button>
-          {selected.status !== 'completed' && (
+          {selected.status !== 'completed' && (<>
             <button
               onClick={async () => {
                 setSaving(true);
@@ -607,7 +607,7 @@ export default function FiveSPage() {
               }}
               onCancel={() => setShowConfirmComplete(false)}
             />
-          )}
+          </>)}
         </div>
       </div>
     );

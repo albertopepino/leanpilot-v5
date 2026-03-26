@@ -101,7 +101,7 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const searchTimer = useRef<NodeJS.Timeout>();
+  const searchTimer = useRef<NodeJS.Timeout>(undefined);
 
   useEffect(() => {
     searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);

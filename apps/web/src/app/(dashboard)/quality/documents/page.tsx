@@ -85,7 +85,7 @@ export default function DocumentsPage() {
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const searchTimer = useRef<NodeJS.Timeout>();
+  const searchTimer = useRef<NodeJS.Timeout>(undefined);
 
   // Debounce search input
   useEffect(() => {

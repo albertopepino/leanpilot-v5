@@ -121,7 +121,7 @@ export default function EquipmentPage() {
   // Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const searchTimer = useRef<NodeJS.Timeout>();
+  const searchTimer = useRef<NodeJS.Timeout>(undefined);
 
   useEffect(() => {
     searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);

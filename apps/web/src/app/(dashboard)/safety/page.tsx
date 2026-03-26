@@ -161,7 +161,7 @@ export default function SafetyPage() {
   const [filterType, setFilterType] = useState('all');
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const searchTimer = useRef<NodeJS.Timeout>();
+  const searchTimer = useRef<NodeJS.Timeout>(undefined);
 
   useEffect(() => {
     searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);

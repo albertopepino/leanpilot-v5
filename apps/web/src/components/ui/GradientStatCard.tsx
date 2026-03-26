@@ -60,7 +60,7 @@ interface GradientStatCardProps {
 
 function useCountUp(target: number, duration = 800, decimals = 0, delay = 0) {
   const [current, setCurrent] = useState(0);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number>(undefined);
   const safeTarget = typeof target === 'number' && !isNaN(target) ? target : 0;
 
   useEffect(() => {
