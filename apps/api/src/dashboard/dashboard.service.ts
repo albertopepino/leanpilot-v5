@@ -401,8 +401,13 @@ export class DashboardService {
       since: since.toISOString(),
       workstations: results,
       siteOee: results.length > 0
-        ? Math.round(results.reduce((s, r) => s + r.oee, 0) / results.length * 10) / 10
-        : 0,
+        ? {
+            availability: Math.round(results.reduce((s, r) => s + r.availability, 0) / results.length * 10) / 10,
+            performance: Math.round(results.reduce((s, r) => s + r.performance, 0) / results.length * 10) / 10,
+            quality: Math.round(results.reduce((s, r) => s + r.quality, 0) / results.length * 10) / 10,
+            oee: Math.round(results.reduce((s, r) => s + r.oee, 0) / results.length * 10) / 10,
+          }
+        : { availability: 0, performance: 0, quality: 0, oee: 0 },
     };
   }
 
