@@ -170,7 +170,7 @@ export default function SafetyPage() {
 
   // Create form state
   const [newType, setNewType] = useState<'injury' | 'near_miss' | 'property_damage'>('near_miss');
-  const [newSeverity, setNewSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [newSeverity, setNewSeverity] = useState<'minor' | 'moderate' | 'serious' | 'critical'>('moderate');
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newLocation, setNewLocation] = useState('');
@@ -459,9 +459,9 @@ export default function SafetyPage() {
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Severity *</span>
             <select value={newSeverity} onChange={e => setNewSeverity(e.target.value as any)}
               className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+              <option value="minor">Minor</option>
+              <option value="moderate">Moderate</option>
+              <option value="serious">Serious</option>
               <option value="critical">Critical</option>
             </select>
           </label>
