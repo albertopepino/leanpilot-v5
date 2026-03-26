@@ -130,6 +130,10 @@ export class KaizenService {
       throw new BadRequestException(`Cannot transition from "${idea.status}" to "${status}". Allowed: ${allowed.join(', ') || 'none'}`);
     }
 
+    // Validate savings are non-negative
+    if (actualSavings !== undefined && actualSavings < 0) throw new BadRequestException('actualSavings must be non-negative');
+    if (costToImplement !== undefined && costToImplement < 0) throw new BadRequestException('costToImplement must be non-negative');
+
     const data: any = { status };
     if (reviewedById) data.reviewedById = reviewedById;
     if (reviewNotes) data.reviewNotes = reviewNotes;

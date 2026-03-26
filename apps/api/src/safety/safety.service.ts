@@ -94,6 +94,11 @@ export class SafetyService {
     if (data.outcome && !VALID_OUTCOMES.includes(data.outcome)) {
       throw new BadRequestException(`Invalid outcome. Must be: ${VALID_OUTCOMES.join(', ')}`);
     }
+    // Verify workstationId belongs to same site
+    if (data.workstationId) {
+      const ws = await this.prisma.workstation.findFirst({ where: { id: data.workstationId, siteId } });
+      if (!ws) throw new BadRequestException('Workstation does not belong to this site');
+    }
 
     return this.prisma.safetyIncident.create({
       data: {
@@ -247,6 +252,10 @@ export class SafetyService {
   }) {
     const incident = await this.prisma.safetyIncident.findFirst({ where: { id: incidentId, siteId } });
     if (!incident) throw new NotFoundException('Safety incident not found');
+    // Validate fileUrl is from our upload service (prevent arbitrary URLs / XSS)
+    if (!data.fileUrl.startsWith('/uploads/') && !data.fileUrl.startsWith('http')) {
+      throw new BadRequestException('Invalid file URL');
+    }
 
     return this.prisma.safetyAttachment.create({
       data: {

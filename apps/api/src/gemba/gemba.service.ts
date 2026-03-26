@@ -62,6 +62,11 @@ export class GembaService {
     // Verify walk belongs to caller's site
     const walk = await this.prisma.gembaWalk.findFirst({ where: { id: walkId, siteId } });
     if (!walk) throw new NotFoundException('Gemba walk not found');
+    // Verify workstationId belongs to same site
+    if (data.workstationId) {
+      const ws = await this.prisma.workstation.findFirst({ where: { id: data.workstationId, siteId } });
+      if (!ws) throw new BadRequestException('Workstation does not belong to this site');
+    }
     return this.prisma.gembaObservation.create({
       data: {
         walkId,

@@ -428,9 +428,10 @@ export class DashboardService {
     let breakdownHours = 0;
     let changeoverHours = 0;
     let plannedStopHours = 0;
-    let idleHours = 0;       // minor stops / idle
-    let speedLossHours = 0;  // performance gap
-    let defectLossHours = 0; // scrap / rework time
+    let idleHours = 0;         // minor stops / idle
+    let speedLossHours = 0;    // performance gap
+    let qualityHoldHours = 0;  // time spent in quality hold (availability loss)
+    let defectLossHours = 0;   // scrap × cycle time (quality loss)
 
     let totalPlannedHours = 0;
 
@@ -456,7 +457,7 @@ export class DashboardService {
           case 'planned_stop': plannedStopHours += hours; break;
           case 'idle': idleHours += hours; break;
           case 'maintenance': breakdownHours += hours; break; // maintenance downtime = breakdown category
-          case 'quality_hold': defectLossHours += hours; break;
+          case 'quality_hold': qualityHoldHours += hours; break;
         }
       };
 
@@ -515,7 +516,7 @@ export class DashboardService {
     }
 
     // Cap idle + speed loss so total losses cannot exceed planned hours
-    const accountedLosses = breakdownHours + changeoverHours + plannedStopHours + defectLossHours;
+    const accountedLosses = breakdownHours + changeoverHours + plannedStopHours + qualityHoldHours + defectLossHours;
     const remainingPlanned = Math.max(0, totalPlannedHours - accountedLosses);
     const cappedIdleHours = Math.min(idleHours, remainingPlanned);
     const cappedSpeedLoss = Math.min(speedLossHours, Math.max(0, remainingPlanned - cappedIdleHours));
@@ -527,6 +528,7 @@ export class DashboardService {
       { category: 'planned_stop', label: 'Planned stops', hours: Math.round(plannedStopHours * 10) / 10 },
       { category: 'idle', label: 'Minor stops / Idle', hours: Math.round(cappedIdleHours * 10) / 10 },
       { category: 'speed_loss', label: 'Speed loss', hours: Math.round(cappedSpeedLoss * 10) / 10 },
+      { category: 'quality_hold', label: 'Quality hold', hours: Math.round(qualityHoldHours * 10) / 10 },
       { category: 'defect_loss', label: 'Defect / Scrap loss', hours: Math.round(defectLossHours * 10) / 10 },
     ].sort((a, b) => b.hours - a.hours);
 

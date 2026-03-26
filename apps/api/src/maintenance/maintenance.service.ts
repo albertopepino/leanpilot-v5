@@ -341,6 +341,11 @@ export class MaintenanceService {
       where: { id: data.workstationId, siteId },
     });
     if (!ws) throw new BadRequestException('Workstation not found in this site');
+    // Verify maintenanceLogId belongs to same site
+    if (data.maintenanceLogId) {
+      const log = await this.prisma.maintenanceLog.findFirst({ where: { id: data.maintenanceLogId, siteId } });
+      if (!log) throw new BadRequestException('Maintenance log not found in this site');
+    }
 
     return this.prisma.ciltCheck.create({
       data: {
