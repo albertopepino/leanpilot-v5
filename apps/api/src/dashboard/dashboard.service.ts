@@ -212,7 +212,7 @@ export class DashboardService {
           area: ws.area,
           equipmentStatus: ws.equipmentStatus,
           currentStatus: lastStatusEvent?.status || 'idle',
-          currentPO: activeRun
+          currentPO: activeRun?.phase?.order
             ? { poNumber: activeRun.phase.order.poNumber, productName: activeRun.phase.order.productName }
             : null,
           produced,

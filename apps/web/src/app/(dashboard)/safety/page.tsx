@@ -56,9 +56,9 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof AlertTriangle; c
 };
 
 const SEVERITY_BADGE: Record<string, string> = {
-  low: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  minor: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  moderate: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  serious: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 

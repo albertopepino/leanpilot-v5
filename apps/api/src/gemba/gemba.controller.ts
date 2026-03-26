@@ -70,4 +70,14 @@ export class GembaController {
   ) {
     return this.gemba.updateObservationStatus(id, siteId, body.status);
   }
+
+  @Patch('observations/:id/pdca')
+  @Roles('operator')
+  async updateObservationPdca(
+    @Param('id') id: string,
+    @CurrentUser('siteId') siteId: string,
+    @Body() body: { actionRequired?: string; assignedToId?: string; dueDate?: string; completedAt?: string },
+  ) {
+    return this.gemba.updateObservationPdca(id, siteId, body);
+  }
 }

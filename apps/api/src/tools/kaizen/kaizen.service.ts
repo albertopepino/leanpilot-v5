@@ -58,6 +58,11 @@ export class KaizenService {
     if (data.expectedImpact && !VALID_IMPACTS.includes(data.expectedImpact)) {
       throw new BadRequestException('Invalid expectedImpact');
     }
+    // Validate savings are non-negative
+    if (data.expectedSavings !== undefined && data.expectedSavings < 0) throw new BadRequestException('expectedSavings must be non-negative');
+    if (data.costToImplement !== undefined && data.costToImplement < 0) throw new BadRequestException('costToImplement must be non-negative');
+    // Strip actualSavings on create — can only be set when completing
+    delete data.actualSavings;
 
     // Validate gemba observation belongs to same site
     if (data.gembaObservationId) {
@@ -91,6 +96,14 @@ export class KaizenService {
 
     if (data.expectedImpact && !VALID_IMPACTS.includes(data.expectedImpact)) {
       throw new BadRequestException('Invalid expectedImpact');
+    }
+    // Validate savings are non-negative
+    if (data.expectedSavings !== undefined && data.expectedSavings < 0) throw new BadRequestException('expectedSavings must be non-negative');
+    if (data.costToImplement !== undefined && data.costToImplement < 0) throw new BadRequestException('costToImplement must be non-negative');
+    if (data.actualSavings !== undefined && data.actualSavings < 0) throw new BadRequestException('actualSavings must be non-negative');
+    // actualSavings only writable on completed ideas
+    if (data.actualSavings !== undefined && idea.status !== 'completed') {
+      delete data.actualSavings;
     }
 
     return this.prisma.kaizenIdea.update({

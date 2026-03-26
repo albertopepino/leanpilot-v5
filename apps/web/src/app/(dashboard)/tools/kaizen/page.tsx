@@ -479,7 +479,8 @@ export default function KaizenPage() {
                 className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               />
             </label>
-            <div className="grid grid-cols-3 gap-4">
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-6">
               <label className="block">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Expected Savings (EUR)</span>
                 <input type="number" min="0" step="100" value={expectedSavings} onChange={e => setExpectedSavings(e.target.value)}
@@ -506,7 +507,6 @@ export default function KaizenPage() {
                 </select>
               </label>
             </div>
-          </div>
           <button onClick={createIdea} disabled={creating || !title.trim() || !problem.trim()}
             className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
           >

@@ -255,7 +255,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── OEE Section ─────────────────────────────────────────── */}
-      {oee && (
+      {(oee || !loading) && (
         <GlassCard>
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500

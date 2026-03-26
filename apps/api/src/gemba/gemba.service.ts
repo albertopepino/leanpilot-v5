@@ -91,6 +91,30 @@ export class GembaService {
     });
   }
 
+  async updateObservationPdca(id: string, siteId: string, data: {
+    actionRequired?: string;
+    assignedToId?: string;
+    dueDate?: string;
+    completedAt?: string;
+  }) {
+    const obs = await this.prisma.gembaObservation.findFirst({
+      where: { id, walk: { siteId } },
+    });
+    if (!obs) throw new NotFoundException('Observation not found');
+    return this.prisma.gembaObservation.update({
+      where: { id },
+      data: {
+        ...(data.actionRequired !== undefined && { actionRequired: data.actionRequired }),
+        ...(data.assignedToId !== undefined && { assignedToId: data.assignedToId || null }),
+        ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
+        ...(data.completedAt !== undefined && { completedAt: data.completedAt ? new Date(data.completedAt) : null }),
+      },
+      include: {
+        assignedTo: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+  }
+
   /** Get open muda signals for overview */
   async getOpenMudaSignals(siteId: string) {
     return this.prisma.gembaObservation.findMany({

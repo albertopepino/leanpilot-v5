@@ -585,8 +585,7 @@ export default function FiveSPage() {
           </button>
           {selected.status !== 'completed' && (<>
             <button
-              onClick={async () => {
-                setSaving(true);
+              onClick={() => {
                 setShowConfirmComplete(true);
               }}
               disabled={saving || total === 0}
@@ -603,9 +602,10 @@ export default function FiveSPage() {
               variant="warning"
               loading={saving}
               onConfirm={async () => {
+                setSaving(true);
                 try { await saveScores(); await completeAudit(); } catch {} finally { setSaving(false); setShowConfirmComplete(false); }
               }}
-              onCancel={() => setShowConfirmComplete(false)}
+              onCancel={() => { setSaving(false); setShowConfirmComplete(false); }}
             />
           </>)}
         </div>
@@ -711,8 +711,6 @@ export default function FiveSPage() {
     );
   }
 
-  // Fallback: reset to list if state is inconsistent
-  setView('list');
-  setSelected(null);
+  // Fallback — should never reach here
   return null;
 }
