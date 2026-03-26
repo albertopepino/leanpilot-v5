@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import {
   Eye, Plus, CheckCircle2, Clock, ChevronRight, X, Send,
-  AlertTriangle, Loader2, ArrowLeft, Download,
+  AlertTriangle, Loader2, ArrowLeft, Download, Calendar, UserIcon, ClipboardList,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -41,7 +41,17 @@ interface Observation {
   photoUrl?: string;
   operatorQuote?: string;
   status: string;
+  actionRequired?: string;
+  assignedTo?: { id: string; firstName: string; lastName: string } | null;
+  dueDate?: string | null;
+  completedAt?: string | null;
   createdAt: string;
+}
+
+interface UserOption {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface Workstation {
@@ -101,6 +111,13 @@ export default function GembaPage() {
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // PDCA follow-up state
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [pdcaAction, setPdcaAction] = useState('');
+  const [pdcaAssignee, setPdcaAssignee] = useState('');
+  const [pdcaDueDate, setPdcaDueDate] = useState('');
+  const [pdcaSaving, setPdcaSaving] = useState(false);
+
   const loadWalks = useCallback(async () => {
     setLoading(true);
     try {
@@ -116,6 +133,7 @@ export default function GembaPage() {
   useEffect(() => {
     loadWalks();
     api.get<Workstation[]>('/workstations').then(ws => setWorkstations(Array.isArray(ws) ? ws : [])).catch(() => {});
+    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : [])).catch(() => {});
   }, [loadWalks]);
 
   const openWalk = async (id: string) => {
@@ -200,6 +218,51 @@ export default function GembaPage() {
       setError(e.message);
     }
   };
+
+  const savePdca = async (obsId: string) => {
+    setPdcaSaving(true);
+    try {
+      await api.patch(`/gemba/observations/${obsId}/pdca`, {
+        actionRequired: pdcaAction.trim() || undefined,
+        assignedToId: pdcaAssignee || undefined,
+        dueDate: pdcaDueDate || undefined,
+      });
+      // Refresh walk detail
+      if (selectedWalk) {
+        const detail = await api.get<GembaWalkDetail>(`/gemba/${selectedWalk.id}`);
+        setSelectedWalk(detail);
+        const updated = detail.observations.find(o => o.id === obsId);
+        if (updated) setSelectedObs(updated);
+      }
+      toast('success', 'Action plan saved');
+    } catch (e: any) {
+      toast('error', e.message || 'Failed to save action plan');
+    } finally {
+      setPdcaSaving(false);
+    }
+  };
+
+  const markPdcaComplete = async (obsId: string) => {
+    try {
+      await api.patch(`/gemba/observations/${obsId}/pdca`, {
+        completedAt: new Date().toISOString(),
+      });
+      if (selectedWalk) {
+        const detail = await api.get<GembaWalkDetail>(`/gemba/${selectedWalk.id}`);
+        setSelectedWalk(detail);
+        const updated = detail.observations.find(o => o.id === obsId);
+        if (updated) setSelectedObs(updated);
+      }
+      toast('success', 'Action marked complete');
+    } catch (e: any) {
+      toast('error', e.message || 'Failed to mark complete');
+    }
+  };
+
+  // Count overdue actions across all observations in current walk
+  const overdueActionCount = selectedWalk?.observations.filter(obs =>
+    obs.dueDate && !obs.completedAt && new Date(obs.dueDate) < new Date()
+  ).length || 0;
 
   const goBack = () => {
     if (view === 'obs-detail') { setView('detail'); setSelectedObs(null); return; }
@@ -322,6 +385,16 @@ export default function GembaPage() {
       {/* ── Walk Detail ───────────────────────────────────────────── */}
       {view === 'detail' && selectedWalk && !loading && (
         <div className="space-y-3">
+          {/* Overdue actions alert */}
+          {overdueActionCount > 0 && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <span className="text-sm text-red-700 dark:text-red-400 font-medium">
+                {overdueActionCount} overdue action{overdueActionCount !== 1 ? 's' : ''} need attention
+              </span>
+            </div>
+          )}
+
           {selectedWalk.observations.length === 0 ? (
             <div className="text-center py-12">
               <AlertTriangle className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
@@ -331,7 +404,13 @@ export default function GembaPage() {
             selectedWalk.observations.map(obs => (
               <button
                 key={obs.id}
-                onClick={() => { setSelectedObs(obs); setView('obs-detail'); }}
+                onClick={() => {
+                  setSelectedObs(obs);
+                  setPdcaAction(obs.actionRequired || '');
+                  setPdcaAssignee(obs.assignedTo?.id || '');
+                  setPdcaDueDate(obs.dueDate ? obs.dueDate.split('T')[0] : '');
+                  setView('obs-detail');
+                }}
                 className="w-full p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors text-left"
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -350,7 +429,25 @@ export default function GembaPage() {
                 {obs.operatorQuote && (
                   <p className="text-sm text-gray-500 italic mt-1">&ldquo;{obs.operatorQuote}&rdquo;</p>
                 )}
-                <div className="flex items-center justify-end mt-2">
+                {/* PDCA indicators */}
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2">
+                    {obs.actionRequired && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <ClipboardList className="w-3 h-3" /> Action set
+                      </span>
+                    )}
+                    {obs.dueDate && !obs.completedAt && new Date(obs.dueDate) < new Date() && (
+                      <span className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> Overdue
+                      </span>
+                    )}
+                    {obs.completedAt && (
+                      <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Done
+                      </span>
+                    )}
+                  </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </div>
               </button>
@@ -525,6 +622,90 @@ export default function GembaPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* PDCA Follow-up */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+              <ClipboardList className="w-4 h-4" /> Action Follow-up (PDCA)
+            </h3>
+
+            {selectedObs.completedAt ? (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm font-medium">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Action completed on {new Date(selectedObs.completedAt).toLocaleDateString()}
+                </div>
+                {selectedObs.actionRequired && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{selectedObs.actionRequired}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Action Required</label>
+                  <textarea
+                    value={pdcaAction}
+                    onChange={e => setPdcaAction(e.target.value)}
+                    rows={2}
+                    placeholder="What needs to be done?"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none resize-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign To</label>
+                    <select
+                      value={pdcaAssignee}
+                      onChange={e => setPdcaAssignee(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                    >
+                      <option value="">— Unassigned —</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      value={pdcaDueDate}
+                      onChange={e => setPdcaDueDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Overdue warning */}
+                {selectedObs.dueDate && !selectedObs.completedAt && new Date(selectedObs.dueDate) < new Date() && (
+                  <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span className="text-xs text-red-700 dark:text-red-400 font-medium">
+                      This action is overdue (due {new Date(selectedObs.dueDate).toLocaleDateString()})
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => savePdca(selectedObs.id)}
+                    disabled={pdcaSaving}
+                    className="flex-1 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {pdcaSaving ? 'Saving...' : 'Save Action Plan'}
+                  </button>
+                  {selectedObs.actionRequired && (
+                    <button
+                      onClick={() => markPdcaComplete(selectedObs.id)}
+                      className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Complete
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

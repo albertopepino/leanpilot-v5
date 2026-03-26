@@ -56,7 +56,7 @@ export function ProgressRing({
   size = 80,
   strokeWidth = 6,
   color = '#3b82f6',
-  bgColor = '#e5e7eb',
+  bgColor,
   children,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
@@ -79,8 +79,9 @@ export function ProgressRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={bgColor}
+          stroke={bgColor || '#e5e7eb'}
           strokeWidth={strokeWidth}
+          className={!bgColor ? 'dark:stroke-gray-700' : ''}
         />
         <circle
           cx={size / 2}
@@ -126,12 +127,14 @@ export function TrendChart({
       <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
         <defs>
           <linearGradient id="areaGrad1" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color1} stopOpacity={0.2} />
-            <stop offset="100%" stopColor={color1} stopOpacity={0} />
+            <stop offset="0%" stopColor={color1} stopOpacity={0.4} />
+            <stop offset="60%" stopColor={color1} stopOpacity={0.1} />
+            <stop offset="100%" stopColor={color1} stopOpacity={0.02} />
           </linearGradient>
           <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color2} stopOpacity={0.15} />
-            <stop offset="100%" stopColor={color2} stopOpacity={0} />
+            <stop offset="0%" stopColor={color2} stopOpacity={0.3} />
+            <stop offset="60%" stopColor={color2} stopOpacity={0.08} />
+            <stop offset="100%" stopColor={color2} stopOpacity={0.01} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />

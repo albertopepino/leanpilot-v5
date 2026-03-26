@@ -51,6 +51,7 @@ export class KaizenService {
     photoUrl?: string;
     expectedSavings?: number;
     actualSavings?: number;
+    costToImplement?: number;
     savingsType?: string;
     gembaObservationId?: string;
   }) {
@@ -82,6 +83,7 @@ export class KaizenService {
     photoUrl?: string;
     expectedSavings?: number;
     actualSavings?: number;
+    costToImplement?: number;
     savingsType?: string;
   }) {
     const idea = await this.prisma.kaizenIdea.findFirst({ where: { id, siteId } });
@@ -101,7 +103,7 @@ export class KaizenService {
     });
   }
 
-  async changeStatus(id: string, siteId: string, status: string, reviewedById?: string, reviewNotes?: string) {
+  async changeStatus(id: string, siteId: string, status: string, reviewedById?: string, reviewNotes?: string, actualSavings?: number, costToImplement?: number) {
     if (!VALID_STATUSES.includes(status)) {
       throw new BadRequestException(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
@@ -119,6 +121,8 @@ export class KaizenService {
     if (reviewedById) data.reviewedById = reviewedById;
     if (reviewNotes) data.reviewNotes = reviewNotes;
     if (status === 'completed') data.implementedAt = new Date();
+    if (actualSavings !== undefined) data.actualSavings = actualSavings;
+    if (costToImplement !== undefined) data.costToImplement = costToImplement;
 
     return this.prisma.kaizenIdea.update({
       where: { id },

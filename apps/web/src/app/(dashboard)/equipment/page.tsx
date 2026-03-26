@@ -25,6 +25,8 @@ interface Workstation {
   criticality: 'A' | 'B' | 'C';
   equipmentStatus: 'operational' | 'degraded' | 'down';
   overdueCount?: number;
+  parentId: string | null;
+  children?: Workstation[];
   createdAt: string;
   updatedAt: string;
 }
@@ -333,7 +335,7 @@ export default function EquipmentPage() {
           </div>
         </div>
 
-        {/* Workstation grid */}
+        {/* Workstation grid — grouped as tree: Lines → Machines */}
         {loading ? (
           <SkeletonList count={4} />
         ) : filteredWorkstations.length === 0 ? (
@@ -342,35 +344,91 @@ export default function EquipmentPage() {
             title="No workstations found"
             description="Workstations will appear here once they are configured in the system."
           />
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredWorkstations.map(ws => {
-              const wsOverdue = overdueForWs(ws.id);
-              return (
-                <GlassCard key={ws.id} onClick={() => openDetail(ws)} hover>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${STATUS_DOT[ws.equipmentStatus]}`} />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{STATUS_LABEL[ws.equipmentStatus]}</span>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${CRITICALITY_BADGE[ws.criticality]}`}>
-                      {ws.criticality}
-                    </span>
+        ) : (() => {
+          // Build tree: parents (no parentId) and children (have parentId)
+          const parentIds = new Set(filteredWorkstations.filter(ws => !ws.parentId).map(ws => ws.id));
+          const childrenOf = (parentId: string) => filteredWorkstations.filter(ws => ws.parentId === parentId);
+          // Lines = workstations with no parent that have children among filtered set
+          const lines = filteredWorkstations.filter(ws => !ws.parentId && childrenOf(ws.id).length > 0);
+          // Standalone = workstations with no parent and no children
+          const standalone = filteredWorkstations.filter(ws => !ws.parentId && childrenOf(ws.id).length === 0);
+          // Orphaned children (parent not in filtered set) shown standalone
+          const orphaned = filteredWorkstations.filter(ws => ws.parentId && !parentIds.has(ws.parentId));
+
+          const renderCard = (ws: Workstation, indent = false) => {
+            const wsOverdue = overdueForWs(ws.id);
+            return (
+              <GlassCard key={ws.id} onClick={() => openDetail(ws)} hover>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${STATUS_DOT[ws.equipmentStatus]}`} />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{STATUS_LABEL[ws.equipmentStatus]}</span>
                   </div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">{ws.name}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{ws.code} — {ws.type}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{ws.area}</p>
-                  {wsOverdue > 0 && (
-                    <div className="mt-3 flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-medium">
-                      <AlertTriangle className="w-3 h-3" />
-                      {wsOverdue} overdue
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${CRITICALITY_BADGE[ws.criticality]}`}>
+                    {ws.criticality}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-gray-900 dark:text-white truncate">{ws.name}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{ws.code} — {ws.type}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{ws.area}</p>
+                {wsOverdue > 0 && (
+                  <div className="mt-3 flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-medium">
+                    <AlertTriangle className="w-3 h-3" />
+                    {wsOverdue} overdue
+                  </div>
+                )}
+              </GlassCard>
+            );
+          };
+
+          return (
+            <div className="space-y-6">
+              {/* Assembly Lines with their machines */}
+              {lines.map(line => (
+                <div key={line.id}>
+                  <div className="flex items-center gap-3 mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${STATUS_DOT[line.equipmentStatus]}`} />
+                      <h2
+                        className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                        onClick={() => openDetail(line)}
+                      >
+                        {line.name}
+                      </h2>
                     </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{line.code} — {line.area}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${CRITICALITY_BADGE[line.criticality]}`}>
+                      {line.criticality}
+                    </span>
+                    {overdueForWs(line.id) > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-medium">
+                        <AlertTriangle className="w-3 h-3" /> {overdueForWs(line.id)} overdue
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                    {childrenOf(line.id).map(child => renderCard(child, true))}
+                  </div>
+                </div>
+              ))}
+
+              {/* Standalone workstations (no parent, no children) */}
+              {(standalone.length > 0 || orphaned.length > 0) && (
+                <div>
+                  {lines.length > 0 && (
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 px-1">
+                      Standalone Equipment
+                    </h2>
                   )}
-                </GlassCard>
-              );
-            })}
-          </div>
-        )}
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {standalone.map(ws => renderCard(ws))}
+                    {orphaned.map(ws => renderCard(ws))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }

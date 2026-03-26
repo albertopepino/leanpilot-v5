@@ -6,7 +6,7 @@ import FileUpload from '@/components/FileUpload';
 import {
   ShieldAlert, Plus, Search, ChevronRight, X,
   AlertTriangle, AlertOctagon, HardHat, Flame,
-  Calendar, MapPin, Clock, User, FileText,
+  Calendar, MapPin, Clock, User, FileText, HelpCircle, Info,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -74,6 +74,75 @@ const STATUS_LABEL: Record<string, string> = {
   investigating: 'Investigating',
   corrective_action: 'Corrective Action',
   closed: 'Closed',
+};
+
+// Near-miss ratio interpretation based on Heinrich's triangle / Bird's pyramid
+const NearMissInterpretation = ({ ratio }: { ratio: number }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  let color: string;
+  let bgColor: string;
+  let label: string;
+  let message: string;
+
+  if (ratio > 80) {
+    color = 'text-green-700 dark:text-green-400';
+    bgColor = 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+    label = 'Good';
+    message = 'Good reporting culture. Near-miss reporting is strong relative to incidents.';
+  } else if (ratio >= 50) {
+    color = 'text-yellow-700 dark:text-yellow-400';
+    bgColor = 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+    label = 'Improving';
+    message = 'Improving. Continue encouraging near-miss reporting across all shifts and areas.';
+  } else {
+    color = 'text-red-700 dark:text-red-400';
+    bgColor = 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+    label = 'Alert';
+    message = 'Near-misses likely underreported. Heinrich ratio target: 10:1 (near-miss:injury). Encourage a blame-free reporting culture.';
+  }
+
+  return (
+    <div className={`p-3 rounded-lg border ${bgColor} flex items-start gap-2`}>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`text-sm font-semibold ${color}`}>
+            {ratio.toFixed(1)}% Near-Miss Ratio — {label}
+          </span>
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip(v => !v)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              aria-label="Learn about Heinrich's triangle"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+            {showTooltip && (
+              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg text-xs">
+                <div className="font-semibold text-gray-900 dark:text-white mb-1">Heinrich&apos;s Triangle / Bird&apos;s Pyramid</div>
+                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                  For every serious injury, there are roughly 10 minor injuries, 30 property damage incidents, and 600 near-misses.
+                </p>
+                <p className="text-gray-600 dark:text-gray-400">
+                  A healthy near-miss ratio (&gt;80%) indicates workers feel safe reporting minor events before they become serious incidents.
+                </p>
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500" /> <span className="text-gray-500">&gt;80%: Strong culture</span></div>
+                  <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500" /> <span className="text-gray-500">50-80%: Improving</span></div>
+                  <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500" /> <span className="text-gray-500">&lt;50%: Underreported</span></div>
+                </div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-2 h-2 rotate-45 bg-white dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-600" />
+              </div>
+            )}
+          </div>
+        </div>
+        <p className={`text-xs ${color}`}>{message}</p>
+      </div>
+    </div>
+  );
 };
 
 type View = 'list' | 'detail' | 'create';
@@ -236,12 +305,18 @@ export default function SafetyPage() {
 
         {/* Metrics */}
         {metrics && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <GradientStatCard label="Days Since Last Incident" value={metrics.daysSinceLastIncident} variant="green" icon={ShieldAlert} />
-            <GradientStatCard label="Incidents This Year" value={metrics.totalIncidents || 0} variant="orange" icon={AlertOctagon} />
-            <GradientStatCard label="Near-Miss Ratio" value={metrics.nearMissRatioPercent || 0} suffix="%" variant="blue" icon={AlertTriangle} decimals={1} />
-            <GradientStatCard label="Total Days Lost" value={metrics.totalDaysLost} variant="slate" icon={Calendar} />
-          </div>
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <GradientStatCard label="Days Since Last Incident" value={metrics.daysSinceLastIncident} variant="green" icon={ShieldAlert} />
+              <GradientStatCard label="Incidents This Year" value={metrics.totalIncidents || 0} variant="orange" icon={AlertOctagon} />
+              <GradientStatCard label="Near-Miss Ratio" value={metrics.nearMissRatioPercent || 0} suffix="%" variant="blue" icon={AlertTriangle} decimals={1} />
+              <GradientStatCard label="Total Days Lost" value={metrics.totalDaysLost} variant="slate" icon={Calendar} />
+            </div>
+            {/* Near-miss ratio interpretation */}
+            <div className="mb-6">
+              <NearMissInterpretation ratio={metrics.nearMissRatioPercent || 0} />
+            </div>
+          </>
         )}
 
         {/* Filters */}

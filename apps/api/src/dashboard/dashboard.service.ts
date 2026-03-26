@@ -138,6 +138,164 @@ export class DashboardService {
     };
   }
 
+  /** Shift Handover: summary of last N hours across all workstations */
+  async getShiftHandover(siteId: string, hours = 8) {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    // All active workstations
+    const workstations = await this.prisma.workstation.findMany({
+      where: { siteId, isActive: true },
+      orderBy: { name: 'asc' },
+    });
+
+    // Build per-workstation summary
+    const workstationSummaries = await Promise.all(
+      workstations.map(async (ws) => {
+        // Current status (last status_change event)
+        const lastStatusEvent = await this.prisma.workstationEvent.findFirst({
+          where: { workstationId: ws.id, eventType: 'status_change' },
+          orderBy: { timestamp: 'desc' },
+        });
+
+        // Active production run
+        const activeRun = await this.prisma.productionRun.findFirst({
+          where: { workstationId: ws.id, status: 'active' },
+          include: {
+            phase: {
+              include: { order: { select: { poNumber: true, productName: true } } },
+            },
+          },
+        });
+
+        // Runs this shift
+        const shiftRuns = await this.prisma.productionRun.findMany({
+          where: {
+            workstationId: ws.id,
+            startedAt: { gte: since },
+          },
+          include: {
+            phase: {
+              include: { order: { select: { poNumber: true, productName: true } } },
+            },
+          },
+        });
+
+        const produced = shiftRuns.reduce((s, r) => s + r.producedQuantity, 0);
+        const scrap = shiftRuns.reduce((s, r) => s + r.scrapQuantity, 0);
+
+        // Status changes this shift (breakdowns, changeovers, etc.)
+        const statusChanges = await this.prisma.workstationEvent.findMany({
+          where: {
+            workstationId: ws.id,
+            eventType: 'status_change',
+            timestamp: { gte: since },
+            status: { in: ['breakdown', 'changeover', 'quality_hold', 'maintenance'] },
+          },
+          orderBy: { timestamp: 'desc' },
+          include: { operator: { select: { firstName: true, lastName: true } } },
+        });
+
+        // Handover notes from completed runs
+        const handoverNotes = shiftRuns
+          .filter(r => r.status === 'completed' && r.phase?.order)
+          .map(r => ({
+            poNumber: r.phase.order.poNumber,
+            productName: r.phase.order.productName,
+            produced: r.producedQuantity,
+            scrap: r.scrapQuantity,
+          }));
+
+        return {
+          workstationId: ws.id,
+          workstationName: ws.name,
+          workstationCode: ws.code,
+          area: ws.area,
+          equipmentStatus: ws.equipmentStatus,
+          currentStatus: lastStatusEvent?.status || 'idle',
+          currentPO: activeRun
+            ? { poNumber: activeRun.phase.order.poNumber, productName: activeRun.phase.order.productName }
+            : null,
+          produced,
+          scrap,
+          statusChanges: statusChanges.map(e => ({
+            status: e.status,
+            reasonCode: e.reasonCode,
+            notes: e.notes,
+            timestamp: e.timestamp,
+            operator: e.operator ? `${e.operator.firstName} ${e.operator.lastName}` : null,
+          })),
+          handoverNotes,
+        };
+      }),
+    );
+
+    // Open NCRs from this shift
+    const ncrs = await this.prisma.nonConformanceReport.findMany({
+      where: {
+        siteId,
+        createdAt: { gte: since },
+        status: { not: 'closed' },
+      },
+      select: {
+        id: true,
+        title: true,
+        severity: true,
+        status: true,
+        description: true,
+        defectQuantity: true,
+        createdAt: true,
+        workstation: { select: { name: true, code: true } },
+        reporter: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Safety incidents from this shift
+    const safetyIncidents = await this.prisma.safetyIncident.findMany({
+      where: {
+        siteId,
+        createdAt: { gte: since },
+      },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        severity: true,
+        outcome: true,
+        status: true,
+        location: true,
+        createdAt: true,
+        reporter: { select: { firstName: true, lastName: true } },
+        workstation: { select: { name: true, code: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Breakdowns this shift
+    const breakdowns = workstationSummaries.flatMap(ws =>
+      ws.statusChanges
+        .filter(e => e.status === 'breakdown')
+        .map(e => ({ ...e, workstationName: ws.workstationName, workstationCode: ws.workstationCode })),
+    );
+
+    return {
+      period: { since: since.toISOString(), hours },
+      workstations: workstationSummaries,
+      attentionItems: {
+        breakdowns,
+        ncrs,
+        safetyIncidents,
+      },
+      totals: {
+        totalProduced: workstationSummaries.reduce((s, w) => s + w.produced, 0),
+        totalScrap: workstationSummaries.reduce((s, w) => s + w.scrap, 0),
+        workstationsRunning: workstationSummaries.filter(w => w.currentStatus === 'running').length,
+        workstationsDown: workstationSummaries.filter(w => w.currentStatus === 'breakdown').length,
+        totalWorkstations: workstations.length,
+      },
+    };
+  }
+
   /** OEE: Availability × Performance × Quality per workstation */
   async getOee(siteId: string, workstationId?: string, period = 'week') {
     const now = new Date();
@@ -154,7 +312,7 @@ export class DashboardService {
     const results: Array<{
       workstationId: string; workstationName: string; workstationCode: string;
       availability: number; performance: number; quality: number; oee: number;
-      totalProduced: number; totalScrap: number; operatingMinutes: number; downtimeMinutes: number;
+      totalProduced: number; totalScrap: number; plannedMinutes: number; operatingMinutes: number; downtimeMinutes: number;
     }> = [];
 
     for (const ws of workstations) {
@@ -180,24 +338,9 @@ export class DashboardService {
         orderBy: { timestamp: 'asc' },
       });
 
-      // Calculate planned time (assume shifts cover the period, simplified)
-      const shifts = await this.prisma.shiftDefinition.findMany({
-        where: { siteId, isActive: true },
-      });
-      // Sum shift hours per day × days in period
-      let dailyShiftHours = 0;
-      for (const s of shifts) {
-        const parts = (s.startTime || '').split(':').map(Number);
-        const eParts = (s.endTime || '').split(':').map(Number);
-        const sh = parts[0] || 0, sm = parts[1] || 0;
-        const eh = eParts[0] || 0, em = eParts[1] || 0;
-        if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue; // skip malformed shifts
-        let shiftDuration = (eh + em / 60) - (sh + sm / 60);
-        if (shiftDuration < 0) shiftDuration += 24; // crosses midnight (night shift)
-        dailyShiftHours += shiftDuration;
-      }
+      // Planned production time from workstation's plannedHoursPerDay
       const days = periodMs / (24 * 60 * 60 * 1000);
-      const plannedMinutes = dailyShiftHours * 60 * days;
+      const plannedMinutes = (ws.plannedHoursPerDay ?? 8) * 60 * days;
 
       // Calculate downtime from events (non-running, non-idle, non-planned_stop)
       let downtimeMinutes = 0;
@@ -247,6 +390,7 @@ export class DashboardService {
         oee: Math.round(oee * 1000) / 10,
         totalProduced,
         totalScrap,
+        plannedMinutes: Math.round(plannedMinutes),
         operatingMinutes: Math.round(operatingMinutes),
         downtimeMinutes: Math.round(downtimeMinutes),
       });
@@ -259,6 +403,141 @@ export class DashboardService {
       siteOee: results.length > 0
         ? Math.round(results.reduce((s, r) => s + r.oee, 0) / results.length * 10) / 10
         : 0,
+    };
+  }
+
+  /** Pareto / Loss waterfall: 6 big losses ranked by hours */
+  async getPareto(siteId: string, period = 'week') {
+    const now = new Date();
+    const periodMs = period === 'day' ? 24 * 60 * 60 * 1000
+      : period === 'month' ? 30 * 24 * 60 * 60 * 1000
+      : 7 * 24 * 60 * 60 * 1000;
+    const since = new Date(now.getTime() - periodMs);
+    const days = periodMs / (24 * 60 * 60 * 1000);
+
+    const workstations = await this.prisma.workstation.findMany({
+      where: { siteId, isActive: true },
+    });
+
+    // Accumulate the 6 big losses across all workstations
+    let breakdownHours = 0;
+    let changeoverHours = 0;
+    let plannedStopHours = 0;
+    let idleHours = 0;       // minor stops / idle
+    let speedLossHours = 0;  // performance gap
+    let defectLossHours = 0; // scrap / rework time
+
+    let totalPlannedHours = 0;
+
+    for (const ws of workstations) {
+      const plannedMinutes = (ws.plannedHoursPerDay ?? 8) * 60 * days;
+      totalPlannedHours += plannedMinutes / 60;
+
+      // Status events for time-based losses
+      const events = await this.prisma.workstationEvent.findMany({
+        where: {
+          workstationId: ws.id,
+          eventType: 'status_change',
+          timestamp: { gte: since },
+        },
+        orderBy: { timestamp: 'asc' },
+      });
+
+      const nowMs = Date.now();
+      const addDuration = (status: string, hours: number) => {
+        switch (status) {
+          case 'breakdown': breakdownHours += hours; break;
+          case 'changeover': changeoverHours += hours; break;
+          case 'planned_stop': plannedStopHours += hours; break;
+          case 'idle': idleHours += hours; break;
+          case 'maintenance': breakdownHours += hours; break; // maintenance downtime = breakdown category
+          case 'quality_hold': defectLossHours += hours; break;
+        }
+      };
+
+      for (let i = 0; i < events.length - 1; i++) {
+        const e = events[i];
+        if (e.status && e.status !== 'running') {
+          const durationMs = new Date(events[i + 1].timestamp).getTime() - new Date(e.timestamp).getTime();
+          addDuration(e.status, durationMs / (1000 * 60 * 60));
+        }
+      }
+      if (events.length > 0) {
+        const last = events[events.length - 1];
+        if (last.status && last.status !== 'running') {
+          const durationMs = nowMs - new Date(last.timestamp).getTime();
+          addDuration(last.status, durationMs / (1000 * 60 * 60));
+        }
+      }
+
+      // Production runs for speed loss and scrap loss
+      const runs = await this.prisma.productionRun.findMany({
+        where: {
+          workstationId: ws.id,
+          startedAt: { gte: since },
+          status: 'completed',
+        },
+        include: {
+          phase: { select: { cycleTimeSeconds: true } },
+        },
+      });
+
+      // Speed loss = operating_time - ideal_run_time (performance gap)
+      const downtimeMinutes = events.reduce((acc, e, i) => {
+        if (e.status && e.status !== 'running' && e.status !== 'idle' && e.status !== 'planned_stop') {
+          const endMs = i < events.length - 1
+            ? new Date(events[i + 1].timestamp).getTime()
+            : nowMs;
+          return acc + (endMs - new Date(e.timestamp).getTime()) / 60000;
+        }
+        return acc;
+      }, 0);
+      const operatingMinutes = Math.max(0, plannedMinutes - downtimeMinutes);
+
+      const idealRunMinutes = runs.reduce(
+        (s, r) => s + ((r.phase.cycleTimeSeconds || 60) * r.producedQuantity), 0,
+      ) / 60;
+
+      if (operatingMinutes > idealRunMinutes) {
+        speedLossHours += (operatingMinutes - idealRunMinutes) / 60;
+      }
+
+      // Scrap loss: scrap × ideal cycle time
+      const scrapMinutes = runs.reduce(
+        (s, r) => s + ((r.phase.cycleTimeSeconds || 60) * r.scrapQuantity), 0,
+      ) / 60;
+      defectLossHours += scrapMinutes / 60;
+    }
+
+    // Build ranked array
+    const losses = [
+      { category: 'breakdown', label: 'Breakdown', hours: Math.round(breakdownHours * 10) / 10 },
+      { category: 'changeover', label: 'Changeover', hours: Math.round(changeoverHours * 10) / 10 },
+      { category: 'planned_stop', label: 'Planned stops', hours: Math.round(plannedStopHours * 10) / 10 },
+      { category: 'idle', label: 'Minor stops / Idle', hours: Math.round(idleHours * 10) / 10 },
+      { category: 'speed_loss', label: 'Speed loss', hours: Math.round(speedLossHours * 10) / 10 },
+      { category: 'defect_loss', label: 'Defect / Scrap loss', hours: Math.round(defectLossHours * 10) / 10 },
+    ].sort((a, b) => b.hours - a.hours);
+
+    const totalLossHours = losses.reduce((s, l) => s + l.hours, 0);
+
+    // Add cumulative percentage for Pareto chart
+    let cumulative = 0;
+    const ranked = losses.map((l) => {
+      cumulative += l.hours;
+      return {
+        ...l,
+        percentage: totalLossHours > 0 ? Math.round((l.hours / totalLossHours) * 1000) / 10 : 0,
+        cumulativePercentage: totalLossHours > 0 ? Math.round((cumulative / totalLossHours) * 1000) / 10 : 0,
+      };
+    });
+
+    return {
+      period,
+      since: since.toISOString(),
+      totalPlannedHours: Math.round(totalPlannedHours * 10) / 10,
+      totalLossHours: Math.round(totalLossHours * 10) / 10,
+      losses: ranked,
     };
   }
 }

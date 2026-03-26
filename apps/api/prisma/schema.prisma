@@ -37,27 +37,27 @@ model Site {
 
   storageUsedBytes BigInt @default(0)
 
-  corporate    Corporate          @relation(fields: [corporateId], references: [id], onDelete: Cascade)
-  users        User[]
-  workstations Workstation[]
-  orders       ProductionOrder[]
-  reasonCodes  ReasonCode[]
-  shifts       ShiftDefinition[]
-  gembaWalks   GembaWalk[]
-  fiveSAudits  FiveSAudit[]
-  kaizenIdeas  KaizenIdea[]
-  qualityTemplates QualityTemplate[]
+  corporate          Corporate              @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  users              User[]
+  workstations       Workstation[]
+  orders             ProductionOrder[]
+  reasonCodes        ReasonCode[]
+  shifts             ShiftDefinition[]
+  gembaWalks         GembaWalk[]
+  fiveSAudits        FiveSAudit[]
+  kaizenIdeas        KaizenIdea[]
+  qualityTemplates   QualityTemplate[]
   qualityInspections QualityInspection[]
-  ncrs             NonConformanceReport[]
-  reportTemplate   ReportTemplate?
-  documents        Document[]
-  maintenancePlans MaintenancePlan[]
-  maintenanceLogs  MaintenanceLog[]
-  ciltChecks       CiltCheck[]
-  fiveWhyAnalyses  FiveWhyAnalysis[]
-  ishikawaAnalyses IshikawaAnalysis[]
-  eightDReports    EightDReport[]
-  safetyIncidents  SafetyIncident[]
+  ncrs               NonConformanceReport[]
+  reportTemplate     ReportTemplate?
+  documents          Document[]
+  maintenancePlans   MaintenancePlan[]
+  maintenanceLogs    MaintenanceLog[]
+  ciltChecks         CiltCheck[]
+  fiveWhyAnalyses    FiveWhyAnalysis[]
+  ishikawaAnalyses   IshikawaAnalysis[]
+  eightDReports      EightDReport[]
+  safetyIncidents    SafetyIncident[]
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -83,29 +83,30 @@ model User {
   site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   corporate Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
 
-  productionRuns     ProductionRun[]
-  workstationEvents  WorkstationEvent[]
-  gembaWalks         GembaWalk[]        @relation("GembaWalker")
-  gembaObservations  GembaObservation[]
-  fiveSAudits        FiveSAudit[]
-  kaizenIdeas        KaizenIdea[]       @relation("KaizenSubmitter")
-  kaizenReviews      KaizenIdea[]       @relation("KaizenReviewer")
-  qualityTemplates   QualityTemplate[]
-  qualityInspections QualityInspection[]
-  ncrsReported       NonConformanceReport[] @relation("NcrReporter")
-  ncrsVerified       NonConformanceReport[] @relation("NcrVerifier")
-  refreshTokens      RefreshToken[]
-  documentsCreated   Document[]           @relation("DocumentCreator")
-  documentsApproved  Document[]           @relation("DocumentApprover")
-  documentRevisions  DocumentRevision[]   @relation("RevisionUploader")
-  maintenancePlansAssigned MaintenancePlan[] @relation("PlanAssignee")
-  maintenanceLogsPerformed MaintenanceLog[] @relation("MaintenancePerformer")
+  productionRuns           ProductionRun[]
+  workstationEvents        WorkstationEvent[]
+  gembaWalks               GembaWalk[]            @relation("GembaWalker")
+  gembaObservations        GembaObservation[]
+  fiveSAudits              FiveSAudit[]
+  kaizenIdeas              KaizenIdea[]           @relation("KaizenSubmitter")
+  kaizenReviews            KaizenIdea[]           @relation("KaizenReviewer")
+  qualityTemplates         QualityTemplate[]
+  qualityInspections       QualityInspection[]
+  ncrsReported             NonConformanceReport[] @relation("NcrReporter")
+  ncrsVerified             NonConformanceReport[] @relation("NcrVerifier")
+  refreshTokens            RefreshToken[]
+  documentsCreated         Document[]             @relation("DocumentCreator")
+  documentsApproved        Document[]             @relation("DocumentApprover")
+  documentRevisions        DocumentRevision[]     @relation("RevisionUploader")
+  maintenancePlansAssigned MaintenancePlan[]      @relation("PlanAssignee")
+  maintenanceLogsPerformed MaintenanceLog[]       @relation("MaintenancePerformer")
   ciltChecksPerformed      CiltCheck[]
-  fiveWhyAnalyses    FiveWhyAnalysis[]    @relation("FiveWhyAnalyst")
-  ishikawaAnalyses   IshikawaAnalysis[]   @relation("IshikawaAnalyst")
-  eightDReportsLead  EightDReport[]       @relation("EightDLead")
-  safetyReported     SafetyIncident[]     @relation("SafetyReporter")
-  safetyInvestigated SafetyIncident[]     @relation("SafetyInvestigator")
+  fiveWhyAnalyses          FiveWhyAnalysis[]      @relation("FiveWhyAnalyst")
+  ishikawaAnalyses         IshikawaAnalysis[]     @relation("IshikawaAnalyst")
+  eightDReportsLead        EightDReport[]         @relation("EightDLead")
+  safetyReported           SafetyIncident[]       @relation("SafetyReporter")
+  safetyInvestigated       SafetyIncident[]       @relation("SafetyInvestigator")
+  gembaAssignments         GembaObservation[]     @relation("GembaAssignee")
 
   @@map("users")
 }
@@ -128,10 +129,10 @@ model AuditLog {
   id         String   @id @default(cuid())
   userId     String?
   userEmail  String?
-  action     String   // create, update, delete, login, login_failed, logout, export
-  entityType String   // user, inspection, ncr, audit_5s, kaizen, gemba, order, run, file
+  action     String // create, update, delete, login, login_failed, logout, export
+  entityType String // user, inspection, ncr, audit_5s, kaizen, gemba, order, run, file
   entityId   String?
-  metadata   String?  // JSON: before/after diff, extra context
+  metadata   String? // JSON: before/after diff, extra context
   ipAddress  String?
   userAgent  String?
   result     String   @default("success") // success, failure
@@ -146,42 +147,43 @@ model AuditLog {
 // ===== PRODUCTION: Shop Floor =====
 
 model Workstation {
-  id     String @id @default(cuid())
-  siteId String
-  name   String
-  type   String @default("machine") // machine | line | manual
-  area   String @default("")
-  code   String @default("")        // short code for display, e.g. "CNC-01"
-  isActive Boolean @default(true)
+  id        String   @id @default(cuid())
+  siteId    String
+  name      String
+  type      String   @default("machine") // machine | line | manual
+  area      String   @default("")
+  code      String   @default("") // short code for display, e.g. "CNC-01"
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Asset management fields (TPM / ISO 55001)
-  serialNumber    String?
-  manufacturer    String?
-  modelNumber     String?
-  acquisitionDate DateTime?
-  warrantyExpiry  DateTime?
-  criticality     String   @default("B")  // A=critical, B=important, C=general
-  assetTag        String?                 // unique per site, for QR/barcode scan
-  equipmentStatus String   @default("operational") // operational | degraded | down | decommissioned
-  photoUrl        String?
+  serialNumber       String?
+  manufacturer       String?
+  modelNumber        String?
+  acquisitionDate    DateTime?
+  warrantyExpiry     DateTime?
+  criticality        String    @default("B") // A=critical, B=important, C=general
+  assetTag           String? // unique per site, for QR/barcode scan
+  equipmentStatus    String    @default("operational") // operational | degraded | down | decommissioned
+  photoUrl           String?
+  plannedHoursPerDay Float     @default(8) // OEE: planned production hours per day (default 8h shift)
 
   // Parent-child tree: Line → Machines
-  parentId        String?
-  parent          Workstation?  @relation("WorkstationTree", fields: [parentId], references: [id])
-  children        Workstation[] @relation("WorkstationTree")
+  parentId String?
+  parent   Workstation?  @relation("WorkstationTree", fields: [parentId], references: [id])
+  children Workstation[] @relation("WorkstationTree")
 
-  site            Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  phases          ProductionOrderPhase[]
-  productionRuns  ProductionRun[]
-  events          WorkstationEvent[]
+  site               Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  phases             ProductionOrderPhase[]
+  productionRuns     ProductionRun[]
+  events             WorkstationEvent[]
   qualityInspections QualityInspection[]
-  ncrs            NonConformanceReport[]
-  maintenancePlans  MaintenancePlan[]
-  maintenanceLogs   MaintenanceLog[]
-  ciltChecks        CiltCheck[]
-  safetyIncidents   SafetyIncident[]
+  ncrs               NonConformanceReport[]
+  maintenancePlans   MaintenancePlan[]
+  maintenanceLogs    MaintenanceLog[]
+  ciltChecks         CiltCheck[]
+  safetyIncidents    SafetyIncident[]
 
   @@unique([siteId, code])
   @@map("workstations")
@@ -190,14 +192,14 @@ model Workstation {
 // Configurable reason codes per site, per category
 // category: breakdown | changeover | quality | idle | maintenance | planned_stop | scrap
 model ReasonCode {
-  id       String @id @default(cuid())
-  siteId   String
-  category String // which status or scrap this reason applies to
-  code     String // short code, e.g. "MECH"
-  label    String // display name, e.g. "Mechanical failure"
-  color    String @default("#gray")
-  sortOrder Int   @default(0)
-  isActive Boolean @default(true)
+  id        String  @id @default(cuid())
+  siteId    String
+  category  String // which status or scrap this reason applies to
+  code      String // short code, e.g. "MECH"
+  label     String // display name, e.g. "Mechanical failure"
+  color     String  @default("#gray")
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -206,13 +208,13 @@ model ReasonCode {
 }
 
 model ShiftDefinition {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   siteId    String
-  name      String   // "Morning", "Afternoon", "Night"
-  startTime String   // "06:00"
-  endTime   String   // "14:00"
-  days      String   // JSON: ["mon","tue","wed","thu","fri"]
-  isActive  Boolean  @default(true)
+  name      String // "Morning", "Afternoon", "Night"
+  startTime String // "06:00"
+  endTime   String // "14:00"
+  days      String // JSON: ["mon","tue","wed","thu","fri"]
+  isActive  Boolean @default(true)
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -238,6 +240,7 @@ model ProductionOrder {
 
   site   Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   phases ProductionOrderPhase[]
+  ncrs   NonConformanceReport[]
 
   @@unique([siteId, poNumber])
   @@map("production_orders")
@@ -246,10 +249,10 @@ model ProductionOrder {
 model ProductionOrderPhase {
   id               String @id @default(cuid())
   orderId          String
-  sequence         Int    // 10, 20, 30...
+  sequence         Int // 10, 20, 30...
   name             String // "Cutting", "Bending", "Welding"
   workstationId    String // planned workstation
-  cycleTimeSeconds Int    // theoretical cycle time for OEE Performance
+  cycleTimeSeconds Int // theoretical cycle time for OEE Performance
   status           String @default("pending") // pending | in_progress | completed
 
   order       ProductionOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -265,9 +268,9 @@ model ProductionOrderPhase {
 model ProductionRun {
   id               String    @id @default(cuid())
   phaseId          String
-  workstationId    String    // actual workstation (may differ from planned)
+  workstationId    String // actual workstation (may differ from planned)
   operatorId       String
-  shiftDate        String    // "2026-03-23"
+  shiftDate        String // "2026-03-23"
   startedAt        DateTime  @default(now())
   endedAt          DateTime?
   producedQuantity Int       @default(0)
@@ -291,9 +294,9 @@ model WorkstationEvent {
   workstationId   String
   productionRunId String?
   operatorId      String
-  eventType       String   // status_change | flag | shift_start | shift_end | po_start | po_end
-  status          String?  // running | breakdown | changeover | quality_hold | idle | maintenance | planned_stop
-  reasonCode      String?  // code from ReasonCode table
+  eventType       String // status_change | flag | shift_start | shift_end | po_start | po_end
+  status          String? // running | breakdown | changeover | quality_hold | idle | maintenance | planned_stop
+  reasonCode      String? // code from ReasonCode table
   notes           String?
   timestamp       DateTime @default(now()) // when it happened (from tablet)
   syncedAt        DateTime @default(now()) // when server received it
@@ -312,7 +315,7 @@ model GembaWalk {
   id        String    @id @default(cuid())
   siteId    String
   walkerId  String
-  date      String    // "2026-03-23"
+  date      String // "2026-03-23"
   startedAt DateTime  @default(now())
   endedAt   DateTime?
   status    String    @default("in_progress") // in_progress | completed
@@ -326,21 +329,29 @@ model GembaWalk {
 
 // wasteCategory: waiting | overproduction | inventory | motion | transportation | over_processing | defect | talent
 model GembaObservation {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   walkId        String
   observerId    String
   workstationId String? // optional — where was this observed
-  wasteCategory String  // one of the 8 wastes
-  severity      String  @default("medium") // low | medium | high
+  wasteCategory String // one of the 8 wastes
+  severity      String   @default("medium") // low | medium | high
   description   String
   photoUrl      String?
   operatorQuote String? // what the operator said
-  status        String  @default("open") // open | investigating | addressed | closed
+  status        String   @default("open") // open | investigating | addressed | closed
   escalatedTo   String? // improvement_project | kaizen | action_item | none
+
+  // PDCA follow-up fields
+  actionRequired String?    // what needs to be done
+  assignedToId   String?    // relation to User
+  dueDate        DateTime?
+  completedAt    DateTime?
+
   createdAt     DateTime @default(now())
 
-  walk     GembaWalk @relation(fields: [walkId], references: [id], onDelete: Cascade)
-  observer User      @relation(fields: [observerId], references: [id])
+  walk       GembaWalk   @relation(fields: [walkId], references: [id], onDelete: Cascade)
+  observer   User        @relation(fields: [observerId], references: [id])
+  assignedTo User?       @relation("GembaAssignee", fields: [assignedToId], references: [id])
   kaizenIdea KaizenIdea?
 
   @@map("gemba_observations")
@@ -361,8 +372,8 @@ model FiveSAudit {
   completedAt DateTime?
   createdAt   DateTime  @default(now())
 
-  site    Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  auditor User        @relation(fields: [auditorId], references: [id])
+  site    Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  auditor User         @relation(fields: [auditorId], references: [id])
   scores  FiveSScore[]
 
   @@index([siteId])
@@ -372,7 +383,7 @@ model FiveSAudit {
 model FiveSScore {
   id       String  @id @default(cuid())
   auditId  String
-  category String  // sort | set_in_order | shine | standardize | sustain | safety
+  category String // sort | set_in_order | shine | standardize | sustain | safety
   score    Int     @default(0) // 0-5
   notes    String?
   photoUrl String?
@@ -400,16 +411,17 @@ model KaizenIdea {
   implementedAt      DateTime?
   result             String?
   photoUrl           String?
-  expectedSavings    Float?    // estimated cost reduction in EUR
-  actualSavings      Float?    // verified savings after implementation
-  savingsType        String?   // time | cost | quality | safety | productivity
+  expectedSavings    Float? // estimated cost reduction in EUR
+  actualSavings      Float? // verified savings after implementation
+  costToImplement    Float? // cost to implement the improvement
+  savingsType        String? // time | cost | quality | safety | productivity
   gembaObservationId String?   @unique
   createdAt          DateTime  @default(now())
 
-  site              Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  submittedBy       User              @relation("KaizenSubmitter", fields: [submittedById], references: [id])
-  reviewedBy        User?             @relation("KaizenReviewer", fields: [reviewedById], references: [id])
-  gembaObservation  GembaObservation? @relation(fields: [gembaObservationId], references: [id])
+  site             Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  submittedBy      User              @relation("KaizenSubmitter", fields: [submittedById], references: [id])
+  reviewedBy       User?             @relation("KaizenReviewer", fields: [reviewedById], references: [id])
+  gembaObservation GembaObservation? @relation(fields: [gembaObservationId], references: [id])
 
   @@index([siteId])
   @@index([status])
@@ -419,13 +431,13 @@ model KaizenIdea {
 // ===== QUALITY MODULE =====
 
 model QualityTemplate {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   siteId      String
   name        String
   productName String?
   phase       String?
   createdById String
-  isActive    Boolean @default(true)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   site        Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -469,10 +481,10 @@ model QualityInspection {
   notes         String?
   createdAt     DateTime  @default(now())
 
-  site        Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  template    QualityTemplate   @relation(fields: [templateId], references: [id])
-  workstation Workstation       @relation(fields: [workstationId], references: [id])
-  inspector   User              @relation(fields: [inspectorId], references: [id])
+  site        Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  template    QualityTemplate @relation(fields: [templateId], references: [id])
+  workstation Workstation     @relation(fields: [workstationId], references: [id])
+  inspector   User            @relation(fields: [inspectorId], references: [id])
   results     QualityResult[]
 
   @@index([siteId])
@@ -484,7 +496,7 @@ model QualityResult {
   id           String  @id @default(cuid())
   inspectionId String
   checkpointId String
-  value        String  // measurement value or "pass"/"fail"
+  value        String // measurement value or "pass"/"fail"
   passed       Boolean
   notes        String?
   photoUrl     String?
@@ -497,28 +509,29 @@ model QualityResult {
 }
 
 model NonConformanceReport {
-  id               String    @id @default(cuid())
-  siteId           String
-  reporterId       String
-  orderId          String?
-  workstationId    String?
-  title            String    @default("")
-  severity         String    @default("minor") // minor | major | critical
-  description      String
-  defectQuantity   Int       @default(0)
-  rootCause        String?
+  id                String    @id @default(cuid())
+  siteId            String
+  reporterId        String
+  orderId           String?
+  workstationId     String?
+  title             String    @default("")
+  severity          String    @default("minor") // minor | major | critical
+  description       String
+  defectQuantity    Int       @default(0)
+  rootCause         String?
   containmentAction String?
   correctiveAction  String?
   preventiveAction  String?
-  verifiedById     String?
-  status           String    @default("open") // open | containment | investigation | corrective | verification | closed
-  closedAt         DateTime?
-  createdAt        DateTime  @default(now())
+  verifiedById      String?
+  status            String    @default("open") // open | containment | investigation | corrective | verification | closed
+  closedAt          DateTime?
+  createdAt         DateTime  @default(now())
 
-  site        Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  reporter    User         @relation("NcrReporter", fields: [reporterId], references: [id])
-  verifiedBy  User?        @relation("NcrVerifier", fields: [verifiedById], references: [id])
-  workstation Workstation? @relation(fields: [workstationId], references: [id])
+  site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  reporter    User             @relation("NcrReporter", fields: [reporterId], references: [id])
+  verifiedBy  User?            @relation("NcrVerifier", fields: [verifiedById], references: [id])
+  workstation Workstation?     @relation(fields: [workstationId], references: [id])
+  order       ProductionOrder? @relation(fields: [orderId], references: [id])
   attachments NcrAttachment[]
 
   @@index([siteId])
@@ -565,7 +578,7 @@ model Document {
   siteId         String
   title          String
   description    String?
-  category       String    // policy, procedure, form, specification
+  category       String // policy, procedure, form, specification
   status         String    @default("draft") // draft, review, approved, obsolete
   currentVersion Int       @default(1)
   createdById    String
@@ -605,25 +618,25 @@ model DocumentRevision {
 // ===== EQUIPMENT & MAINTENANCE (TPM / ISO 55001) =====
 
 model MaintenancePlan {
-  id              String    @id @default(cuid())
-  siteId          String
-  workstationId   String
-  name            String    // "Weekly lubrication", "Annual calibration"
-  type            String    @default("preventive") // preventive | predictive | condition_based | calibration
-  frequencyDays   Int       // repeat every N days
-  frequencyHours  Int?      // hour-based PMs (e.g., every 500 running hours)
-  estimatedMinutes Int?
-  instructions    String?
-  assignedToId    String?
-  isActive        Boolean   @default(true)
-  nextDueDate     DateTime
+  id                String    @id @default(cuid())
+  siteId            String
+  workstationId     String
+  name              String // "Weekly lubrication", "Annual calibration"
+  type              String    @default("preventive") // preventive | predictive | condition_based | calibration
+  frequencyDays     Int // repeat every N days
+  frequencyHours    Int? // hour-based PMs (e.g., every 500 running hours)
+  estimatedMinutes  Int?
+  instructions      String?
+  assignedToId      String?
+  isActive          Boolean   @default(true)
+  nextDueDate       DateTime
   lastCompletedDate DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  site        Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  workstation Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
-  assignedTo  User?       @relation("PlanAssignee", fields: [assignedToId], references: [id])
+  site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  workstation Workstation      @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  assignedTo  User?            @relation("PlanAssignee", fields: [assignedToId], references: [id])
   logs        MaintenanceLog[]
 
   @@index([siteId])
@@ -635,22 +648,22 @@ model MaintenanceLog {
   id              String   @id @default(cuid())
   siteId          String
   workstationId   String
-  planId          String?  // null = corrective/unplanned
-  type            String   // preventive | corrective | emergency
+  planId          String? // null = corrective/unplanned
+  type            String // preventive | corrective | emergency
   performedById   String
   description     String
-  partsUsed       String?  // JSON array of parts
-  failureCode     String?  // standardized failure code for Pareto
-  durationMinutes Int?     // labor time
-  downtimeMinutes Int?     // production time lost
+  partsUsed       String? // JSON array of parts
+  failureCode     String? // standardized failure code for Pareto
+  durationMinutes Int? // labor time
+  downtimeMinutes Int? // production time lost
   cost            Float?
   status          String   @default("completed") // completed | partial | deferred
   performedAt     DateTime @default(now())
 
-  site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  workstation Workstation      @relation(fields: [workstationId], references: [id], onDelete: Cascade)
-  plan        MaintenancePlan? @relation(fields: [planId], references: [id])
-  performedBy User             @relation("MaintenancePerformer", fields: [performedById], references: [id])
+  site           Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  workstation    Workstation      @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  plan           MaintenancePlan? @relation(fields: [planId], references: [id])
+  performedBy    User             @relation("MaintenancePerformer", fields: [performedById], references: [id])
   ciltEscalation CiltCheck?
 
   @@index([siteId])
@@ -660,25 +673,25 @@ model MaintenanceLog {
 
 // TPM Pillar 1: Autonomous Maintenance — CILT (Clean, Inspect, Lubricate, Tighten)
 model CiltCheck {
-  id              String   @id @default(cuid())
-  siteId          String
-  workstationId   String
-  operatorId      String
-  date            String   // "2026-03-24"
-  shift           String?  // "morning" | "afternoon" | "night"
-  cleaningDone    Boolean  @default(false)
-  cleaningNotes   String?
-  inspectionDone  Boolean  @default(false)
-  inspectionNotes String?
-  lubricationDone Boolean  @default(false)
-  lubricationNotes String?
-  tighteningDone  Boolean  @default(false)
-  tighteningNotes String?
-  abnormalityFound Boolean @default(false)
+  id                     String   @id @default(cuid())
+  siteId                 String
+  workstationId          String
+  operatorId             String
+  date                   String // "2026-03-24"
+  shift                  String? // "morning" | "afternoon" | "night"
+  cleaningDone           Boolean  @default(false)
+  cleaningNotes          String?
+  inspectionDone         Boolean  @default(false)
+  inspectionNotes        String?
+  lubricationDone        Boolean  @default(false)
+  lubricationNotes       String?
+  tighteningDone         Boolean  @default(false)
+  tighteningNotes        String?
+  abnormalityFound       Boolean  @default(false)
   abnormalityDescription String?
-  photoUrl        String?
-  maintenanceLogId String? @unique // escalate to corrective maintenance
-  createdAt       DateTime @default(now())
+  photoUrl               String?
+  maintenanceLogId       String?  @unique // escalate to corrective maintenance
+  createdAt              DateTime @default(now())
 
   site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
   workstation    Workstation     @relation(fields: [workstationId], references: [id], onDelete: Cascade)
@@ -701,14 +714,14 @@ model FiveWhyAnalysis {
   incidentId       String?
   analystId        String
   rootCauseSummary String?
-  categoryTag      String?   // mechanical | electrical | procedural | human_error | material_defect | environmental | design | software
+  categoryTag      String? // mechanical | electrical | procedural | human_error | material_defect | environmental | design | software
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   completedAt      DateTime?
 
-  site    Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  analyst User           @relation("FiveWhyAnalyst", fields: [analystId], references: [id])
-  steps   FiveWhyStep[]
+  site          Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  analyst       User           @relation("FiveWhyAnalyst", fields: [analystId], references: [id])
+  steps         FiveWhyStep[]
   eightDReports EightDReport[] @relation("EightDFiveWhy")
 
   @@index([siteId])
@@ -718,7 +731,7 @@ model FiveWhyAnalysis {
 model FiveWhyStep {
   id         String @id @default(cuid())
   analysisId String
-  stepNumber Int    // 1-5
+  stepNumber Int // 1-5
   question   String
   answer     String
 
@@ -742,10 +755,10 @@ model IshikawaAnalysis {
   updatedAt        DateTime  @updatedAt
   completedAt      DateTime?
 
-  site    Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  analyst User             @relation("IshikawaAnalyst", fields: [analystId], references: [id])
-  causes  IshikawaCause[]
-  eightDReports EightDReport[] @relation("EightDIshikawa")
+  site          Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  analyst       User            @relation("IshikawaAnalyst", fields: [analystId], references: [id])
+  causes        IshikawaCause[]
+  eightDReports EightDReport[]  @relation("EightDIshikawa")
 
   @@index([siteId])
   @@map("ishikawa_analyses")
@@ -754,7 +767,7 @@ model IshikawaAnalysis {
 model IshikawaCause {
   id          String  @id @default(cuid())
   analysisId  String
-  category    String  // man | machine | method | material | measurement | environment
+  category    String // man | machine | method | material | measurement | environment
   description String
   isRootCause Boolean @default(false)
 
@@ -764,36 +777,36 @@ model IshikawaCause {
 }
 
 model EightDReport {
-  id             String    @id @default(cuid())
-  siteId         String
-  title          String
-  ncrId          String?
-  incidentId     String?
-  status         String    @default("d0_initiated")
+  id           String  @id @default(cuid())
+  siteId       String
+  title        String
+  ncrId        String?
+  incidentId   String?
+  status       String  @default("d0_initiated")
   // d0_initiated | d1_team | d2_problem | d3_containment | d4_root_cause | d5_corrective | d6_implemented | d7_prevention | d8_closed
-  teamLeaderId   String
-  teamMembers    String?   // JSON array of user IDs
+  teamLeaderId String
+  teamMembers  String? // JSON array of user IDs
 
   // D2: Problem Description
   d2ProblemDescription String?
-  d2IsIsNot            String?  // JSON: IS/IS NOT analysis
+  d2IsIsNot            String? // JSON: IS/IS NOT analysis
 
   // D3: Interim Containment
   d3ContainmentActions   String?
   d3ContainmentEffective Boolean?
 
   // D4: Root Cause
-  d4FiveWhyId      String?
-  d4IshikawaId     String?
+  d4FiveWhyId        String?
+  d4IshikawaId       String?
   d4RootCauseSummary String?
 
   // D5-D6: Corrective Actions
-  d5CorrectiveActions     String?
-  d6ImplementationNotes   String?
+  d5CorrectiveActions   String?
+  d6ImplementationNotes String?
 
   // D7: Prevention
-  d7SystemicChanges  String?
-  d7LessonsLearned   String?
+  d7SystemicChanges String?
+  d7LessonsLearned  String?
 
   // D8: Closure
   d8ClosedAt         DateTime?
@@ -817,54 +830,54 @@ model EightDReport {
 // ===== SAFETY INCIDENTS (ISO 45001) =====
 
 model SafetyIncident {
-  id              String    @id @default(cuid())
-  siteId          String
-  reporterId      String
-  workstationId   String?
+  id            String  @id @default(cuid())
+  siteId        String
+  reporterId    String
+  workstationId String?
 
   // Classification
-  type            String    // injury | near_miss | property_damage | environmental | first_aid
-  severity        String    @default("minor") // minor | moderate | serious | critical
-  outcome         String    @default("no_injury") // no_injury | first_aid | medical_treatment | restricted_work | lost_time | fatality
-  date            DateTime
-  time            String?   // "14:30"
-  location        String    // area/zone description
+  type     String // injury | near_miss | property_damage | environmental | first_aid
+  severity String   @default("minor") // minor | moderate | serious | critical
+  outcome  String   @default("no_injury") // no_injury | first_aid | medical_treatment | restricted_work | lost_time | fatality
+  date     DateTime
+  time     String? // "14:30"
+  location String // area/zone description
 
   // Details
-  title           String
-  description     String
-  injuredPerson   String?
-  injuryType      String?   // laceration | burn | crush | strain | chemical_exposure | fall | other
-  bodyPart        String?   // hand | arm | leg | head | back | eye | other
-  treatmentGiven  String?
-  daysLost        Int       @default(0)
+  title             String
+  description       String
+  injuredPerson     String?
+  injuryType        String? // laceration | burn | crush | strain | chemical_exposure | fall | other
+  bodyPart          String? // hand | arm | leg | head | back | eye | other
+  treatmentGiven    String?
+  daysLost          Int     @default(0)
   potentialSeverity String? // for near-misses: what COULD have happened
-  isOshaRecordable Boolean @default(false)
+  isOshaRecordable  Boolean @default(false)
 
   // Investigation
-  immediateAction  String?
-  witnessNames     String?  // JSON array
-  status           String   @default("reported")
+  immediateAction    String?
+  witnessNames       String? // JSON array
+  status             String    @default("reported")
   // reported | investigating | root_cause_identified | corrective_action | verification | closed
-  investigatorId   String?
-  investigationDate DateTime?
+  investigatorId     String?
+  investigationDate  DateTime?
   investigationNotes String?
 
   // RCA links
-  fiveWhyId        String?
-  ishikawaId       String?
-  eightDReportId   String?
+  fiveWhyId      String?
+  ishikawaId     String?
+  eightDReportId String?
 
-  photoUrl         String?
-  closedAt         DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  photoUrl  String?
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  site          Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  reporter      User              @relation("SafetyReporter", fields: [reporterId], references: [id])
-  workstation   Workstation?      @relation(fields: [workstationId], references: [id])
-  investigator  User?             @relation("SafetyInvestigator", fields: [investigatorId], references: [id])
-  attachments   SafetyAttachment[]
+  site         Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  reporter     User               @relation("SafetyReporter", fields: [reporterId], references: [id])
+  workstation  Workstation?       @relation(fields: [workstationId], references: [id])
+  investigator User?              @relation("SafetyInvestigator", fields: [investigatorId], references: [id])
+  attachments  SafetyAttachment[]
 
   @@index([siteId])
   @@index([siteId, type, date])

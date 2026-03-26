@@ -19,6 +19,7 @@ interface KaizenIdea {
   area: string | null;
   expectedSavings: number | null;
   actualSavings: number | null;
+  costToImplement: number | null;
   savingsType: string | null;
   createdAt: string;
   submittedBy: { firstName: string; lastName: string };
@@ -64,8 +65,14 @@ export default function KaizenPage() {
   const [impact, setImpact] = useState('medium');
   const [area, setArea] = useState('');
   const [expectedSavings, setExpectedSavings] = useState('');
+  const [costToImplement, setCostToImplement] = useState('');
   const [savingsType, setSavingsType] = useState('cost');
   const [creating, setCreating] = useState(false);
+
+  // Completion dialog — prompt for actual savings when moving to "completed"
+  const [completionDialog, setCompletionDialog] = useState<{ id: string; expectedSavings: number | null } | null>(null);
+  const [completionActualSavings, setCompletionActualSavings] = useState('');
+  const [completionCost, setCompletionCost] = useState('');
 
   // Edit mode
   const [editing, setEditing] = useState(false);
@@ -96,12 +103,13 @@ export default function KaizenPage() {
         expectedImpact: impact,
         area: area.trim() || undefined,
         expectedSavings: expectedSavings ? Number(expectedSavings) : undefined,
+        costToImplement: costToImplement ? Number(costToImplement) : undefined,
         savingsType: savingsType || undefined,
       });
       setItems(prev => [idea, ...prev]);
       setView('board');
       setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea('');
-      setExpectedSavings(''); setSavingsType('cost');
+      setExpectedSavings(''); setCostToImplement(''); setSavingsType('cost');
       toast('success', 'Kaizen idea submitted');
     } catch (e: any) {
       setError(e.message || 'Failed to create idea');
@@ -133,9 +141,21 @@ export default function KaizenPage() {
     }
   };
 
-  const changeStatus = async (id: string, newStatus: string) => {
+  const changeStatus = async (id: string, newStatus: string, extraData?: { actualSavings?: number; costToImplement?: number }) => {
+    // Intercept completion to prompt for actual savings
+    if (newStatus === 'completed' && !extraData) {
+      const item = items.find(i => i.id === id);
+      setCompletionDialog({ id, expectedSavings: item?.expectedSavings ?? null });
+      setCompletionActualSavings(item?.actualSavings?.toString() || item?.expectedSavings?.toString() || '');
+      setCompletionCost(item?.costToImplement?.toString() || '');
+      return;
+    }
+
     try {
-      const updated = await api.patch<KaizenIdea>(`/tools/kaizen/${id}/status`, { status: newStatus });
+      const body: any = { status: newStatus };
+      if (extraData?.actualSavings !== undefined) body.actualSavings = extraData.actualSavings;
+      if (extraData?.costToImplement !== undefined) body.costToImplement = extraData.costToImplement;
+      const updated = await api.patch<KaizenIdea>(`/tools/kaizen/${id}/status`, body);
       setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
       if (selected?.id === id) setSelected(updated);
       const col = STATUS_COLS.find(c => c.key === newStatus);
@@ -143,6 +163,15 @@ export default function KaizenPage() {
     } catch (e: any) {
       toast('error', e.message || 'Failed to update status');
     }
+  };
+
+  const confirmCompletion = () => {
+    if (!completionDialog) return;
+    changeStatus(completionDialog.id, 'completed', {
+      actualSavings: completionActualSavings ? Number(completionActualSavings) : undefined,
+      costToImplement: completionCost ? Number(completionCost) : undefined,
+    });
+    setCompletionDialog(null);
   };
 
   const openDetail = (idea: KaizenIdea) => {
@@ -193,15 +222,16 @@ export default function KaizenPage() {
           const active = items.filter(i => !['completed','rejected'].includes(i.status));
           const inPipeline = active.reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
           const totalTarget = items.filter(i => i.status !== 'rejected').reduce((sum, i) => sum + (i.expectedSavings || 0), 0);
+          const totalCost = items.filter(i => i.status !== 'rejected').reduce((sum, i) => sum + (i.costToImplement || 0), 0);
           if (totalTarget <= 0 && realized <= 0) return null;
           return (
-            <div className="mb-4 grid grid-cols-3 gap-3">
+            <div className="mb-4 grid grid-cols-4 gap-3">
               <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">
                   &euro;{realized.toLocaleString()}
                 </p>
                 <p className="text-[11px] font-medium text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-wider mt-0.5">
-                  Realized ({completed.length} completed)
+                  Realized ({completed.length} done)
                 </p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800 rounded-xl p-3 text-center">
@@ -212,17 +242,61 @@ export default function KaizenPage() {
                   In Pipeline ({active.length} active)
                 </p>
               </div>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800 rounded-xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-amber-700 dark:text-amber-400 tabular-nums">
+                  &euro;{totalCost.toLocaleString()}
+                </p>
+                <p className="text-[11px] font-medium text-amber-600/70 dark:text-amber-400/70 uppercase tracking-wider mt-0.5">
+                  Implementation Cost
+                </p>
+              </div>
               <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-gray-700 dark:text-gray-300 tabular-nums">
                   &euro;{totalTarget.toLocaleString()}
                 </p>
                 <p className="text-[11px] font-medium text-gray-500/70 dark:text-gray-400/70 uppercase tracking-wider mt-0.5">
-                  Total Target
+                  Total Expected
                 </p>
               </div>
             </div>
           );
         })()}
+
+        {/* Completion dialog — actual savings input */}
+        {completionDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setCompletionDialog(null)}>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Complete Kaizen</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Enter verified savings and implementation cost before closing.
+              </p>
+              <label className="block mb-3">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Savings (EUR)</span>
+                <input type="number" min="0" step="100" value={completionActualSavings} onChange={e => setCompletionActualSavings(e.target.value)}
+                  placeholder={completionDialog.expectedSavings ? `Expected: ${completionDialog.expectedSavings}` : '0'}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+              </label>
+              <label className="block mb-4">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Cost to Implement (EUR)</span>
+                <input type="number" min="0" step="100" value={completionCost} onChange={e => setCompletionCost(e.target.value)}
+                  placeholder="0"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+              </label>
+              <div className="flex gap-2">
+                <button onClick={() => setCompletionDialog(null)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={confirmCompletion}
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
+                  Mark Complete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
@@ -309,18 +383,25 @@ export default function KaizenPage() {
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
                               {item.problem}
                             </p>
-                            {item.expectedSavings != null && item.expectedSavings > 0 && (
-                              <div className="flex items-center gap-1 mb-1.5">
-                                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                  {item.status === 'completed' && item.actualSavings != null
-                                    ? `€${item.actualSavings.toLocaleString()} saved`
-                                    : `€${item.expectedSavings.toLocaleString()} est.`}
-                                </span>
+                            {(item.expectedSavings != null && item.expectedSavings > 0) || (item.costToImplement != null && item.costToImplement > 0) ? (
+                              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                                {item.expectedSavings != null && item.expectedSavings > 0 && (
+                                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                    {item.status === 'completed' && item.actualSavings != null
+                                      ? `€${item.actualSavings.toLocaleString()} saved`
+                                      : `€${item.expectedSavings.toLocaleString()} est.`}
+                                  </span>
+                                )}
+                                {item.costToImplement != null && item.costToImplement > 0 && (
+                                  <span className="text-[10px] text-amber-600 dark:text-amber-400">
+                                    (cost: €{item.costToImplement.toLocaleString()})
+                                  </span>
+                                )}
                                 {item.savingsType && (
-                                  <span className="text-[10px] text-gray-400 capitalize">({item.savingsType})</span>
+                                  <span className="text-[10px] text-gray-400 capitalize">· {item.savingsType}</span>
                                 )}
                               </div>
-                            )}
+                            ) : null}
                             <div className="flex items-center justify-between">
                               <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${IMPACT_BADGE[item.expectedImpact] || ''}`}>
                                 {item.expectedImpact}
@@ -398,11 +479,18 @@ export default function KaizenPage() {
                 className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               />
             </label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <label className="block">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Expected Savings (EUR)</span>
                 <input type="number" min="0" step="100" value={expectedSavings} onChange={e => setExpectedSavings(e.target.value)}
                   placeholder="e.g. 5000"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Cost to Implement (EUR)</span>
+                <input type="number" min="0" step="100" value={costToImplement} onChange={e => setCostToImplement(e.target.value)}
+                  placeholder="e.g. 500"
                   className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                 />
               </label>

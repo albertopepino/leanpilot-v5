@@ -7,7 +7,7 @@ import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
   Lightbulb, Settings, LogOut, Menu, X,
   Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
-  Wrench, ShieldAlert, Search, PackageCheck,
+  Wrench, ShieldAlert, Search, PackageCheck, ArrowLeftRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,6 +25,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer', iconGradient: 'from-blue-600 to-indigo-600' },
+  { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, minRole: 'operator', iconGradient: 'from-teal-500 to-cyan-500' },
   { href: '/orders', label: 'Orders', icon: PackageCheck, minRole: 'operator', iconGradient: 'from-blue-500 to-indigo-500' },
   { href: '/corporate', label: 'Corporate', icon: Building2, minRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager', iconGradient: 'from-cyan-600 to-blue-500' },

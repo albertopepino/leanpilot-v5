@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
-import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star, Download } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star, Download, HelpCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -45,6 +46,107 @@ const CATEGORIES = [
   { key: 'safety', label: 'Safety', desc: 'Hazard identification & PPE', emoji: '🦺' },
 ];
 
+// Scoring criteria per category — what each score 1-5 means
+const SCORE_CRITERIA: Record<string, Record<number, string>> = {
+  sort: {
+    1: 'Unnecessary items everywhere, no red-tag process in place',
+    2: 'Many unneeded items remain, red-tagging started but inconsistent',
+    3: 'Most unnecessary items removed, some gray areas remain',
+    4: 'Only needed items present, red-tag process followed regularly',
+    5: 'Perfect: only essential items, regular audits, disposal process active',
+  },
+  set_in_order: {
+    1: 'No designated locations, tools/parts scattered randomly',
+    2: 'Some labeling exists but items frequently misplaced',
+    3: 'Most items have designated spots, some labels missing or unclear',
+    4: 'Clear labeling, shadow boards, items returned after use',
+    5: 'Visual workplace: everything labeled, color-coded, 30-second retrieval',
+  },
+  shine: {
+    1: 'Area is dirty, debris/spills present, safety hazard',
+    2: 'Cleaning done sporadically, visible grime on equipment',
+    3: 'Regular cleaning schedule exists, area generally clean',
+    4: 'Clean and well-maintained, cleaning integrated into daily routine',
+    5: 'Spotless: cleaning is inspection, root causes of dirt eliminated',
+  },
+  standardize: {
+    1: 'No standards documented, each shift does things differently',
+    2: 'Some written standards but not posted or followed consistently',
+    3: 'Standards posted, most personnel aware, occasional deviations',
+    4: 'Visual standards at point of use, regular checks, deviations flagged',
+    5: 'Self-explaining workplace, standards continuously improved, full compliance',
+  },
+  sustain: {
+    1: 'No audit schedule, 5S efforts abandoned after initial push',
+    2: 'Occasional audits but no follow-up on findings',
+    3: 'Regular audits with action plans, some areas backslide',
+    4: 'Strong discipline, team ownership, improvements tracked on board',
+    5: '5S is culture: self-audits, Kaizen suggestions, management walks the floor',
+  },
+  safety: {
+    1: 'Unsafe conditions present, PPE not worn, hazards unaddressed',
+    2: 'Major safety gaps: missing guards, poor signage, near-misses ignored',
+    3: 'Basic PPE compliance, hazards marked, emergency exits clear',
+    4: 'Good safety culture, regular hazard walks, near-miss reporting active',
+    5: 'Zero-incident mindset: proactive hazard elimination, safety embedded in all tasks',
+  },
+};
+
+const SCORE_LABELS: Record<number, string> = {
+  1: 'Unacceptable',
+  2: 'Poor',
+  3: 'Fair',
+  4: 'Good',
+  5: 'Excellent',
+};
+
+// Tooltip component for score criteria
+const ScoreCriteriaTooltip = ({ categoryKey }: { categoryKey: string }) => {
+  const [open, setOpen] = useState(false);
+  const criteria = SCORE_CRITERIA[categoryKey];
+  if (!criteria) return null;
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="p-0.5 text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400 transition-colors"
+        aria-label="Scoring criteria"
+      >
+        <HelpCircle className="w-4 h-4" />
+      </button>
+      {open && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg text-xs">
+          <div className="font-semibold text-gray-900 dark:text-white mb-2">Scoring Guide</div>
+          <div className="space-y-1.5">
+            {[1, 2, 3, 4, 5].map(score => (
+              <div key={score} className="flex gap-2">
+                <span className={`shrink-0 w-5 h-5 rounded flex items-center justify-center font-bold text-white ${
+                  score === 1 ? 'bg-red-500' :
+                  score === 2 ? 'bg-orange-500' :
+                  score === 3 ? 'bg-yellow-500' :
+                  score === 4 ? 'bg-green-500' :
+                  'bg-emerald-600'
+                }`}>
+                  {score}
+                </span>
+                <div>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{SCORE_LABELS[score]}: </span>
+                  <span className="text-gray-500 dark:text-gray-400">{criteria[score]}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-2 h-2 rotate-45 bg-white dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-600" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 type View = 'list' | 'create' | 'detail' | 'scoring';
 
 export default function FiveSPage() {
@@ -70,6 +172,7 @@ export default function FiveSPage() {
   const [scoreNotes, setScoreNotes] = useState<Record<string, string>>({});
   const [scorePhotos, setScorePhotos] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [showConfirmComplete, setShowConfirmComplete] = useState(false);
 
   const loadAudits = useCallback(() => {
     api.get<FiveSAudit[]>('/tools/five-s')
@@ -443,7 +546,10 @@ export default function FiveSPage() {
             <div key={cat.key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">{cat.emoji} {cat.label}</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-1">
+                    {cat.emoji} {cat.label}
+                    <ScoreCriteriaTooltip categoryKey={cat.key} />
+                  </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{cat.desc}</p>
                 </div>
                 <ScoreInput value={scores[cat.key] || 0} onChange={v => setScores(p => ({ ...p, [cat.key]: v }))} />
@@ -481,7 +587,7 @@ export default function FiveSPage() {
             <button
               onClick={async () => {
                 setSaving(true);
-                try { await saveScores(); await completeAudit(); } catch {} finally { setSaving(false); }
+                setShowConfirmComplete(true);
               }}
               disabled={saving || total === 0}
               className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
@@ -489,6 +595,18 @@ export default function FiveSPage() {
               <CheckCircle className="w-4 h-4" />
               {saving ? 'Saving...' : 'Save & Complete'}
             </button>
+            <ConfirmDialog
+              open={showConfirmComplete}
+              title="Complete 5S Audit"
+              message="This will finalize and lock the audit. Scores cannot be changed after completion. Continue?"
+              confirmLabel="Complete Audit"
+              variant="warning"
+              loading={saving}
+              onConfirm={async () => {
+                try { await saveScores(); await completeAudit(); } catch {} finally { setSaving(false); setShowConfirmComplete(false); }
+              }}
+              onCancel={() => setShowConfirmComplete(false)}
+            />
           )}
         </div>
       </div>

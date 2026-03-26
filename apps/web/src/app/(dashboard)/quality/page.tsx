@@ -56,6 +56,12 @@ interface InspectionResult {
   checkpoint: Checkpoint;
 }
 
+interface OrderSummary {
+  id: string;
+  poNumber: string;
+  productName: string;
+}
+
 interface NCR {
   id: string;
   title: string;
@@ -67,6 +73,7 @@ interface NCR {
   correctiveAction: string | null;
   createdAt: string;
   reportedBy: { firstName: string; lastName: string };
+  order?: OrderSummary | null;
 }
 
 type Tab = 'inspections' | 'templates' | 'ncr';
@@ -102,10 +109,14 @@ export default function QualityPage() {
   const [results, setResults] = useState<Record<string, { passed?: boolean; value?: number; notes?: string }>>({});
   const [saving, setSaving] = useState(false);
 
+  // Orders (for NCR linking)
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+
   // NCR form
   const [ncrTitle, setNcrTitle] = useState('');
   const [ncrDesc, setNcrDesc] = useState('');
   const [ncrSeverity, setNcrSeverity] = useState<'minor' | 'major' | 'critical'>('minor');
+  const [ncrOrderId, setNcrOrderId] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Template form
@@ -117,14 +128,16 @@ export default function QualityPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [insp, tmpl, ncr] = await Promise.all([
+      const [insp, tmpl, ncr, ord] = await Promise.all([
         api.get<Inspection[]>('/quality/inspections').catch(() => []),
         api.get<Template[]>('/quality/templates').catch(() => []),
         api.get<NCR[]>('/quality/ncr').catch(() => []),
+        api.get<OrderSummary[]>('/orders').catch(() => []),
       ]);
       setInspections(Array.isArray(insp) ? insp : []);
       setTemplates(Array.isArray(tmpl) ? tmpl : []);
       setNcrs(Array.isArray(ncr) ? ncr : []);
+      setOrders(Array.isArray(ord) ? ord : []);
     } finally {
       setLoading(false);
     }
@@ -233,10 +246,11 @@ export default function QualityPage() {
         title: ncrTitle.trim(),
         description: ncrDesc.trim(),
         severity: ncrSeverity,
+        orderId: ncrOrderId || undefined,
       });
       setNcrs(prev => [ncr, ...prev]);
       setView('list');
-      setNcrTitle(''); setNcrDesc(''); setNcrSeverity('minor');
+      setNcrTitle(''); setNcrDesc(''); setNcrSeverity('minor'); setNcrOrderId('');
       toast('success', 'NCR created');
     } catch (e: any) {
       setError(e.message || 'Failed to create NCR');
@@ -707,6 +721,15 @@ export default function QualityPage() {
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
               <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{selectedNcr.description}</p>
             </div>
+            {selectedNcr.order && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Linked Production Order</h3>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  <span className="font-mono font-semibold">{selectedNcr.order.poNumber}</span>
+                  <span className="ml-2 text-gray-500 dark:text-gray-400">— {selectedNcr.order.productName}</span>
+                </p>
+              </div>
+            )}
             {selectedNcr.rootCause && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Root Cause</h3>
@@ -801,7 +824,7 @@ export default function QualityPage() {
                 className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
               />
             </label>
-            <label className="block mb-6">
+            <label className="block mb-4">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Severity *</span>
               <select value={ncrSeverity} onChange={e => setNcrSeverity(e.target.value as any)}
                 className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
@@ -809,6 +832,17 @@ export default function QualityPage() {
                 <option value="minor">Minor</option>
                 <option value="major">Major</option>
                 <option value="critical">Critical</option>
+              </select>
+            </label>
+            <label className="block mb-6">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Production Order</span>
+              <select value={ncrOrderId} onChange={e => setNcrOrderId(e.target.value)}
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+              >
+                <option value="">— None —</option>
+                {orders.map(o => (
+                  <option key={o.id} value={o.id}>{o.poNumber} — {o.productName}</option>
+                ))}
               </select>
             </label>
             <button onClick={createNcr} disabled={creating || !ncrTitle.trim() || !ncrDesc.trim()}

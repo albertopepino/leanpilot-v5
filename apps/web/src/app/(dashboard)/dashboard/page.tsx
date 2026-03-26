@@ -149,6 +149,7 @@ export default function DashboardPage() {
   const attention = data?.attention;
 
   const qualityRate = production && typeof production.scrapRate === 'number' ? Math.max(0, 100 - production.scrapRate) : 0;
+  const hasOeeData = oee?.siteOee && (oee.siteOee.availability > 0 || oee.siteOee.performance > 0 || oee.siteOee.quality > 0);
   const summaryPills: string[] = [];
   if (attention?.machinesDown) summaryPills.push(`${attention.machinesDown} machine${attention.machinesDown > 1 ? 's' : ''} down`);
   if (attention?.posBehind) summaryPills.push(`${attention.posBehind} PO${attention.posBehind > 1 ? 's' : ''} behind`);
@@ -254,7 +255,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── OEE Section ─────────────────────────────────────────── */}
-      {oee?.siteOee && (
+      {oee && (
         <GlassCard>
           <div className="flex items-center gap-2.5 mb-6">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500
@@ -270,7 +271,14 @@ export default function DashboardPage() {
           </div>
 
           {/* OEE Rings — API returns values already as percentages (e.g. 82.3) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {!hasOeeData && (
+            <div className="text-center py-8 text-gray-400">
+              <Gauge className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-medium">No production data yet</p>
+              <p className="text-xs mt-1">OEE will populate after production runs are closed</p>
+            </div>
+          )}
+          {hasOeeData && <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div className="flex flex-col items-center gap-2">
               <ProgressRing value={oee.siteOee.availability || 0} size={100} strokeWidth={8} color="#3b82f6">
                 <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
@@ -303,10 +311,10 @@ export default function DashboardPage() {
               </ProgressRing>
               <span className="text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">Overall OEE</span>
             </div>
-          </div>
+          </div>}
 
           {/* Workstation Breakdown Table */}
-          {oee.workstations && oee.workstations.length > 0 && (
+          {hasOeeData && oee.workstations && oee.workstations.length > 0 && (
             <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
                 Per Workstation

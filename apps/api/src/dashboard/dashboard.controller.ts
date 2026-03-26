@@ -28,4 +28,22 @@ export class DashboardController {
   ) {
     return this.dashboard.getOee(siteId, workstationId, period || 'week');
   }
+
+  @Get('shift-handover')
+  @Roles('viewer')
+  async getShiftHandover(
+    @CurrentUser('siteId') siteId: string,
+    @Query('hours') hours?: string,
+  ) {
+    return this.dashboard.getShiftHandover(siteId, hours ? parseInt(hours, 10) : 8);
+  }
+
+  @Get('pareto')
+  @Roles('viewer')
+  async getPareto(
+    @CurrentUser('siteId') siteId: string,
+    @Query('period') period?: string,
+  ) {
+    return this.dashboard.getPareto(siteId, period || 'week');
+  }
 }

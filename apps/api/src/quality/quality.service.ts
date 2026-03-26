@@ -188,6 +188,7 @@ export class QualityService {
       include: {
         reporter: { select: { firstName: true, lastName: true } },
         workstation: { select: { name: true, code: true } },
+        order: { select: { poNumber: true, productName: true } },
         _count: { select: { attachments: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -201,6 +202,7 @@ export class QualityService {
         reporter: { select: { firstName: true, lastName: true } },
         verifiedBy: { select: { firstName: true, lastName: true } },
         workstation: { select: { name: true, code: true } },
+        order: { select: { id: true, poNumber: true, productName: true } },
         attachments: { orderBy: { createdAt: 'desc' } },
       },
     });
@@ -225,9 +227,17 @@ export class QualityService {
       const ws = await this.prisma.workstation.findFirst({ where: { id: data.workstationId, siteId } });
       if (!ws) throw new BadRequestException('Workstation does not belong to this site');
     }
+    // Verify optional orderId belongs to site
+    if (data.orderId) {
+      const order = await this.prisma.productionOrder.findFirst({ where: { id: data.orderId, siteId } });
+      if (!order) throw new BadRequestException('Order does not belong to this site');
+    }
     return this.prisma.nonConformanceReport.create({
       data: { siteId, reporterId, ...data },
-      include: { reporter: { select: { firstName: true, lastName: true } } },
+      include: {
+        reporter: { select: { firstName: true, lastName: true } },
+        order: { select: { poNumber: true, productName: true } },
+      },
     });
   }
 

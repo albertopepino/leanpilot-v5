@@ -33,6 +33,7 @@ export class KaizenController {
       photoUrl?: string;
       expectedSavings?: number;
       actualSavings?: number;
+      costToImplement?: number;
       savingsType?: string;
       gembaObservationId?: string;
     },
@@ -61,6 +62,7 @@ export class KaizenController {
       photoUrl?: string;
       expectedSavings?: number;
       actualSavings?: number;
+      costToImplement?: number;
       savingsType?: string;
     },
   ) {
@@ -73,8 +75,8 @@ export class KaizenController {
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') reviewerId: string,
-    @Body() body: { status: string; reviewNotes?: string },
+    @Body() body: { status: string; reviewNotes?: string; actualSavings?: number; costToImplement?: number },
   ) {
-    return this.kaizen.changeStatus(id, siteId, body.status, reviewerId, body.reviewNotes);
+    return this.kaizen.changeStatus(id, siteId, body.status, reviewerId, body.reviewNotes, body.actualSavings, body.costToImplement);
   }
 }
