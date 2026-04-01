@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Response } from 'express';
 import { ShopfloorService } from './shopfloor.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -27,8 +28,10 @@ export class ShopfloorController {
   async getActiveRun(
     @Param('workstationId') workstationId: string,
     @CurrentUser('siteId') siteId: string,
+    @Res() res: Response,
   ) {
-    return this.shopfloor.getActiveRun(workstationId, siteId);
+    const run = await this.shopfloor.getActiveRun(workstationId, siteId);
+    return res.json(run ?? null);
   }
 
   @Get('reason-codes')

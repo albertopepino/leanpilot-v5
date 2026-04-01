@@ -259,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="lg:ml-64 min-h-screen">
+      <main className="lg:ml-64 min-h-screen overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>

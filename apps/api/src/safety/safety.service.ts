@@ -69,7 +69,7 @@ export class SafetyService {
     type: string;
     severity?: string;
     outcome?: string;
-    date: string;
+    date?: string;
     time?: string;
     location: string;
     title: string;
@@ -108,7 +108,7 @@ export class SafetyService {
         type: data.type,
         severity: data.severity || 'minor',
         outcome: data.outcome || 'no_injury',
-        date: new Date(data.date),
+        date: data.date ? new Date(data.date) : new Date(),
         time: data.time,
         location: data.location,
         title: data.title,

@@ -211,18 +211,18 @@ export default function QualityPage() {
     setError('');
     try {
       const checkpoints = tmplCheckpoints.map((cp, i) => ({
-        name: cp.name,
+        description: cp.name,
         measurementType: cp.measurementType,
         unit: cp.unit || undefined,
         targetValue: cp.targetValue ? parseFloat(cp.targetValue) : undefined,
-        toleranceMin: cp.toleranceMin ? parseFloat(cp.toleranceMin) : undefined,
-        toleranceMax: cp.toleranceMax ? parseFloat(cp.toleranceMax) : undefined,
-        sortOrder: i,
+        lowerLimit: cp.toleranceMin ? parseFloat(cp.toleranceMin) : undefined,
+        upperLimit: cp.toleranceMax ? parseFloat(cp.toleranceMax) : undefined,
+        sequence: i + 1,
       }));
       const tmpl = await api.post<Template>('/quality/templates', {
         name: tmplName.trim(),
-        description: tmplDesc.trim() || undefined,
-        productFamily: tmplFamily.trim() || undefined,
+        productName: tmplFamily.trim() || undefined,
+        phase: tmplDesc.trim() || undefined,
         checkpoints,
       });
       setTemplates(prev => [tmpl, ...prev]);

@@ -26,12 +26,12 @@ interface SafetyIncident {
   date: string;
   status: 'open' | 'investigating' | 'corrective_action' | 'closed';
   injuredPerson: string | null;
-  injuryDescription: string | null;
+  injuryType: string | null;
   daysLost: number;
   photoUrl: string | null;
-  investigation: string | null;
-  rcaId: string | null;
-  reportedBy: { firstName: string; lastName: string };
+  investigationNotes: string | null;
+  fiveWhyId: string | null;
+  reporter: { id: string; firstName: string; lastName: string };
   createdAt: string;
   updatedAt: string;
 }
@@ -258,7 +258,7 @@ export default function SafetyPage() {
 
   const resetForm = () => {
     setNewType('near_miss');
-    setNewSeverity('medium');
+    setNewSeverity('moderate');
     setNewTitle('');
     setNewDesc('');
     setNewLocation('');
@@ -568,7 +568,7 @@ export default function SafetyPage() {
               {selected.title}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Reported by {selected.reportedBy.firstName} {selected.reportedBy.lastName} — {new Date(selected.createdAt).toLocaleDateString()}
+              Reported by {selected.reporter.firstName} {selected.reporter.lastName} — {new Date(selected.createdAt).toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -626,17 +626,17 @@ export default function SafetyPage() {
                 </h3>
                 <dl className="space-y-2 text-sm">
                   <div><dt className="text-gray-500 dark:text-gray-400">Injured Person</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuredPerson}</dd></div>
-                  {selected.injuryDescription && (
-                    <div><dt className="text-gray-500 dark:text-gray-400">Injury</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuryDescription}</dd></div>
+                  {selected.injuryType && (
+                    <div><dt className="text-gray-500 dark:text-gray-400">Injury</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuryType}</dd></div>
                   )}
                 </dl>
               </Card>
             )}
 
-            {selected.investigation && (
+            {selected.investigationNotes && (
               <Card>
                 <h3 className="font-medium text-gray-900 dark:text-white mb-3">Investigation Notes</h3>
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.investigation}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.investigationNotes}</p>
               </Card>
             )}
 
@@ -647,10 +647,10 @@ export default function SafetyPage() {
               </Card>
             )}
 
-            {selected.rcaId && (
+            {selected.fiveWhyId && (
               <Card>
                 <h3 className="font-medium text-gray-900 dark:text-white mb-2">Linked Root Cause Analysis</h3>
-                <p className="text-sm text-brand-600 dark:text-brand-400">RCA ID: {selected.rcaId}</p>
+                <p className="text-sm text-brand-600 dark:text-brand-400">Five-Why ID: {selected.fiveWhyId}</p>
               </Card>
             )}
           </div>

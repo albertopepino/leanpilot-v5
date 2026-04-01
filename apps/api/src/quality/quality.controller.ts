@@ -64,7 +64,7 @@ export class QualityController {
   async createInspection(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') inspectorId: string,
-    @Body() body: { templateId: string; workstationId: string; orderId?: string; phaseId?: string },
+    @Body() body: { templateId: string; workstationId?: string; orderId?: string; phaseId?: string },
   ) {
     return this.quality.createInspection(siteId, inspectorId, body);
   }

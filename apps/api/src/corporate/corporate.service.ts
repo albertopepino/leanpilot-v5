@@ -159,7 +159,7 @@ export class CorporateService {
           siteName: site.name,
           location: site.location,
           // Values are already percentages, just compute weighted average
-          oee: oeeResult?.siteOee ?? 0,
+          oee: typeof oeeResult?.siteOee === 'object' ? (oeeResult.siteOee?.oee ?? 0) : (oeeResult?.siteOee ?? 0),
           availability: totalOp > 0 ? Math.round((sumA / totalOp) * 10) / 10 : 0,
           performance: totalOp > 0 ? Math.round((sumP / totalOp) * 10) / 10 : 0,
           quality: totalOp > 0 ? Math.round((sumQ / totalOp) * 10) / 10 : 0,

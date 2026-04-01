@@ -45,7 +45,7 @@ export class OrdersService {
     unit?: string;
     dueDate?: string;
     priority?: string;
-    phases?: { sequence: number; name: string; workstationId: string; cycleTimeSeconds: number }[];
+    phases?: { sequence: number; name?: string; workstationId: string; cycleTimeSeconds: number }[];
   }) {
     // Validate all workstationIds belong to this site
     if (data.phases?.length) {
@@ -74,7 +74,7 @@ export class OrdersService {
         phases: data.phases ? {
           create: data.phases.map(p => ({
             sequence: p.sequence,
-            name: p.name,
+            name: p.name || `Phase ${p.sequence}`,
             workstationId: p.workstationId,
             cycleTimeSeconds: p.cycleTimeSeconds,
           })),

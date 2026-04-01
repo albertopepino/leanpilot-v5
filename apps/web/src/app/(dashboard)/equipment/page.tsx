@@ -34,11 +34,15 @@ interface Workstation {
 interface MaintenancePlan {
   id: string;
   workstationId: string;
+  name: string;
   type: string;
-  description: string;
-  frequency: string;
+  frequencyDays: number;
+  frequencyHours: number | null;
+  estimatedMinutes: number | null;
+  instructions: string | null;
   nextDueDate: string;
   assignedTo: { firstName: string; lastName: string } | null;
+  workstation: { id: string; name: string };
   createdAt: string;
 }
 
@@ -47,24 +51,23 @@ interface MaintenanceLog {
   workstationId: string;
   type: string;
   description: string;
-  duration: number;
+  durationMinutes: number;
   cost: number | null;
-  performedBy: { firstName: string; lastName: string };
+  performedBy: { id: string; firstName: string; lastName: string };
   performedAt: string;
-  createdAt: string;
 }
 
 interface CiltCheck {
   id: string;
   workstationId: string;
-  cleaning: boolean;
-  inspection: boolean;
-  lubrication: boolean;
-  tightening: boolean;
-  abnormality: boolean;
-  notes: string | null;
-  performedBy: { firstName: string; lastName: string };
-  performedAt: string;
+  cleaningDone: boolean;
+  inspectionDone: boolean;
+  lubricationDone: boolean;
+  tighteningDone: boolean;
+  abnormalityFound: boolean;
+  abnormalityDescription: string | null;
+  operator: { firstName: string; lastName: string };
+  createdAt: string;
 }
 
 interface MaintenanceMetrics {
@@ -576,9 +579,9 @@ export default function EquipmentPage() {
                                 {plan.type}
                               </span>
                               <div className="min-w-0">
-                                <p className="font-medium text-gray-900 dark:text-white truncate">{plan.description}</p>
+                                <p className="font-medium text-gray-900 dark:text-white truncate">{plan.name}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {plan.frequency} — {plan.assignedTo ? `${plan.assignedTo.firstName} ${plan.assignedTo.lastName}` : 'Unassigned'}
+                                  Every {plan.frequencyDays}d — {plan.assignedTo ? `${plan.assignedTo.firstName} ${plan.assignedTo.lastName}` : 'Unassigned'}
                                 </p>
                               </div>
                             </div>
@@ -671,12 +674,12 @@ export default function EquipmentPage() {
                                 {log.type}
                               </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {log.duration} min {log.cost ? `— $${log.cost.toFixed(2)}` : ''}
+                                {log.durationMinutes} min {log.cost ? `— $${log.cost.toFixed(2)}` : ''}
                               </span>
                             </div>
                             <p className="text-sm text-gray-900 dark:text-white">{log.description}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : 'Unknown'} — {new Date(log.performedAt || log.createdAt).toLocaleString()}
+                              {log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : 'Unknown'} — {new Date(log.performedAt).toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -767,18 +770,18 @@ export default function EquipmentPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="flex gap-1">
-                                {check.cleaning && <span className="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-[10px] font-bold text-blue-600 dark:text-blue-400">C</span>}
-                                {check.inspection && <span className="w-5 h-5 rounded bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-[10px] font-bold text-cyan-600 dark:text-cyan-400">I</span>}
-                                {check.lubrication && <span className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-[10px] font-bold text-amber-600 dark:text-amber-400">L</span>}
-                                {check.tightening && <span className="w-5 h-5 rounded bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-[10px] font-bold text-purple-600 dark:text-purple-400">T</span>}
+                                {check.cleaningDone && <span className="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-[10px] font-bold text-blue-600 dark:text-blue-400">C</span>}
+                                {check.inspectionDone && <span className="w-5 h-5 rounded bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-[10px] font-bold text-cyan-600 dark:text-cyan-400">I</span>}
+                                {check.lubricationDone && <span className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-[10px] font-bold text-amber-600 dark:text-amber-400">L</span>}
+                                {check.tighteningDone && <span className="w-5 h-5 rounded bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-[10px] font-bold text-purple-600 dark:text-purple-400">T</span>}
                               </div>
-                              {check.abnormality && (
+                              {check.abnormalityFound && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">ABN</span>
                               )}
-                              {check.notes && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">{check.notes}</span>}
+                              {check.abnormalityDescription && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">{check.abnormalityDescription}</span>}
                             </div>
                             <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                              {check.performedBy ? `${check.performedBy.firstName} ${check.performedBy.lastName}` : 'Unknown'} — {new Date(check.performedAt).toLocaleDateString()}
+                              {check.operator ? `${check.operator.firstName} ${check.operator.lastName}` : 'Unknown'} — {new Date(check.createdAt).toLocaleDateString()}
                             </span>
                           </div>
                         </Card>

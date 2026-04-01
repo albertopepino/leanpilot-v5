@@ -40,14 +40,14 @@ export class MaintenanceService {
 
   async createPlan(siteId: string, data: {
     workstationId: string;
-    name: string;
+    name?: string;
     type?: string;
     frequencyDays: number;
     frequencyHours?: number;
     estimatedMinutes?: number;
     instructions?: string;
     assignedToId?: string;
-    nextDueDate: string;
+    nextDueDate?: string;
   }) {
     if (data.type && !VALID_PLAN_TYPES.includes(data.type)) {
       throw new BadRequestException(`Invalid plan type. Must be: ${VALID_PLAN_TYPES.join(', ')}`);
@@ -63,14 +63,16 @@ export class MaintenanceService {
       data: {
         siteId,
         workstationId: data.workstationId,
-        name: data.name,
+        name: data.name || data.instructions || `${data.type || 'preventive'} maintenance`,
         type: data.type || 'preventive',
         frequencyDays: data.frequencyDays,
         frequencyHours: data.frequencyHours,
         estimatedMinutes: data.estimatedMinutes,
         instructions: data.instructions,
         assignedToId: data.assignedToId,
-        nextDueDate: new Date(data.nextDueDate),
+        nextDueDate: data.nextDueDate
+          ? new Date(data.nextDueDate)
+          : new Date(Date.now() + (data.frequencyDays || 30) * 86400000),
       },
       include: {
         workstation: { select: { id: true, name: true } },

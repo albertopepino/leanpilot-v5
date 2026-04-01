@@ -106,7 +106,7 @@ export class QualityService {
 
   async createInspection(siteId: string, inspectorId: string, data: {
     templateId: string;
-    workstationId: string;
+    workstationId?: string;
     orderId?: string;
     phaseId?: string;
   }) {
@@ -114,14 +114,26 @@ export class QualityService {
     const tpl = await this.prisma.qualityTemplate.findFirst({ where: { id: data.templateId, siteId } });
     if (!tpl) throw new NotFoundException('Template not found');
 
-    // Verify workstationId belongs to site
-    if (data.workstationId) {
-      const ws = await this.prisma.workstation.findFirst({ where: { id: data.workstationId, siteId } });
-      if (!ws) throw new BadRequestException('Workstation does not belong to this site');
+    // If no workstationId, use the first workstation in the site
+    if (!data.workstationId) {
+      const ws = await this.prisma.workstation.findFirst({ where: { siteId }, select: { id: true } });
+      if (ws) data.workstationId = ws.id;
+      else throw new BadRequestException('No workstations found in this site');
     }
 
+    // Verify workstationId belongs to site
+    const ws = await this.prisma.workstation.findFirst({ where: { id: data.workstationId, siteId } });
+    if (!ws) throw new BadRequestException('Workstation does not belong to this site');
+
     return this.prisma.qualityInspection.create({
-      data: { siteId, inspectorId, ...data },
+      data: {
+        siteId,
+        inspectorId,
+        templateId: data.templateId,
+        workstationId: data.workstationId!,
+        orderId: data.orderId,
+        phaseId: data.phaseId,
+      },
       include: {
         template: { include: { checkpoints: { orderBy: { sequence: 'asc' } } } },
         inspector: { select: { firstName: true, lastName: true } },

@@ -18,7 +18,7 @@ import Link from 'next/link';
 
 interface OeeWorkstation {
   workstationId: string;
-  name: string;
+  workstationName: string;
   availability: number;
   performance: number;
   quality: number;
@@ -278,7 +278,7 @@ export default function DashboardPage() {
               <p className="text-xs mt-1">OEE will populate after production runs are closed</p>
             </div>
           )}
-          {hasOeeData && <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {hasOeeData && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6">
             <div className="flex flex-col items-center gap-2">
               <ProgressRing value={oee.siteOee.availability || 0} size={100} strokeWidth={8} color="#3b82f6">
                 <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">
@@ -333,7 +333,7 @@ export default function DashboardPage() {
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                     {oee.workstations.map((ws) => (
                       <tr key={ws.workstationId} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">
-                        <td className="py-2 font-medium text-gray-700 dark:text-gray-200">{ws.name}</td>
+                        <td className="py-2 font-medium text-gray-700 dark:text-gray-200">{ws.workstationName}</td>
                         <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.availability || 0).toFixed(1)}%</td>
                         <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.performance || 0).toFixed(1)}%</td>
                         <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.quality || 0).toFixed(1)}%</td>
