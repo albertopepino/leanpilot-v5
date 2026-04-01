@@ -14,7 +14,7 @@ export class NotificationsController {
   constructor(private notifications: NotificationsService) {}
 
   @Get('count')
-  @Roles('operator')
+  @Roles('viewer')
   async getUnreadCount(
     @CurrentUser('id') userId: string,
     @CurrentUser('siteId') siteId: string,
@@ -23,7 +23,7 @@ export class NotificationsController {
   }
 
   @Get()
-  @Roles('operator')
+  @Roles('viewer')
   async findAll(
     @CurrentUser('id') userId: string,
     @CurrentUser('siteId') siteId: string,
@@ -37,7 +37,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  @Roles('operator')
+  @Roles('viewer')
   async markRead(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
@@ -46,7 +46,7 @@ export class NotificationsController {
   }
 
   @Post('read-all')
-  @Roles('operator')
+  @Roles('viewer')
   async markAllRead(
     @CurrentUser('id') userId: string,
     @CurrentUser('siteId') siteId: string,

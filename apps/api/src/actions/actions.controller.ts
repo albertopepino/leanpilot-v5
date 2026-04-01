@@ -14,13 +14,13 @@ export class ActionsController {
   constructor(private actions: ActionsService) {}
 
   @Get('summary')
-  @Roles('operator')
+  @Roles('viewer')
   async getSummary(@CurrentUser('siteId') siteId: string) {
     return this.actions.getSummary(siteId);
   }
 
   @Get()
-  @Roles('operator')
+  @Roles('viewer')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('status') status?: string,
@@ -39,7 +39,7 @@ export class ActionsController {
   }
 
   @Get(':id')
-  @Roles('operator')
+  @Roles('viewer')
   async findOne(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.actions.findById(id, siteId);
   }

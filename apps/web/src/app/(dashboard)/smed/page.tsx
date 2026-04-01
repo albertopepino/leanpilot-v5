@@ -214,7 +214,7 @@ export default function SmedPage() {
             {view === 'list' ? 'SMED — Changeover Analysis' : view === 'create' ? 'New SMED Analysis' : selectedAnalysis?.title || 'SMED Analysis'}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {view === 'list' ? 'Single-Minute Exchange of Die — reduce changeover times' : view === 'create' ? 'Set up a new changeover study' : `${selectedAnalysis?.workstation || 'Workstation'}: ${selectedAnalysis?.productFrom || '?'} → ${selectedAnalysis?.productTo || '?'}`}
+            {view === 'list' ? 'Single-Minute Exchange of Die — reduce changeover times' : view === 'create' ? 'Set up a new changeover study' : `${selectedAnalysis?.workstation?.name || 'Workstation'}: ${selectedAnalysis?.productFrom || '?'} → ${selectedAnalysis?.productTo || '?'}`}
           </p>
         </div>
         {view === 'list' && (
@@ -262,7 +262,7 @@ export default function SmedPage() {
                           {analysis.status.replace('_', ' ')}
                         </span>
                         {analysis.workstation && (
-                          <span className="text-xs text-gray-500">{analysis.workstation}</span>
+                          <span className="text-xs text-gray-500">{analysis.workstation?.name}</span>
                         )}
                         {analysis.productFrom && analysis.productTo && (
                           <span className="text-xs text-gray-400 flex items-center gap-1">
