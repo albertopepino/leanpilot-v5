@@ -8,7 +8,9 @@ import {
   Lightbulb, Settings, LogOut, Menu, X,
   Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
   Wrench, ShieldAlert, Search, PackageCheck, ArrowLeftRight,
+  CheckSquare, Users2, FileBarChart, GraduationCap, Timer,
 } from 'lucide-react';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -31,15 +33,20 @@ const NAV_ITEMS: NavItem[] = [
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager', iconGradient: 'from-cyan-600 to-blue-500' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator', iconGradient: 'from-orange-500 to-amber-500' },
   { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator', iconGradient: 'from-violet-600 to-purple-500' },
+  { href: '/actions', label: 'Actions', icon: CheckSquare, minRole: 'operator', iconGradient: 'from-rose-500 to-pink-500' },
+  { href: '/tier-meetings', label: 'Tier Meetings', icon: Users2, minRole: 'manager', iconGradient: 'from-indigo-500 to-violet-500' },
   { href: '/equipment', label: 'Equipment', icon: Wrench, minRole: 'operator', iconGradient: 'from-slate-600 to-slate-500' },
   {
     href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator', iconGradient: 'from-emerald-600 to-teal-500',
     children: [
       { href: '/quality/documents', label: 'Documents', icon: FileText, minRole: 'viewer' },
       { href: '/quality/root-cause', label: 'Root Cause', icon: Search, minRole: 'operator' },
+      { href: '/quality/a3', label: 'A3 Reports', icon: FileBarChart, minRole: 'operator' },
     ],
   },
   { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, minRole: 'operator', iconGradient: 'from-red-500 to-orange-500' },
+  { href: '/skills', label: 'Skills Matrix', icon: GraduationCap, minRole: 'manager', iconGradient: 'from-emerald-500 to-teal-500' },
+  { href: '/smed', label: 'SMED', icon: Timer, minRole: 'operator', iconGradient: 'from-cyan-500 to-blue-500' },
   { section: 'System', href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true, iconGradient: 'from-indigo-500 to-blue-500' },
@@ -93,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Factory className="w-5 h-5 text-brand-600" />
           <span className="font-semibold text-gray-900 dark:text-white">LeanPilot</span>
         </div>
-        <div className="w-6" />
+        <NotificationBell />
       </header>
 
       {/* Sidebar overlay (mobile) */}

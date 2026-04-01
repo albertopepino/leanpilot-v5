@@ -20,6 +20,12 @@ import { DocumentsModule } from './documents/documents.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { RootCauseModule } from './root-cause/root-cause.module';
 import { SafetyModule } from './safety/safety.module';
+import { ActionsModule } from './actions/actions.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TierMeetingsModule } from './tier-meetings/tier-meetings.module';
+import { A3Module } from './a3/a3.module';
+import { SkillsModule } from './skills/skills.module';
+import { SmedModule } from './smed/smed.module';
 
 @Module({
   imports: [
@@ -44,6 +50,12 @@ import { SafetyModule } from './safety/safety.module';
     MaintenanceModule,
     RootCauseModule,
     SafetyModule,
+    ActionsModule,
+    NotificationsModule,
+    TierMeetingsModule,
+    A3Module,
+    SkillsModule,
+    SmedModule,
   ],
 })
 export class AppModule {}
