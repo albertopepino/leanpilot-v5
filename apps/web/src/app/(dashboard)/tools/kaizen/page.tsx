@@ -83,7 +83,7 @@ export default function KaizenPage() {
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const loadItems = useCallback(() => {
-    api.get<KaizenIdea[]>('/tools/kaizen')
+    api.get<any>('/tools/kaizen')
       .then(res => setItems(Array.isArray(res) ? res : res?.data || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));

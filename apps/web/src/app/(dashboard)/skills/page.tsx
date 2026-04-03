@@ -94,7 +94,7 @@ export default function SkillsPage() {
 
   const loadGaps = useCallback(async () => {
     try {
-      const res = await api.get<SkillGap[]>('/skills/gaps');
+      const res = await api.get<any>('/skills/gaps');
       setGaps(Array.isArray(res) ? res : res?.data || []);
     } catch {
       // non-critical

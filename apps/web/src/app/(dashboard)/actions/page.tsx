@@ -105,7 +105,7 @@ export default function ActionsPage() {
       if (filterStatus) params.set('status', filterStatus);
       if (filterCategory) params.set('category', filterCategory);
       const qs = params.toString();
-      const res = await api.get<Action[]>(`/actions${qs ? `?${qs}` : ''}`);
+      const res = await api.get<any>(`/actions${qs ? `?${qs}` : ''}`);
       setActions(Array.isArray(res) ? res : res?.data || []);
     } catch (e: any) {
       setError(e.message);

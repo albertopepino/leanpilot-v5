@@ -328,7 +328,7 @@ export default function GembaPage() {
   const loadWalks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<GembaWalk[]>('/gemba');
+      const res = await api.get<any>('/gemba');
       setWalks(Array.isArray(res) ? res : res?.data || []);
     } catch (e: any) {
       setError(e.message);

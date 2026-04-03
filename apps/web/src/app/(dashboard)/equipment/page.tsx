@@ -169,7 +169,7 @@ export default function EquipmentPage() {
   const loadWorkstations = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<Workstation[]>('/workstations');
+      const res = await api.get<any>('/workstations');
       setWorkstations(Array.isArray(res) ? res : res?.data || []);
     } catch {
       setWorkstations([]);
@@ -180,7 +180,7 @@ export default function EquipmentPage() {
 
   const loadOverdue = useCallback(async () => {
     try {
-      const res = await api.get<OverduePlan[]>('/maintenance/overdue');
+      const res = await api.get<any>('/maintenance/overdue');
       setOverdue(Array.isArray(res) ? res : res?.data || []);
     } catch {
       setOverdue([]);

@@ -174,9 +174,9 @@ export default function RootCausePage() {
     setLoading(true);
     try {
       const [fiveWhysRaw, ishikawasRaw, eightDsRaw] = await Promise.all([
-        api.get<FiveWhy[]>('/rca/five-why').catch(() => []),
-        api.get<Ishikawa[]>('/rca/ishikawa').catch(() => []),
-        api.get<EightD[]>('/rca/eight-d').catch(() => []),
+        api.get<any>('/rca/five-why').catch(() => []),
+        api.get<any>('/rca/ishikawa').catch(() => []),
+        api.get<any>('/rca/eight-d').catch(() => []),
       ]);
       const fiveWhys = Array.isArray(fiveWhysRaw) ? fiveWhysRaw : fiveWhysRaw?.data || [];
       const ishikawas = Array.isArray(ishikawasRaw) ? ishikawasRaw : ishikawasRaw?.data || [];
