@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { LEVEL_HIERARCHY } from '../roles/permission.constants';
 
 @Injectable()
 export class EscalationService {
   private readonly logger = new Logger(EscalationService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private email: EmailService,
+  ) {}
 
   // ── CRUD ────────────────────────────────────────────────
 
@@ -72,11 +76,18 @@ export class EscalationService {
 
   // ── Escalation Check: Breakdowns ──────────────────────
 
+  private async getSiteName(siteId: string): Promise<string> {
+    const site = await this.prisma.site.findUnique({ where: { id: siteId }, select: { name: true } });
+    return site?.name || 'Unknown Site';
+  }
+
   async checkBreakdowns(siteId: string) {
     const rules = await this.prisma.escalationRule.findMany({
       where: { siteId, triggerType: 'breakdown', isActive: true },
     });
     if (rules.length === 0) return;
+
+    const siteName = await this.getSiteName(siteId);
 
     // Find all workstations in this site
     const workstations = await this.prisma.workstation.findMany({
@@ -113,7 +124,7 @@ export class EscalationService {
           rule.notifyLevel,
         );
 
-        // Create notifications
+        // Create notifications + send emails
         for (const user of users) {
           await this.prisma.notification.create({
             data: {
@@ -125,6 +136,15 @@ export class EscalationService {
               sourceType: 'workstation',
               sourceId: ws.id,
             },
+          });
+
+          await this.email.sendEscalationAlert(user.email, user.firstName, {
+            ruleName: rule.name,
+            triggerType: rule.triggerType,
+            workstationName: ws.name,
+            durationMinutes: breakdownMinutes,
+            tier: rule.escalationTier,
+            siteName,
           });
         }
 
@@ -147,6 +167,8 @@ export class EscalationService {
       where: { siteId, triggerType: 'safety_incident', isActive: true },
     });
     if (rules.length === 0) return;
+
+    const siteName = await this.getSiteName(siteId);
 
     // Find serious/critical safety incidents that are still open
     const incidents = await this.prisma.safetyIncident.findMany({
@@ -189,6 +211,14 @@ export class EscalationService {
               sourceId: incident.id,
             },
           });
+
+          await this.email.sendEscalationAlert(user.email, user.firstName, {
+            ruleName: rule.name,
+            triggerType: rule.triggerType,
+            durationMinutes: Math.round(minutesSince),
+            tier: rule.escalationTier,
+            siteName,
+          });
         }
 
         await this.prisma.escalationLog.create({
@@ -209,6 +239,8 @@ export class EscalationService {
       where: { siteId, triggerType: 'action_overdue', isActive: true },
     });
     if (rules.length === 0) return;
+
+    const siteName = await this.getSiteName(siteId);
 
     // Find actions that are past due and not completed/cancelled
     const actions = await this.prisma.action.findMany({
@@ -251,6 +283,14 @@ export class EscalationService {
               sourceId: action.id,
             },
           });
+
+          await this.email.sendEscalationAlert(user.email, user.firstName, {
+            ruleName: rule.name,
+            triggerType: rule.triggerType,
+            durationMinutes: Math.round(overdueMinutes),
+            tier: rule.escalationTier,
+            siteName,
+          });
         }
 
         await this.prisma.escalationLog.create({
@@ -278,8 +318,10 @@ export class EscalationService {
     siteId: string,
     featureGroup: string,
     minLevel: string,
-  ): Promise<{ id: string }[]> {
+  ): Promise<{ id: string; email: string; firstName: string }[]> {
     const minLevelNum = LEVEL_HIERARCHY[minLevel] || 0;
+
+    const userSelect = { id: true, email: true, firstName: true } as const;
 
     // System admins (corporate_admin, site_admin) always have manage-level access
     const systemAdmins = await this.prisma.user.findMany({
@@ -288,7 +330,7 @@ export class EscalationService {
         isActive: true,
         role: { in: ['corporate_admin', 'site_admin'] },
       },
-      select: { id: true },
+      select: userSelect,
     });
 
     // Users with custom roles that have the required permission level
@@ -306,12 +348,12 @@ export class EscalationService {
           },
         },
       },
-      select: { id: true },
+      select: userSelect,
     });
 
     // Deduplicate
     const seen = new Set<string>();
-    const result: { id: string }[] = [];
+    const result: { id: string; email: string; firstName: string }[] = [];
     for (const u of [...systemAdmins, ...customRoleUsers]) {
       if (!seen.has(u.id)) {
         seen.add(u.id);

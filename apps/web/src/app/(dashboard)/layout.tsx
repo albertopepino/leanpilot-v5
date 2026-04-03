@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/api';
+import { auth, api } from '@/lib/api';
 import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
   Lightbulb, Settings, LogOut, Menu, X, Bell,
@@ -26,24 +26,27 @@ type NavItem = {
   children?: NavItem[];
   iconGradient?: string;
   section?: string;
+  /** Maps this nav item to a site tool config slug for enable/disable filtering */
+  toolSlug?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
   // ── Core ────────────────────────────────────────────────────
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconGradient: 'from-blue-600 to-indigo-600' },
-  { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, group: 'shift_management', minLevel: 'view', iconGradient: 'from-teal-500 to-cyan-500' },
-  { href: '/orders', label: 'Orders', icon: PackageCheck, group: 'production', minLevel: 'view', iconGradient: 'from-blue-500 to-indigo-500' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, toolSlug: 'dashboard', iconGradient: 'from-blue-600 to-indigo-600' },
+  { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, group: 'shift_management', minLevel: 'view', toolSlug: 'shift-handover', iconGradient: 'from-teal-500 to-cyan-500' },
+  { href: '/orders', label: 'Orders', icon: PackageCheck, group: 'production', minLevel: 'view', toolSlug: 'orders', iconGradient: 'from-blue-500 to-indigo-500' },
   { href: '/corporate', label: 'Corporate', icon: Building2, systemRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
   // ── Lean Tools (core 6) ─────────────────────────────────────
-  { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, group: 'continuous_improvement', minLevel: 'manage', iconGradient: 'from-cyan-600 to-blue-500' },
-  { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, group: 'continuous_improvement', minLevel: 'participate', iconGradient: 'from-orange-500 to-amber-500' },
-  { href: '/equipment', label: 'Equipment', icon: Wrench, group: 'maintenance', minLevel: 'view', iconGradient: 'from-slate-600 to-slate-500' },
-  { href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', iconGradient: 'from-emerald-600 to-teal-500' },
+  { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, group: 'continuous_improvement', minLevel: 'manage', toolSlug: 'gemba', iconGradient: 'from-cyan-600 to-blue-500' },
+  { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, group: 'continuous_improvement', minLevel: 'participate', toolSlug: 'five-s', iconGradient: 'from-orange-500 to-amber-500' },
+  { href: '/equipment', label: 'Equipment', icon: Wrench, group: 'maintenance', minLevel: 'view', toolSlug: 'equipment', iconGradient: 'from-slate-600 to-slate-500' },
+  { href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', toolSlug: 'quality', iconGradient: 'from-emerald-600 to-teal-500' },
   // ── Safety ──────────────────────────────────────────────────
-  { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, group: 'safety', minLevel: 'view', iconGradient: 'from-red-500 to-orange-500' },
+  { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, group: 'safety', minLevel: 'view', toolSlug: 'safety', iconGradient: 'from-red-500 to-orange-500' },
   // ── System ──────────────────────────────────────────────────
   { section: 'System', href: '/admin/users', label: 'Users', icon: Users, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/admin/roles', label: 'Roles', icon: ShieldCheck, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/admin/tools', label: 'Tools', icon: Settings, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/admin/escalation', label: 'Escalation', icon: Bell, group: 'people', minLevel: 'manage', iconGradient: 'from-amber-500 to-orange-500' },
   { href: '/settings', label: 'Settings', icon: Settings, iconGradient: 'from-gray-500 to-gray-400' },
   // ── External (Shop Floor) ───────────────────────────────────
@@ -51,8 +54,12 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/andon', label: 'Andon Board', icon: Radio, group: 'production', minLevel: 'view', external: true, iconGradient: 'from-red-500 to-orange-500' },
 ];
 
-function isNavItemVisible(item: NavItem, user: UserWithPermissions): boolean {
+function isNavItemVisible(item: NavItem, user: UserWithPermissions, enabledTools?: Set<string>): boolean {
   if (item.systemRole) return user.role === item.systemRole;
+  // If the item has a toolSlug and we have tool config data, check if tool is enabled
+  if (item.toolSlug && enabledTools && !enabledTools.has(item.toolSlug)) {
+    return false;
+  }
   if (!item.group) return true;
   return hasPermission(user, item.group as any, (item.minLevel || 'view') as any);
 }
@@ -63,6 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any>(null);
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [enabledTools, setEnabledTools] = useState<Set<string> | undefined>(undefined);
 
   useEffect(() => {
     const u = auth.getUser();
@@ -70,6 +78,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/login');
     } else {
       setUser(u);
+      // Fetch site tool configs to filter sidebar
+      api.get<Array<{ toolSlug: string; isEnabled: boolean }>>('/site-config/tools')
+        .then(configs => {
+          if (Array.isArray(configs)) {
+            setEnabledTools(new Set(configs.filter(c => c.isEnabled).map(c => c.toolSlug)));
+          }
+        })
+        .catch(() => {
+          // If fetch fails, show all tools (graceful degradation)
+        });
     }
     setHydrated(true);
   }, [router]);
@@ -82,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const visibleNav = NAV_ITEMS.filter(item => isNavItemVisible(item, user));
+  const visibleNav = NAV_ITEMS.filter(item => isNavItemVisible(item, user, enabledTools));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -148,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {visibleNav.map((item, idx) => {
             const Icon = item.icon;
-            const children = item.children?.filter(c => isNavItemVisible(c, user));
+            const children = item.children?.filter(c => isNavItemVisible(c, user, enabledTools));
             const hasChildren = children && children.length > 0;
 
             const childActive = hasChildren && children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'));

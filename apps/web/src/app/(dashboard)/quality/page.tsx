@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import {
-  Plus, ChevronLeft, X, CheckCircle, AlertTriangle,
+  Plus, ChevronLeft, X, CheckCircle, AlertTriangle, Download,
   FileText, ClipboardList, BarChart3, AlertOctagon,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { exportToCSV } from '@/lib/csv-export';
 import { SkeletonList } from '@/components/ui/Skeleton';
 
 // ===== TYPES =====
@@ -275,13 +276,41 @@ export default function QualityPage() {
           </p>
         </div>
         {view === 'list' && (
-          <button
-            onClick={() => { setView('create'); setError(''); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {tab === 'inspections' ? 'New Inspection' : tab === 'templates' ? 'New Template' : 'New NCR'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (tab === 'inspections') {
+                  exportToCSV(inspections.map(i => ({
+                    Template: i.template.name,
+                    Status: i.status,
+                    Inspector: `${i.inspector.firstName} ${i.inspector.lastName}`,
+                    Date: new Date(i.createdAt).toLocaleDateString(),
+                  })), 'quality-inspections');
+                } else if (tab === 'ncr') {
+                  exportToCSV(ncrs.map(n => ({
+                    Title: n.title,
+                    Severity: n.severity,
+                    Status: n.status,
+                    Disposition: n.disposition || '',
+                    'Reported By': `${n.reportedBy.firstName} ${n.reportedBy.lastName}`,
+                    Date: new Date(n.createdAt).toLocaleDateString(),
+                  })), 'quality-ncrs');
+                }
+              }}
+              disabled={(tab === 'inspections' ? inspections.length : tab === 'ncr' ? ncrs.length : 0) === 0}
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+              title="Export CSV"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setView('create'); setError(''); }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {tab === 'inspections' ? 'New Inspection' : tab === 'templates' ? 'New Template' : 'New NCR'}
+            </button>
+          </div>
         )}
       </div>
 

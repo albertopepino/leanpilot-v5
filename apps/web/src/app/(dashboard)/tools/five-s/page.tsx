@@ -8,6 +8,7 @@ import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star, Download, Help
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { exportToCSV } from '@/lib/csv-export';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import {
@@ -543,13 +544,30 @@ export default function FiveSPage() {
               Workplace organization audits — Sort, Set in Order, Shine, Standardize, Sustain, Safety
             </p>
           </div>
-          <button
-            onClick={() => setView('create')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Audit
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToCSV(audits.map(a => ({
+                Area: a.area,
+                Status: a.status,
+                'Score %': a.percentage,
+                'Total Score': a.totalScore,
+                Auditor: `${a.auditor.firstName} ${a.auditor.lastName}`,
+                Date: new Date(a.createdAt).toLocaleDateString(),
+              })), '5s-audits')}
+              disabled={audits.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+              title="Export CSV"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView('create')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Audit
+            </button>
+          </div>
         </div>
 
         {/* Trends section */}

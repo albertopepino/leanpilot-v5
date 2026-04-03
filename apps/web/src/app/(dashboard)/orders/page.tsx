@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api, auth } from '@/lib/api';
 import {
-  PackageCheck, Plus, ChevronRight, Search, X, ArrowLeft,
+  PackageCheck, Plus, ChevronRight, Search, X, ArrowLeft, Download,
   Clock, AlertTriangle, Calendar, Hash, Layers, Play,
   CheckCircle2, Archive, FileText, Trash2,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { exportToCSV } from '@/lib/csv-export';
 
 // ===== TYPES =====
 
@@ -560,17 +561,35 @@ export default function OrdersPage() {
             <p className="text-xs text-gray-400">{orders.length} order{orders.length !== 1 ? 's' : ''} total</p>
           </div>
         </div>
-        {isManager && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl
-              bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium
-              shadow-sm shadow-blue-500/20 hover:shadow-md hover:shadow-blue-500/30
-              transition-all"
+            onClick={() => exportToCSV(orders.map(o => ({
+              'PO Number': o.poNumber,
+              Product: o.productName,
+              'Target Qty': o.targetQuantity,
+              Unit: o.unit,
+              Status: o.status,
+              Priority: o.priority,
+              'Due Date': o.dueDate ? new Date(o.dueDate).toLocaleDateString() : '',
+            })), 'production-orders')}
+            disabled={orders.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+            title="Export CSV"
           >
-            <Plus className="w-4 h-4" /> New Order
+            <Download className="w-4 h-4" />
           </button>
-        )}
+          {isManager && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl
+                bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium
+                shadow-sm shadow-blue-500/20 hover:shadow-md hover:shadow-blue-500/30
+                transition-all"
+            >
+              <Plus className="w-4 h-4" /> New Order
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Status Tabs */}

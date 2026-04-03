@@ -13,6 +13,7 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
+import { exportToCSV } from '@/lib/csv-export';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, Cell,
@@ -504,13 +505,28 @@ export default function GembaPage() {
           )}
         </div>
         {view === 'list' && (
-          <button
-            onClick={startNewWalk}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm disabled:opacity-50"
-          >
-            <Plus className="w-4 h-4" /> Start Walk
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToCSV(walks.map(w => ({
+                Date: w.date,
+                Walker: `${w.walker.firstName} ${w.walker.lastName}`,
+                Status: w.status,
+                Observations: w._count.observations,
+              })), 'gemba-walks')}
+              disabled={walks.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+              title="Export CSV"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={startNewWalk}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" /> Start Walk
+            </button>
+          </div>
         )}
         {view === 'detail' && selectedWalk && (
           <div className="flex gap-2">

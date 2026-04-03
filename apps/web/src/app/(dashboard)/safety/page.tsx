@@ -4,13 +4,14 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import {
-  ShieldAlert, Plus, Search, ChevronRight, X,
+  ShieldAlert, Plus, Search, ChevronRight, X, Download,
   AlertTriangle, AlertOctagon, HardHat, Flame,
   Calendar, MapPin, Clock, User, FileText, HelpCircle, Info, TrendingUp,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { exportToCSV } from '@/lib/csv-export';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
@@ -463,12 +464,31 @@ export default function SafetyPage() {
               Incident reporting, tracking &amp; safety metrics
             </p>
           </div>
-          <button
-            onClick={() => { setView('create'); setError(''); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Report Incident
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToCSV(incidents.map(i => ({
+                Title: i.title,
+                Type: TYPE_CONFIG[i.type]?.label || i.type,
+                Severity: i.severity,
+                Status: STATUS_LABEL[i.status] || i.status,
+                Location: i.location,
+                Date: new Date(i.date).toLocaleDateString(),
+                Reporter: `${i.reporter.firstName} ${i.reporter.lastName}`,
+                'Days Lost': i.daysLost,
+              })), 'safety-incidents')}
+              disabled={incidents.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+              title="Export CSV"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setView('create'); setError(''); }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Report Incident
+            </button>
+          </div>
         </div>
 
         {/* Analytics section */}

@@ -32,6 +32,8 @@ import { SmedModule } from './smed/smed.module';
 import { SiteConfigModule } from './site-config/site-config.module';
 import { RolesModule } from './roles/roles.module';
 import { EscalationModule } from './escalation/escalation.module';
+import { EmailModule } from './email/email.module';
+import { HealthModule } from './health/health.module';
 import { PermissionGuard } from './roles/permission.guard';
 
 @Module({
@@ -42,6 +44,7 @@ import { PermissionGuard } from './roles/permission.guard';
       { name: 'short', ttl: 1000, limit: 10 },   // 10 req/sec per IP
       { name: 'medium', ttl: 60000, limit: 100 }, // 100 req/min per IP
     ]),
+    EmailModule,
     PrismaModule,
     AuditModule,
     AuthModule,
@@ -71,6 +74,7 @@ import { PermissionGuard } from './roles/permission.guard';
     SiteConfigModule,
     RolesModule,
     EscalationModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

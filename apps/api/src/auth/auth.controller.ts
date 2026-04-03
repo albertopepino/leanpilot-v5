@@ -1,5 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -40,5 +40,24 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token' })
   async refresh(@Body() dto: RefreshDto) {
     return this.auth.refreshTokens(dto.refreshToken);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ short: { ttl: 60000, limit: 3 } })
+  @ApiOperation({ summary: 'Request password reset email' })
+  @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
+  async forgotPassword(@Body() body: { email: string }) {
+    await this.auth.requestPasswordReset(body.email);
+    return { message: 'If an account exists, a reset email has been sent' };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiBody({ schema: { properties: { token: { type: 'string' }, password: { type: 'string' } } } })
+  async resetPassword(@Body() body: { token: string; password: string }) {
+    await this.auth.resetPassword(body.token, body.password);
+    return { message: 'Password reset successful' };
   }
 }

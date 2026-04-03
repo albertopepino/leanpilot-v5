@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 
 jest.mock('bcrypt');
 
@@ -15,7 +16,9 @@ describe('AuthService', () => {
   const mockPrisma = {
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     refreshToken: { create: jest.fn(), deleteMany: jest.fn() },
+    passwordResetToken: { create: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     site: { findFirst: jest.fn() },
+    $transaction: jest.fn((fn: any) => fn(mockPrisma)),
   };
 
   const mockJwt = {
@@ -31,6 +34,10 @@ describe('AuthService', () => {
     log: jest.fn(),
   };
 
+  const mockEmail = {
+    sendPasswordReset: jest.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -39,6 +46,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwt },
         { provide: ConfigService, useValue: mockConfig },
         { provide: AuditService, useValue: mockAudit },
+        { provide: EmailService, useValue: mockEmail },
       ],
     }).compile();
 
