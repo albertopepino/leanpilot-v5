@@ -2,19 +2,19 @@ import { Controller, Get, Post, Param, Body, Query, UseGuards } from '@nestjs/co
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Production Orders')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('orders')
 export class OrdersController {
   constructor(private orders: OrdersService) {}
 
   @Get()
-  @Roles('viewer')
+  @RequirePermission('production', 'view')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('limit') limit?: string,
@@ -24,13 +24,13 @@ export class OrdersController {
   }
 
   @Get(':id')
-  @Roles('viewer')
+  @RequirePermission('production', 'view')
   async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.orders.findById(id, siteId);
   }
 
   @Post()
-  @Roles('manager')
+  @RequirePermission('production', 'manage')
   async create(@CurrentUser('siteId') siteId: string, @Body() body: any) {
     return this.orders.create(siteId, body);
   }

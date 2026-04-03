@@ -2,25 +2,25 @@ import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ActionsService } from './actions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Action Tracker')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('actions')
 export class ActionsController {
   constructor(private actions: ActionsService) {}
 
   @Get('summary')
-  @Roles('viewer')
+  @RequirePermission('continuous_improvement', 'view')
   async getSummary(@CurrentUser('siteId') siteId: string) {
     return this.actions.getSummary(siteId);
   }
 
   @Get()
-  @Roles('viewer')
+  @RequirePermission('continuous_improvement', 'view')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('status') status?: string,
@@ -41,13 +41,13 @@ export class ActionsController {
   }
 
   @Get(':id')
-  @Roles('viewer')
+  @RequirePermission('continuous_improvement', 'view')
   async findOne(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.actions.findById(id, siteId);
   }
 
   @Post()
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'manage')
   async create(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') userId: string,
@@ -68,7 +68,7 @@ export class ActionsController {
   }
 
   @Patch(':id')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async update(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -87,7 +87,7 @@ export class ActionsController {
   }
 
   @Patch(':id/status')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async changeStatus(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,

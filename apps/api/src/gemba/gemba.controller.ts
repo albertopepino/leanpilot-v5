@@ -2,19 +2,19 @@ import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GembaService } from './gemba.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Gemba Walk')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('gemba')
 export class GembaController {
   constructor(private gemba: GembaService) {}
 
   @Get()
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'view')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('limit') limit?: string,
@@ -24,31 +24,31 @@ export class GembaController {
   }
 
   @Get('muda-signals')
-  @Roles('viewer')
+  @RequirePermission('continuous_improvement', 'view')
   async getMudaSignals(@CurrentUser('siteId') siteId: string) {
     return this.gemba.getOpenMudaSignals(siteId);
   }
 
   @Get(':id')
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'view')
   async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.gemba.findById(id, siteId);
   }
 
   @Post()
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'manage')
   async startWalk(@CurrentUser('siteId') siteId: string, @CurrentUser('id') userId: string) {
     return this.gemba.startWalk(siteId, userId);
   }
 
   @Patch(':id/complete')
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'manage')
   async completeWalk(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.gemba.completeWalk(id, siteId);
   }
 
   @Post(':id/observations')
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'manage')
   async addObservation(
     @Param('id') walkId: string,
     @CurrentUser('id') observerId: string,
@@ -66,7 +66,7 @@ export class GembaController {
   }
 
   @Patch('observations/:id/status')
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'manage')
   async updateObservationStatus(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -76,7 +76,7 @@ export class GembaController {
   }
 
   @Patch('observations/:id/pdca')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async updateObservationPdca(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,

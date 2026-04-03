@@ -1,6 +1,6 @@
 /** Role values stored as strings in SQLite, enum in PostgreSQL */
-export type Role = 'corporate_admin' | 'site_admin' | 'manager' | 'operator' | 'viewer';
-export const ROLES: Role[] = ['corporate_admin', 'site_admin', 'manager', 'operator', 'viewer'];
+export type Role = 'corporate_admin' | 'site_admin' | 'manager' | 'operator' | 'shopfloor_operator' | 'viewer';
+export const ROLES: Role[] = ['corporate_admin', 'site_admin', 'manager', 'operator', 'shopfloor_operator', 'viewer'];
 
 export type FiveSCategory = 'sort' | 'set_in_order' | 'shine' | 'standardize' | 'sustain' | 'safety';
 export const FIVE_S_CATEGORIES: FiveSCategory[] = ['sort', 'set_in_order', 'shine', 'standardize', 'sustain', 'safety'];

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/api';
+import { getLoginRedirect } from '@/lib/permissions';
 
 const LEAN_QUOTES = [
   { text: 'The most dangerous kind of waste is the waste we do not recognize.', author: 'Shigeo Shingo' },
@@ -46,7 +47,8 @@ export default function LoginPage() {
 
     try {
       const user = await auth.login(email, password);
-      router.push(user.role === 'corporate_admin' ? '/corporate' : '/dashboard');
+      const dest = getLoginRedirect(user);
+      router.push(dest);
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

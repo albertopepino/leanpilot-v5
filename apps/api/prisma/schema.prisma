@@ -65,13 +65,47 @@ model Site {
   skills             Skill[]
   smedAnalyses       SmedAnalysis[]
   toolConfigs        SiteToolConfig[]
+  customRoles        CustomRole[]
 
   @@unique([corporateId, slug])
   @@map("sites")
 }
 
+// ===== PERMISSION MATRIX =====
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  siteId      String?
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  site        Site?            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([siteId, name])
+  @@map("custom_roles")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  featureGroup String // production, shift_management, continuous_improvement, quality, problem_solving, safety, maintenance, people
+  level        String // none, view, participate, manage
+
+  role CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, featureGroup])
+  @@map("role_permissions")
+}
+
 // ===== AUTH & USERS =====
-// Role values: corporate_admin | site_admin | manager | operator | viewer
+// System roles: corporate_admin | site_admin | viewer
+// Custom roles: assigned via customRoleId with permission matrix
 
 model User {
   id          String    @id @default(cuid())
@@ -79,16 +113,18 @@ model User {
   password    String
   firstName   String
   lastName    String
-  role        String    @default("viewer")
-  siteId      String
-  corporateId String
-  isActive    Boolean   @default(true)
-  lastLogin   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  role          String     @default("viewer") // system role: corporate_admin | site_admin | viewer (or legacy)
+  customRoleId  String?
+  siteId        String
+  corporateId   String
+  isActive      Boolean    @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  corporate Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  site       Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  corporate  Corporate   @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  customRole CustomRole? @relation(fields: [customRoleId], references: [id])
 
   productionRuns           ProductionRun[]
   workstationEvents        WorkstationEvent[]

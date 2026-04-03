@@ -19,7 +19,11 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { site: true, corporate: true },
+      include: {
+        site: true,
+        corporate: true,
+        customRole: { include: { permissions: true } },
+      },
     });
 
     if (!user || !user.isActive) {
@@ -43,6 +47,14 @@ export class AuthService {
 
     this.audit.log({ userId: user.id, userEmail: user.email, action: 'login', entityType: 'auth', entityId: user.id });
 
+    // Build permission map from custom role
+    const permissions: Record<string, string> = {};
+    if (user.customRole?.permissions) {
+      for (const p of user.customRole.permissions) {
+        permissions[p.featureGroup] = p.level;
+      }
+    }
+
     return {
       ...tokens,
       user: {
@@ -51,10 +63,13 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        customRoleId: user.customRoleId,
+        customRoleName: user.customRole?.name ?? null,
         siteId: user.siteId,
         corporateId: user.corporateId,
         siteName: user.site?.name ?? null,
         corporateName: user.corporate?.name ?? null,
+        permissions,
       },
     };
   }
@@ -142,11 +157,12 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
-  private async generateTokens(user: { id: string; email: string; role: any; siteId: string; corporateId: string }) {
+  private async generateTokens(user: { id: string; email: string; role: any; customRoleId?: string | null; siteId: string; corporateId: string }) {
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      customRoleId: user.customRoleId || null,
       siteId: user.siteId,
       corporateId: user.corporateId,
     };

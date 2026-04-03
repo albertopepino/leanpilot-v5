@@ -8,6 +8,7 @@ interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  customRoleId?: string;
   siteId: string;
   corporateId: string;
 }
@@ -34,6 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         firstName: true,
         lastName: true,
         role: true,
+        customRoleId: true,
         siteId: true,
         corporateId: true,
         isActive: true,

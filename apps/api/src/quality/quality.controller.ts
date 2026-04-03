@@ -2,13 +2,13 @@ import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { QualityService } from './quality.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Quality')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('quality')
 export class QualityController {
   constructor(private quality: QualityService) {}
@@ -16,7 +16,7 @@ export class QualityController {
   // ── Templates ────────────────────────────────────────────────────
 
   @Get('templates')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getTemplates(
     @CurrentUser('siteId') siteId: string,
     @Query('limit') limit?: string,
@@ -26,7 +26,7 @@ export class QualityController {
   }
 
   @Post('templates')
-  @Roles('manager')
+  @RequirePermission('quality', 'manage')
   async createTemplate(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') userId: string,
@@ -50,7 +50,7 @@ export class QualityController {
   }
 
   @Get('templates/:id')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getTemplate(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.quality.getTemplate(id, siteId);
   }
@@ -58,7 +58,7 @@ export class QualityController {
   // ── Inspections ──────────────────────────────────────────────────
 
   @Get('inspections')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getInspections(
     @CurrentUser('siteId') siteId: string,
     @Query('limit') limit?: string,
@@ -68,7 +68,7 @@ export class QualityController {
   }
 
   @Post('inspections')
-  @Roles('operator')
+  @RequirePermission('quality', 'participate')
   async createInspection(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') inspectorId: string,
@@ -78,13 +78,13 @@ export class QualityController {
   }
 
   @Get('inspections/:id')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getInspection(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.quality.getInspection(id, siteId);
   }
 
   @Post('inspections/:id/results')
-  @Roles('operator')
+  @RequirePermission('quality', 'participate')
   async submitResults(
     @Param('id') inspectionId: string,
     @CurrentUser('siteId') siteId: string,
@@ -104,7 +104,7 @@ export class QualityController {
   // ── NCR ──────────────────────────────────────────────────────────
 
   @Get('ncr')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getNcrs(
     @CurrentUser('siteId') siteId: string,
     @Query('limit') limit?: string,
@@ -114,7 +114,7 @@ export class QualityController {
   }
 
   @Post('ncr')
-  @Roles('operator')
+  @RequirePermission('quality', 'participate')
   async createNcr(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') reporterId: string,
@@ -131,13 +131,13 @@ export class QualityController {
   }
 
   @Get('ncr/:id')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getNcr(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.quality.getNcr(id, siteId);
   }
 
   @Patch('ncr/:id')
-  @Roles('manager')
+  @RequirePermission('quality', 'manage')
   async updateNcr(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -156,7 +156,7 @@ export class QualityController {
   }
 
   @Post('ncr/:id/attachments')
-  @Roles('operator')
+  @RequirePermission('quality', 'participate')
   async addAttachment(
     @Param('id') ncrId: string,
     @CurrentUser('siteId') siteId: string,
@@ -169,7 +169,7 @@ export class QualityController {
   // ── SPC ──────────────────────────────────────────────────────────
 
   @Get('spc')
-  @Roles('operator')
+  @RequirePermission('quality', 'view')
   async getSpcData(
     @Query('checkpointId') checkpointId: string,
     @CurrentUser('siteId') siteId: string,

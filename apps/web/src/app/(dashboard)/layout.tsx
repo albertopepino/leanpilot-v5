@@ -11,6 +11,7 @@ import {
   CheckSquare, Users2, FileBarChart, GraduationCap, Timer,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/ui/NotificationBell';
+import { hasPermission, isSystemAdmin, type UserWithPermissions } from '@/lib/permissions';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -18,7 +19,9 @@ type NavItem = {
   href: string;
   label: string;
   icon: any;
-  minRole: string;
+  group?: string;
+  minLevel?: string;
+  systemRole?: string;
   external?: boolean;
   children?: NavItem[];
   iconGradient?: string;
@@ -26,40 +29,39 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer', iconGradient: 'from-blue-600 to-indigo-600' },
-  { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, minRole: 'operator', iconGradient: 'from-teal-500 to-cyan-500' },
-  { href: '/orders', label: 'Orders', icon: PackageCheck, minRole: 'operator', iconGradient: 'from-blue-500 to-indigo-500' },
-  { href: '/corporate', label: 'Corporate', icon: Building2, minRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
-  { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, minRole: 'manager', iconGradient: 'from-cyan-600 to-blue-500' },
-  { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, minRole: 'operator', iconGradient: 'from-orange-500 to-amber-500' },
-  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, minRole: 'operator', iconGradient: 'from-violet-600 to-purple-500' },
-  { href: '/actions', label: 'Actions', icon: CheckSquare, minRole: 'operator', iconGradient: 'from-rose-500 to-pink-500' },
-  { href: '/tier-meetings', label: 'Tier Meetings', icon: Users2, minRole: 'manager', iconGradient: 'from-indigo-500 to-violet-500' },
-  { href: '/equipment', label: 'Equipment', icon: Wrench, minRole: 'operator', iconGradient: 'from-slate-600 to-slate-500' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconGradient: 'from-blue-600 to-indigo-600' },
+  { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, group: 'shift_management', minLevel: 'view', iconGradient: 'from-teal-500 to-cyan-500' },
+  { href: '/orders', label: 'Orders', icon: PackageCheck, group: 'production', minLevel: 'view', iconGradient: 'from-blue-500 to-indigo-500' },
+  { href: '/corporate', label: 'Corporate', icon: Building2, systemRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
+  { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, group: 'continuous_improvement', minLevel: 'manage', iconGradient: 'from-cyan-600 to-blue-500' },
+  { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, group: 'continuous_improvement', minLevel: 'participate', iconGradient: 'from-orange-500 to-amber-500' },
+  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, group: 'continuous_improvement', minLevel: 'participate', iconGradient: 'from-violet-600 to-purple-500' },
+  { href: '/actions', label: 'Actions', icon: CheckSquare, group: 'continuous_improvement', minLevel: 'view', iconGradient: 'from-rose-500 to-pink-500' },
+  { href: '/tier-meetings', label: 'Tier Meetings', icon: Users2, group: 'shift_management', minLevel: 'participate', iconGradient: 'from-indigo-500 to-violet-500' },
+  { href: '/equipment', label: 'Equipment', icon: Wrench, group: 'maintenance', minLevel: 'view', iconGradient: 'from-slate-600 to-slate-500' },
   {
-    href: '/quality', label: 'Quality', icon: ShieldCheck, minRole: 'operator', iconGradient: 'from-emerald-600 to-teal-500',
+    href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', iconGradient: 'from-emerald-600 to-teal-500',
     children: [
-      { href: '/quality/documents', label: 'Documents', icon: FileText, minRole: 'viewer' },
-      { href: '/quality/root-cause', label: 'Root Cause', icon: Search, minRole: 'operator' },
-      { href: '/quality/a3', label: 'A3 Reports', icon: FileBarChart, minRole: 'operator' },
+      { href: '/quality/documents', label: 'Documents', icon: FileText, group: 'quality', minLevel: 'view' },
+      { href: '/quality/root-cause', label: 'Root Cause', icon: Search, group: 'problem_solving', minLevel: 'view' },
+      { href: '/quality/a3', label: 'A3 Reports', icon: FileBarChart, group: 'problem_solving', minLevel: 'view' },
     ],
   },
-  { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, minRole: 'operator', iconGradient: 'from-red-500 to-orange-500' },
-  { href: '/skills', label: 'Skills Matrix', icon: GraduationCap, minRole: 'manager', iconGradient: 'from-emerald-500 to-teal-500' },
-  { href: '/smed', label: 'SMED', icon: Timer, minRole: 'operator', iconGradient: 'from-cyan-500 to-blue-500' },
-  { section: 'System', href: '/admin/users', label: 'Users', icon: Users, minRole: 'site_admin', iconGradient: 'from-gray-500 to-gray-400' },
-  { href: '/settings', label: 'Settings', icon: Settings, minRole: 'viewer', iconGradient: 'from-gray-500 to-gray-400' },
-  { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, minRole: 'operator', external: true, iconGradient: 'from-indigo-500 to-blue-500' },
-  { href: '/andon', label: 'Andon Board', icon: Radio, minRole: 'viewer', external: true, iconGradient: 'from-red-500 to-orange-500' },
+  { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, group: 'safety', minLevel: 'view', iconGradient: 'from-red-500 to-orange-500' },
+  { href: '/skills', label: 'Skills Matrix', icon: GraduationCap, group: 'people', minLevel: 'view', iconGradient: 'from-emerald-500 to-teal-500' },
+  { href: '/smed', label: 'SMED', icon: Timer, group: 'problem_solving', minLevel: 'participate', iconGradient: 'from-cyan-500 to-blue-500' },
+  { section: 'System', href: '/admin/users', label: 'Users', icon: Users, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/admin/roles', label: 'Roles', icon: ShieldCheck, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/settings', label: 'Settings', icon: Settings, iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, group: 'production', minLevel: 'participate', external: true, iconGradient: 'from-indigo-500 to-blue-500' },
+  { href: '/andon', label: 'Andon Board', icon: Radio, group: 'production', minLevel: 'view', external: true, iconGradient: 'from-red-500 to-orange-500' },
 ];
 
-const ROLE_LEVEL: Record<string, number> = {
-  corporate_admin: 50,
-  site_admin: 40,
-  manager: 30,
-  operator: 20,
-  viewer: 10,
-};
+function isNavItemVisible(item: NavItem, user: UserWithPermissions): boolean {
+  if (item.systemRole) return user.role === item.systemRole;
+  if (!item.group) return true;
+  return hasPermission(user, item.group as any, (item.minLevel || 'view') as any);
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -86,8 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const userLevel = ROLE_LEVEL[user.role] || 0;
-  const visibleNav = NAV_ITEMS.filter(item => userLevel >= ROLE_LEVEL[item.minRole]);
+  const visibleNav = NAV_ITEMS.filter(item => isNavItemVisible(item, user));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -153,7 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {visibleNav.map((item, idx) => {
             const Icon = item.icon;
-            const children = item.children?.filter(c => userLevel >= ROLE_LEVEL[c.minRole]);
+            const children = item.children?.filter(c => isNavItemVisible(c, user));
             const hasChildren = children && children.length > 0;
 
             const childActive = hasChildren && children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'));
@@ -249,7 +250,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {user.firstName} {user.lastName}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">
-                {user.role?.replace(/_/g, ' ')}
+                {user.customRoleName || user.role?.replace(/_/g, ' ')}
               </p>
             </div>
           </div>

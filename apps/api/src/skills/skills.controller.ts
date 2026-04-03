@@ -2,31 +2,31 @@ import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SkillsService } from './skills.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Skills Matrix')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('skills')
 export class SkillsController {
   constructor(private skills: SkillsService) {}
 
   @Get('matrix')
-  @Roles('operator')
+  @RequirePermission('people', 'view')
   async getMatrix(@CurrentUser('siteId') siteId: string) {
     return this.skills.getMatrix(siteId);
   }
 
   @Get('gaps')
-  @Roles('operator')
+  @RequirePermission('people', 'view')
   async getGaps(@CurrentUser('siteId') siteId: string) {
     return this.skills.getGaps(siteId);
   }
 
   @Get('user/:userId')
-  @Roles('operator')
+  @RequirePermission('people', 'view')
   async getUserSkills(
     @Param('userId') userId: string,
     @CurrentUser('siteId') siteId: string,
@@ -35,7 +35,7 @@ export class SkillsController {
   }
 
   @Get()
-  @Roles('operator')
+  @RequirePermission('people', 'view')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('limit') limit?: string,
@@ -45,7 +45,7 @@ export class SkillsController {
   }
 
   @Post()
-  @Roles('manager')
+  @RequirePermission('people', 'manage')
   async create(
     @CurrentUser('siteId') siteId: string,
     @Body() body: {
@@ -58,7 +58,7 @@ export class SkillsController {
   }
 
   @Patch(':id')
-  @Roles('manager')
+  @RequirePermission('people', 'manage')
   async update(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -73,7 +73,7 @@ export class SkillsController {
   }
 
   @Patch('user/:userId/skill/:skillId')
-  @Roles('manager')
+  @RequirePermission('people', 'manage')
   async setUserSkillLevel(
     @Param('userId') userId: string,
     @Param('skillId') skillId: string,

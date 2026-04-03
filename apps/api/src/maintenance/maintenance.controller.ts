@@ -2,13 +2,13 @@ import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards } f
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { MaintenanceService } from './maintenance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Maintenance')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(private maintenance: MaintenanceService) {}
@@ -16,7 +16,7 @@ export class MaintenanceController {
   // ===== PLANS =====
 
   @Get('plans')
-  @Roles('viewer')
+  @RequirePermission('maintenance', 'view')
   @ApiOperation({ summary: 'List maintenance plans for a workstation' })
   async findPlans(
     @CurrentUser('siteId') siteId: string,
@@ -26,7 +26,7 @@ export class MaintenanceController {
   }
 
   @Post('plans')
-  @Roles('manager')
+  @RequirePermission('maintenance', 'manage')
   @ApiOperation({ summary: 'Create a maintenance plan' })
   async createPlan(
     @CurrentUser('siteId') siteId: string,
@@ -46,7 +46,7 @@ export class MaintenanceController {
   }
 
   @Patch('plans/:id')
-  @Roles('manager')
+  @RequirePermission('maintenance', 'manage')
   @ApiOperation({ summary: 'Update a maintenance plan' })
   async updatePlan(
     @Param('id') id: string,
@@ -66,7 +66,7 @@ export class MaintenanceController {
   }
 
   @Delete('plans/:id')
-  @Roles('manager')
+  @RequirePermission('maintenance', 'manage')
   @ApiOperation({ summary: 'Soft-delete a maintenance plan' })
   async deletePlan(
     @Param('id') id: string,
@@ -78,7 +78,7 @@ export class MaintenanceController {
   // ===== LOGS =====
 
   @Get('logs')
-  @Roles('viewer')
+  @RequirePermission('maintenance', 'view')
   @ApiOperation({ summary: 'List maintenance logs' })
   async findLogs(
     @CurrentUser('siteId') siteId: string,
@@ -91,7 +91,7 @@ export class MaintenanceController {
   }
 
   @Post('logs')
-  @Roles('operator')
+  @RequirePermission('maintenance', 'participate')
   @ApiOperation({ summary: 'Log maintenance work (auto-advances plan nextDueDate)' })
   async createLog(
     @CurrentUser('siteId') siteId: string,
@@ -115,7 +115,7 @@ export class MaintenanceController {
   // ===== OVERDUE =====
 
   @Get('overdue')
-  @Roles('viewer')
+  @RequirePermission('maintenance', 'view')
   @ApiOperation({ summary: 'List overdue maintenance plans' })
   async getOverdue(@CurrentUser('siteId') siteId: string) {
     return this.maintenance.getOverdue(siteId);
@@ -124,7 +124,7 @@ export class MaintenanceController {
   // ===== METRICS =====
 
   @Get('metrics')
-  @Roles('viewer')
+  @RequirePermission('maintenance', 'view')
   @ApiOperation({ summary: 'Compute MTBF and MTTR from corrective logs' })
   async getMetrics(
     @CurrentUser('siteId') siteId: string,
@@ -136,7 +136,7 @@ export class MaintenanceController {
   // ===== CILT =====
 
   @Get('cilt')
-  @Roles('viewer')
+  @RequirePermission('maintenance', 'view')
   @ApiOperation({ summary: 'List CILT checks' })
   async findCiltChecks(
     @CurrentUser('siteId') siteId: string,
@@ -147,7 +147,7 @@ export class MaintenanceController {
   }
 
   @Post('cilt')
-  @Roles('operator')
+  @RequirePermission('maintenance', 'participate')
   @ApiOperation({ summary: 'Submit a CILT check' })
   async createCiltCheck(
     @CurrentUser('siteId') siteId: string,

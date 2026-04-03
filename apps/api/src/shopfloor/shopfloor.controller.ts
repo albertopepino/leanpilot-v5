@@ -3,19 +3,19 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ShopfloorService } from './shopfloor.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Shop Floor')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('shopfloor')
 export class ShopfloorController {
   constructor(private shopfloor: ShopfloorService) {}
 
   @Get('workstation/:workstationId/pos')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async getAvailablePOs(
     @Param('workstationId') workstationId: string,
     @CurrentUser('siteId') siteId: string,
@@ -24,7 +24,7 @@ export class ShopfloorController {
   }
 
   @Get('workstation/:workstationId/active-run')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async getActiveRun(
     @Param('workstationId') workstationId: string,
     @CurrentUser('siteId') siteId: string,
@@ -35,13 +35,13 @@ export class ShopfloorController {
   }
 
   @Get('reason-codes')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async getReasonCodes(@CurrentUser('siteId') siteId: string, @Query('category') category: string) {
     return this.shopfloor.getReasonCodes(siteId, category);
   }
 
   @Post('start-run')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async startRun(
     @Body() body: { phaseId: string; workstationId: string },
     @CurrentUser('id') operatorId: string,
@@ -51,7 +51,7 @@ export class ShopfloorController {
   }
 
   @Post('status-change')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async changeStatus(
     @Body() body: { workstationId: string; status: string; reasonCode?: string; notes?: string },
     @CurrentUser('id') operatorId: string,
@@ -61,7 +61,7 @@ export class ShopfloorController {
   }
 
   @Post('flag')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async flag(
     @Body() body: { workstationId: string; notes: string },
     @CurrentUser('id') operatorId: string,
@@ -71,7 +71,7 @@ export class ShopfloorController {
   }
 
   @Post('close-run/:runId')
-  @Roles('operator')
+  @RequirePermission('production', 'participate')
   async closeRun(
     @Param('runId') runId: string,
     @Body() body: { producedQuantity: number; scrapQuantity: number; notes?: string },

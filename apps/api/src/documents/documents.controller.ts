@@ -2,19 +2,19 @@ import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('documents')
 export class DocumentsController {
   constructor(private documents: DocumentsService) {}
 
   @Get()
-  @Roles('viewer')
+  @RequirePermission('quality', 'view')
   @ApiOperation({ summary: 'List documents with optional filters' })
   async findAll(
     @CurrentUser('siteId') siteId: string,
@@ -28,14 +28,14 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  @Roles('viewer')
+  @RequirePermission('quality', 'view')
   @ApiOperation({ summary: 'Document detail with revision history' })
   async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.documents.findById(id, siteId);
   }
 
   @Post()
-  @Roles('manager')
+  @RequirePermission('quality', 'participate')
   @ApiOperation({ summary: 'Create a new document' })
   async create(
     @CurrentUser('siteId') siteId: string,
@@ -53,7 +53,7 @@ export class DocumentsController {
   }
 
   @Patch(':id')
-  @Roles('manager')
+  @RequirePermission('quality', 'manage')
   @ApiOperation({ summary: 'Update document metadata' })
   async update(
     @Param('id') id: string,
@@ -64,7 +64,7 @@ export class DocumentsController {
   }
 
   @Post(':id/revisions')
-  @Roles('manager')
+  @RequirePermission('quality', 'participate')
   @ApiOperation({ summary: 'Upload new document revision' })
   async addRevision(
     @Param('id') id: string,
@@ -81,7 +81,7 @@ export class DocumentsController {
   }
 
   @Patch(':id/status')
-  @Roles('manager')
+  @RequirePermission('quality', 'manage')
   @ApiOperation({ summary: 'Change document status (draft/review/approved/obsolete)' })
   async changeStatus(
     @Param('id') id: string,

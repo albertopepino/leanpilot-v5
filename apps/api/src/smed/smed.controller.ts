@@ -2,19 +2,19 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } f
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SmedService } from './smed.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('SMED Changeover Analysis')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('smed')
 export class SmedController {
   constructor(private smed: SmedService) {}
 
   @Get()
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'view')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('workstationId') workstationId?: string,
@@ -26,13 +26,13 @@ export class SmedController {
   }
 
   @Get(':id')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'view')
   async findOne(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.smed.findById(id, siteId);
   }
 
   @Post()
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   async create(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') userId: string,
@@ -50,7 +50,7 @@ export class SmedController {
   }
 
   @Patch(':id')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   async update(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -69,7 +69,7 @@ export class SmedController {
   }
 
   @Post(':id/activities')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   async addActivity(
     @Param('id') analysisId: string,
     @CurrentUser('siteId') siteId: string,
@@ -86,7 +86,7 @@ export class SmedController {
   }
 
   @Patch(':id/activities/:actId')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   async updateActivity(
     @Param('id') analysisId: string,
     @Param('actId') activityId: string,
@@ -105,7 +105,7 @@ export class SmedController {
   }
 
   @Delete(':id/activities/:actId')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   async removeActivity(
     @Param('id') analysisId: string,
     @Param('actId') activityId: string,

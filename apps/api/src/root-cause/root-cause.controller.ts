@@ -2,13 +2,13 @@ import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards } f
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RootCauseService } from './root-cause.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Root Cause Analysis')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('rca')
 export class RootCauseController {
   constructor(private rootCause: RootCauseService) {}
@@ -16,7 +16,7 @@ export class RootCauseController {
   // ===== FIVE WHY =====
 
   @Get('five-why')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: 'List all Five-Why analyses' })
   async findFiveWhy(
     @CurrentUser('siteId') siteId: string,
@@ -27,7 +27,7 @@ export class RootCauseController {
   }
 
   @Get('five-why/:id')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: 'Five-Why detail with steps' })
   async findFiveWhyById(
     @Param('id') id: string,
@@ -37,7 +37,7 @@ export class RootCauseController {
   }
 
   @Post('five-why')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Create a Five-Why analysis' })
   async createFiveWhy(
     @CurrentUser('siteId') siteId: string,
@@ -53,7 +53,7 @@ export class RootCauseController {
   }
 
   @Patch('five-why/:id')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Update Five-Why (status, summary, categoryTag)' })
   async updateFiveWhy(
     @Param('id') id: string,
@@ -69,7 +69,7 @@ export class RootCauseController {
   }
 
   @Post('five-why/:id/steps')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Add or update a Five-Why step (1-5)' })
   async upsertFiveWhyStep(
     @Param('id') id: string,
@@ -86,7 +86,7 @@ export class RootCauseController {
   // ===== ISHIKAWA =====
 
   @Get('ishikawa')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: 'List all Ishikawa analyses' })
   async findIshikawa(
     @CurrentUser('siteId') siteId: string,
@@ -97,7 +97,7 @@ export class RootCauseController {
   }
 
   @Get('ishikawa/:id')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: 'Ishikawa detail with causes' })
   async findIshikawaById(
     @Param('id') id: string,
@@ -107,7 +107,7 @@ export class RootCauseController {
   }
 
   @Post('ishikawa')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Create an Ishikawa analysis' })
   async createIshikawa(
     @CurrentUser('siteId') siteId: string,
@@ -123,7 +123,7 @@ export class RootCauseController {
   }
 
   @Patch('ishikawa/:id')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Update Ishikawa analysis' })
   async updateIshikawa(
     @Param('id') id: string,
@@ -139,7 +139,7 @@ export class RootCauseController {
   }
 
   @Post('ishikawa/:id/causes')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Add a cause to Ishikawa diagram' })
   async addIshikawaCause(
     @Param('id') id: string,
@@ -154,7 +154,7 @@ export class RootCauseController {
   }
 
   @Delete('ishikawa/:id/causes/:causeId')
-  @Roles('operator')
+  @RequirePermission('problem_solving', 'participate')
   @ApiOperation({ summary: 'Remove a cause from Ishikawa diagram' })
   async removeIshikawaCause(
     @Param('id') id: string,
@@ -167,7 +167,7 @@ export class RootCauseController {
   // ===== 8D =====
 
   @Get('eight-d')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: 'List 8D reports' })
   async findEightD(
     @CurrentUser('siteId') siteId: string,
@@ -178,7 +178,7 @@ export class RootCauseController {
   }
 
   @Get('eight-d/:id')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: '8D report detail with linked RCA' })
   async findEightDById(
     @Param('id') id: string,
@@ -188,7 +188,7 @@ export class RootCauseController {
   }
 
   @Post('eight-d')
-  @Roles('manager')
+  @RequirePermission('problem_solving', 'manage')
   @ApiOperation({ summary: 'Create an 8D report' })
   async createEightD(
     @CurrentUser('siteId') siteId: string,
@@ -205,7 +205,7 @@ export class RootCauseController {
   }
 
   @Patch('eight-d/:id')
-  @Roles('manager')
+  @RequirePermission('problem_solving', 'manage')
   @ApiOperation({ summary: 'Update 8D report (advance status, fill D-fields)' })
   async updateEightD(
     @Param('id') id: string,
@@ -235,7 +235,7 @@ export class RootCauseController {
   // ===== PARETO =====
 
   @Get('pareto')
-  @Roles('viewer')
+  @RequirePermission('problem_solving', 'view')
   @ApiOperation({ summary: 'Pareto aggregation of categoryTag across all RCA types' })
   async getPareto(@CurrentUser('siteId') siteId: string) {
     return this.rootCause.getPareto(siteId);

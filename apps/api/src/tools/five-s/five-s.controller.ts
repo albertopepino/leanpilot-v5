@@ -2,25 +2,25 @@ import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/co
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FiveSService } from './five-s.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../../roles/permission.guard';
+import { RequirePermission } from '../../roles/permission.decorator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('5S Audit')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('tools/five-s')
 export class FiveSController {
   constructor(private fiveS: FiveSService) {}
 
   @Get()
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'view')
   async findAll(@CurrentUser('siteId') siteId: string) {
     return this.fiveS.findAllBySite(siteId);
   }
 
   @Post()
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async create(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') auditorId: string,
@@ -30,13 +30,13 @@ export class FiveSController {
   }
 
   @Get(':id')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'view')
   async findOne(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.fiveS.findById(id, siteId);
   }
 
   @Patch(':id/scores')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async updateScores(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -46,7 +46,7 @@ export class FiveSController {
   }
 
   @Patch(':id/complete')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async complete(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.fiveS.complete(id, siteId);
   }

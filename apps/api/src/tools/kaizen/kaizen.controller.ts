@@ -2,25 +2,25 @@ import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/co
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { KaizenService } from './kaizen.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../../roles/permission.guard';
+import { RequirePermission } from '../../roles/permission.decorator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Kaizen Board')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('tools/kaizen')
 export class KaizenController {
   constructor(private kaizen: KaizenService) {}
 
   @Get()
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'view')
   async findAll(@CurrentUser('siteId') siteId: string) {
     return this.kaizen.findAllBySite(siteId);
   }
 
   @Post()
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async create(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') userId: string,
@@ -42,13 +42,13 @@ export class KaizenController {
   }
 
   @Get(':id')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'view')
   async findOne(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.kaizen.findById(id, siteId);
   }
 
   @Patch(':id')
-  @Roles('operator')
+  @RequirePermission('continuous_improvement', 'participate')
   async update(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -70,7 +70,7 @@ export class KaizenController {
   }
 
   @Patch(':id/status')
-  @Roles('manager')
+  @RequirePermission('continuous_improvement', 'manage')
   async changeStatus(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,

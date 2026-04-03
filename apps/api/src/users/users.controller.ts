@@ -2,20 +2,20 @@ import { Controller, Get, Patch, Param, Body, Query, UseGuards, Delete } from '@
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('users')
 export class UsersController {
   constructor(private users: UsersService) {}
 
   @Get()
-  @Roles('manager')
+  @RequirePermission('people', 'view')
   @ApiOperation({ summary: 'List users (scoped by role)' })
   async findAll(
     @CurrentUser() user: any,
@@ -26,14 +26,14 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles('manager')
+  @RequirePermission('people', 'view')
   @ApiOperation({ summary: 'Get user by ID' })
   async findById(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
     return this.users.findById(id, corporateId);
   }
 
   @Patch(':id')
-  @Roles('site_admin')
+  @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Update user (admin only)' })
   async update(
     @Param('id') id: string,
@@ -44,7 +44,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles('site_admin')
+  @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Deactivate user (soft delete)' })
   async deactivate(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
     return this.users.deactivate(id, corporateId);

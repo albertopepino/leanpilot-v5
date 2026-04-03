@@ -2,19 +2,19 @@ import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TierMeetingsService } from './tier-meetings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Tier Meetings')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('tier-meetings')
 export class TierMeetingsController {
   constructor(private tierMeetings: TierMeetingsService) {}
 
   @Get()
-  @Roles('operator')
+  @RequirePermission('shift_management', 'view')
   async findAll(
     @CurrentUser('siteId') siteId: string,
     @Query('tier') tier?: string,
@@ -31,13 +31,13 @@ export class TierMeetingsController {
   }
 
   @Get(':id')
-  @Roles('operator')
+  @RequirePermission('shift_management', 'view')
   async findOne(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.tierMeetings.findById(id, siteId);
   }
 
   @Post()
-  @Roles('manager')
+  @RequirePermission('shift_management', 'manage')
   async create(
     @CurrentUser('siteId') siteId: string,
     @CurrentUser('id') userId: string,
@@ -53,7 +53,7 @@ export class TierMeetingsController {
   }
 
   @Patch(':id/complete')
-  @Roles('manager')
+  @RequirePermission('shift_management', 'manage')
   async complete(
     @Param('id') id: string,
     @CurrentUser('siteId') siteId: string,
@@ -62,7 +62,7 @@ export class TierMeetingsController {
   }
 
   @Post(':id/items')
-  @Roles('manager')
+  @RequirePermission('shift_management', 'manage')
   async addItem(
     @Param('id') meetingId: string,
     @CurrentUser('siteId') siteId: string,
@@ -79,7 +79,7 @@ export class TierMeetingsController {
   }
 
   @Patch(':id/items/:itemId')
-  @Roles('manager')
+  @RequirePermission('shift_management', 'manage')
   async updateItem(
     @Param('id') meetingId: string,
     @Param('itemId') itemId: string,

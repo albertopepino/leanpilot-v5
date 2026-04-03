@@ -6,19 +6,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Uploads')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('uploads')
 export class UploadsController {
   constructor(private uploads: UploadsService) {}
 
   @Post()
-  @Roles('operator')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } })) // 10MB max
   async upload(
@@ -35,7 +32,6 @@ export class UploadsController {
   }
 
   @Get('quota')
-  @Roles('viewer')
   async getQuota(@CurrentUser('siteId') siteId: string) {
     return this.uploads.getQuota(siteId);
   }

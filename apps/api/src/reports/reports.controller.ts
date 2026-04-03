@@ -3,13 +3,13 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionGuard } from '../roles/permission.guard';
+import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('reports')
 export class ReportsController {
   constructor(private reports: ReportsService) {}
@@ -17,7 +17,7 @@ export class ReportsController {
   // ===== TEMPLATE =====
 
   @Get('template')
-  @Roles('site_admin')
+  @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Get report template for current site' })
   async getTemplate(@CurrentUser('siteId') siteId: string) {
     const tmpl = await this.reports.getTemplate(siteId);
@@ -25,7 +25,7 @@ export class ReportsController {
   }
 
   @Patch('template')
-  @Roles('site_admin')
+  @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Create or update report template' })
   async upsertTemplate(
     @CurrentUser('siteId') siteId: string,
@@ -37,7 +37,7 @@ export class ReportsController {
   // ===== PDF DOWNLOADS =====
 
   @Get('five-s/:auditId')
-  @Roles('viewer')
+  @RequirePermission('quality', 'view')
   @ApiOperation({ summary: '5S Audit PDF report' })
   async fiveSReport(
     @Param('auditId') auditId: string,
@@ -54,7 +54,7 @@ export class ReportsController {
   }
 
   @Get('gemba/:walkId')
-  @Roles('viewer')
+  @RequirePermission('quality', 'view')
   @ApiOperation({ summary: 'Gemba Walk PDF report' })
   async gembaReport(
     @Param('walkId') walkId: string,
@@ -71,7 +71,7 @@ export class ReportsController {
   }
 
   @Get('ncr/:ncrId')
-  @Roles('viewer')
+  @RequirePermission('quality', 'view')
   @ApiOperation({ summary: 'NCR (8D) PDF report' })
   async ncrReport(
     @Param('ncrId') ncrId: string,
@@ -88,7 +88,7 @@ export class ReportsController {
   }
 
   @Get('oee')
-  @Roles('viewer')
+  @RequirePermission('quality', 'view')
   @ApiOperation({ summary: 'OEE Summary PDF report' })
   async oeeReport(
     @CurrentUser('siteId') siteId: string,

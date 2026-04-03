@@ -8,6 +8,7 @@ const ROLE_HIERARCHY: Record<string, number> = {
   site_admin: 40,
   manager: 30,
   operator: 20,
+  shopfloor_operator: 15,
   viewer: 10,
 };
 
