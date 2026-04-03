@@ -115,8 +115,8 @@ export default function DocumentsPage() {
       if (category !== 'all') params.set('category', category);
       if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       const qs = params.toString();
-      const data = await api.get<Document[]>(`/documents${qs ? `?${qs}` : ''}`);
-      setDocs(Array.isArray(data) ? data : []);
+      const res = await api.get<Document[]>(`/documents${qs ? `?${qs}` : ''}`);
+      setDocs(Array.isArray(res) ? res : res?.data || []);
     } catch {
       setDocs([]);
     } finally {

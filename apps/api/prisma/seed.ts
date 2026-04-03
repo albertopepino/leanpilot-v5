@@ -46,16 +46,12 @@ const ROLE_TEMPLATES: Record<string, { description: string; permissions: PermMap
     },
   },
   'Quality Engineer': {
-    description: 'Quality technician — inspections, NCR, root cause analysis',
+    description: 'Quality technician — inspections, NCR, root cause, documents',
     permissions: {
-      production: 'view',
-      shift_management: 'view',
       continuous_improvement: 'participate',
       quality: 'manage',
       problem_solving: 'manage',
       safety: 'participate',
-      maintenance: 'view',
-      people: 'view',
     },
   },
   'Lean Coordinator': {

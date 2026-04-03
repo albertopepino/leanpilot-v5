@@ -173,24 +173,27 @@ export default function RootCausePage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [fiveWhys, ishikawas, eightDs] = await Promise.all([
+      const [fiveWhysRaw, ishikawasRaw, eightDsRaw] = await Promise.all([
         api.get<FiveWhy[]>('/rca/five-why').catch(() => []),
         api.get<Ishikawa[]>('/rca/ishikawa').catch(() => []),
         api.get<EightD[]>('/rca/eight-d').catch(() => []),
       ]);
+      const fiveWhys = Array.isArray(fiveWhysRaw) ? fiveWhysRaw : fiveWhysRaw?.data || [];
+      const ishikawas = Array.isArray(ishikawasRaw) ? ishikawasRaw : ishikawasRaw?.data || [];
+      const eightDs = Array.isArray(eightDsRaw) ? eightDsRaw : eightDsRaw?.data || [];
 
       const unified: UnifiedRca[] = [
-        ...(Array.isArray(fiveWhys) ? fiveWhys : []).map((fw: any): UnifiedRca => ({
+        ...(fiveWhys as any[]).map((fw: any): UnifiedRca => ({
           id: fw.id, method: 'five-why', title: fw.title, problemStatement: fw.rootCauseSummary || '',
           status: fw.status, category: fw.categoryTag || '', linkedNcrId: fw.ncrId,
           linkedIncidentId: fw.incidentId, createdBy: fw.analyst || { firstName: '?', lastName: '' }, createdAt: fw.createdAt, raw: fw,
         })),
-        ...(Array.isArray(ishikawas) ? ishikawas : []).map((ish: any): UnifiedRca => ({
+        ...(ishikawas as any[]).map((ish: any): UnifiedRca => ({
           id: ish.id, method: 'ishikawa', title: ish.title, problemStatement: ish.rootCauseSummary || '',
           status: ish.status, category: ish.categoryTag || '', linkedNcrId: ish.ncrId,
           linkedIncidentId: ish.incidentId, createdBy: ish.analyst || { firstName: '?', lastName: '' }, createdAt: ish.createdAt, raw: ish,
         })),
-        ...(Array.isArray(eightDs) ? eightDs : []).map((ed: any): UnifiedRca => ({
+        ...(eightDs as any[]).map((ed: any): UnifiedRca => ({
           id: ed.id, method: 'eight-d', title: ed.title, problemStatement: ed.d4RootCauseSummary || '',
           status: ed.status, category: ed.categoryTag || '', linkedNcrId: ed.ncrId,
           linkedIncidentId: ed.incidentId, createdBy: ed.teamLeader || { firstName: '?', lastName: '' }, createdAt: ed.createdAt, raw: ed,

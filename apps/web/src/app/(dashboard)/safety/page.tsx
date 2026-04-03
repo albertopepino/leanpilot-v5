@@ -355,7 +355,7 @@ export default function SafetyPage() {
     setLoading(true);
     try {
       const data = await api.get<SafetyIncident[]>('/safety/incidents');
-      setIncidents(Array.isArray(data) ? data : []);
+      setIncidents(Array.isArray(data) ? data : data?.data || []);
     } catch {
       setIncidents([]);
     } finally {

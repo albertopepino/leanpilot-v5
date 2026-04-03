@@ -41,8 +41,8 @@ export default function UsersPage() {
   const currentUser = auth.getUser();
 
   const loadUsers = () => {
-    api.get<any[]>('/users')
-      .then(setUsers)
+    api.get<any>('/users')
+      .then(res => setUsers(Array.isArray(res) ? res : res.data || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   };

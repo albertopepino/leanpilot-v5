@@ -286,8 +286,9 @@ export default function ShopFloorPage() {
   const loadWorkstations = useCallback(async () => {
     setLoading(true);
     try {
-      const ws = await api.get<Workstation[]>('/workstations');
-      setWorkstations(Array.isArray(ws) ? ws.filter(w => w.isActive !== false) : []);
+      const wsRes = await api.get<Workstation[]>('/workstations');
+      const wsList = Array.isArray(wsRes) ? wsRes : wsRes?.data || [];
+      setWorkstations(wsList.filter((w: any) => w.isActive !== false));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -302,7 +303,7 @@ export default function ShopFloorPage() {
         api.get<AvailablePO[]>(`/shopfloor/workstation/${wsId}/pos`),
         api.get<ActiveRun>(`/shopfloor/workstation/${wsId}/active-run`).catch(() => null),
       ]);
-      setAvailablePOs(Array.isArray(pos) ? pos : []);
+      setAvailablePOs(Array.isArray(pos) ? pos : pos?.data || []);
       setActiveRun(run);
       if (run) {
         setProduced(run.producedQuantity);
@@ -321,7 +322,7 @@ export default function ShopFloorPage() {
   const loadReasonCodes = useCallback(async (category: string) => {
     try {
       const codes = await api.get<ReasonCode[]>(`/shopfloor/reason-codes?category=${category}`);
-      setReasonCodes(Array.isArray(codes) ? codes : []);
+      setReasonCodes(Array.isArray(codes) ? codes : codes?.data || []);
     } catch { /* ignore */ }
   }, []);
 
@@ -451,7 +452,7 @@ export default function ShopFloorPage() {
       // Refresh POs
       if (selectedWs) {
         const pos = await api.get<AvailablePO[]>(`/shopfloor/workstation/${selectedWs.id}/pos`);
-        setAvailablePOs(Array.isArray(pos) ? pos : []);
+        setAvailablePOs(Array.isArray(pos) ? pos : pos?.data || []);
       }
     } catch (e: any) {
       setError(e.message);

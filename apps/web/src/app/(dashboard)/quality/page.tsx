@@ -135,10 +135,10 @@ export default function QualityPage() {
         api.get<NCR[]>('/quality/ncr').catch(() => []),
         api.get<OrderSummary[]>('/orders').catch(() => []),
       ]);
-      setInspections(Array.isArray(insp) ? insp : []);
-      setTemplates(Array.isArray(tmpl) ? tmpl : []);
-      setNcrs(Array.isArray(ncr) ? ncr : []);
-      setOrders(Array.isArray(ord) ? ord : []);
+      setInspections(Array.isArray(insp) ? insp : insp?.data || []);
+      setTemplates(Array.isArray(tmpl) ? tmpl : tmpl?.data || []);
+      setNcrs(Array.isArray(ncr) ? ncr : ncr?.data || []);
+      setOrders(Array.isArray(ord) ? ord : ord?.data || []);
     } finally {
       setLoading(false);
     }

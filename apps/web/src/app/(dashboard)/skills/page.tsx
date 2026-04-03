@@ -83,8 +83,8 @@ export default function SkillsPage() {
         api.get<Skill[]>('/skills'),
         api.get<SkillMatrixEntry[]>('/skills/matrix'),
       ]);
-      setSkills(Array.isArray(skillsData) ? skillsData : []);
-      setMatrix(Array.isArray(matrixData) ? matrixData : []);
+      setSkills(Array.isArray(skillsData) ? skillsData : skillsData?.data || []);
+      setMatrix(Array.isArray(matrixData) ? matrixData : matrixData?.data || []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -94,8 +94,8 @@ export default function SkillsPage() {
 
   const loadGaps = useCallback(async () => {
     try {
-      const data = await api.get<SkillGap[]>('/skills/gaps');
-      setGaps(Array.isArray(data) ? data : []);
+      const res = await api.get<SkillGap[]>('/skills/gaps');
+      setGaps(Array.isArray(res) ? res : res?.data || []);
     } catch {
       // non-critical
     }

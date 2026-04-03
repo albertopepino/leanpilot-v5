@@ -328,8 +328,8 @@ export default function GembaPage() {
   const loadWalks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<GembaWalk[]>('/gemba');
-      setWalks(Array.isArray(data) ? data : []);
+      const res = await api.get<GembaWalk[]>('/gemba');
+      setWalks(Array.isArray(res) ? res : res?.data || []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -339,8 +339,8 @@ export default function GembaPage() {
 
   useEffect(() => {
     loadWalks();
-    api.get<Workstation[]>('/workstations').then(ws => setWorkstations(Array.isArray(ws) ? ws : [])).catch(() => {});
-    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : [])).catch(() => {});
+    api.get<Workstation[]>('/workstations').then(ws => setWorkstations(Array.isArray(ws) ? ws : ws?.data || [])).catch(() => {});
+    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : u?.data || [])).catch(() => {});
   }, [loadWalks]);
 
   const openWalk = async (id: string) => {

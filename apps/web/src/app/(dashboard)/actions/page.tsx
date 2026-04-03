@@ -105,8 +105,8 @@ export default function ActionsPage() {
       if (filterStatus) params.set('status', filterStatus);
       if (filterCategory) params.set('category', filterCategory);
       const qs = params.toString();
-      const data = await api.get<Action[]>(`/actions${qs ? `?${qs}` : ''}`);
-      setActions(Array.isArray(data) ? data : []);
+      const res = await api.get<Action[]>(`/actions${qs ? `?${qs}` : ''}`);
+      setActions(Array.isArray(res) ? res : res?.data || []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -126,7 +126,7 @@ export default function ActionsPage() {
   useEffect(() => {
     loadActions();
     loadSummary();
-    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : [])).catch(() => {});
+    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : u?.data || [])).catch(() => {});
   }, [loadActions, loadSummary]);
 
   const createAction = async () => {

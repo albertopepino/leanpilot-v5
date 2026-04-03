@@ -36,11 +36,17 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, group: 'shift_management', minLevel: 'view', toolSlug: 'shift-handover', iconGradient: 'from-teal-500 to-cyan-500' },
   { href: '/orders', label: 'Orders', icon: PackageCheck, group: 'production', minLevel: 'view', toolSlug: 'orders', iconGradient: 'from-blue-500 to-indigo-500' },
   { href: '/corporate', label: 'Corporate', icon: Building2, systemRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
-  // ── Lean Tools (core 6) ─────────────────────────────────────
+  // ── Lean Tools ──────────────────────────────────────────────
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, group: 'continuous_improvement', minLevel: 'manage', toolSlug: 'gemba', iconGradient: 'from-cyan-600 to-blue-500' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, group: 'continuous_improvement', minLevel: 'participate', toolSlug: 'five-s', iconGradient: 'from-orange-500 to-amber-500' },
+  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, group: 'continuous_improvement', minLevel: 'participate', toolSlug: 'kaizen', iconGradient: 'from-violet-600 to-purple-500' },
   { href: '/equipment', label: 'Equipment', icon: Wrench, group: 'maintenance', minLevel: 'view', toolSlug: 'equipment', iconGradient: 'from-slate-600 to-slate-500' },
-  { href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', toolSlug: 'quality', iconGradient: 'from-emerald-600 to-teal-500' },
+  {
+    href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', toolSlug: 'quality', iconGradient: 'from-emerald-600 to-teal-500',
+    children: [
+      { href: '/quality/documents', label: 'Documents', icon: FileText, group: 'quality', minLevel: 'view' },
+    ],
+  },
   // ── Safety ──────────────────────────────────────────────────
   { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, group: 'safety', minLevel: 'view', toolSlug: 'safety', iconGradient: 'from-red-500 to-orange-500' },
   // ── System ──────────────────────────────────────────────────

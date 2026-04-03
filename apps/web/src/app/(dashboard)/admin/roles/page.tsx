@@ -104,8 +104,8 @@ export default function RolesPage() {
 
   const loadRoles = async () => {
     try {
-      const data = await api.get<Role[]>('/roles');
-      setRoles(data);
+      const data = await api.get<any>('/roles');
+      setRoles(Array.isArray(data) ? data : data.roles || data.data || []);
     } catch (e: any) {
       toast('error', e.message || 'Failed to load roles');
     } finally {

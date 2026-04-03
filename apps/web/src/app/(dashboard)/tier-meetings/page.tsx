@@ -84,8 +84,8 @@ export default function TierMeetingsPage() {
   const loadMeetings = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<TierMeeting[]>(`/tier-meetings?tier=${selectedTier}`);
-      setMeetings(Array.isArray(data) ? data : []);
+      const res = await api.get<TierMeeting[]>(`/tier-meetings?tier=${selectedTier}`);
+      setMeetings(Array.isArray(res) ? res : res?.data || []);
     } catch (e: any) {
       setError(e.message);
     } finally {

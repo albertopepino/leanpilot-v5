@@ -125,8 +125,8 @@ export default function OrdersPage() {
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<ProductionOrder[]>('/orders');
-      setOrders(Array.isArray(data) ? data : []);
+      const res = await api.get<ProductionOrder[]>('/orders');
+      setOrders(Array.isArray(res) ? res : res?.data || []);
     } catch {
       setOrders([]);
     } finally {
@@ -136,8 +136,8 @@ export default function OrdersPage() {
 
   const loadWorkstations = useCallback(async () => {
     try {
-      const data = await api.get<Workstation[]>('/workstations');
-      setWorkstations(Array.isArray(data) ? data : []);
+      const res = await api.get<Workstation[]>('/workstations');
+      setWorkstations(Array.isArray(res) ? res : res?.data || []);
     } catch {
       setWorkstations([]);
     }

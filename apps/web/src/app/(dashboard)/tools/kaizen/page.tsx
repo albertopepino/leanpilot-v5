@@ -84,7 +84,7 @@ export default function KaizenPage() {
 
   const loadItems = useCallback(() => {
     api.get<KaizenIdea[]>('/tools/kaizen')
-      .then(data => setItems(Array.isArray(data) ? data : []))
+      .then(res => setItems(Array.isArray(res) ? res : res?.data || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);

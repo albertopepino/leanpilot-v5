@@ -335,7 +335,7 @@ export default function FiveSPage() {
 
   const loadAudits = useCallback(() => {
     api.get<FiveSAudit[]>('/tools/five-s')
-      .then(data => setAudits(Array.isArray(data) ? data : []))
+      .then(data => setAudits(Array.isArray(data) ? data : data?.data || []))
       .catch(() => setAudits([]))
       .finally(() => setLoading(false));
   }, []);
