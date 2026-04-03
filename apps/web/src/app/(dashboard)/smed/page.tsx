@@ -165,7 +165,7 @@ export default function SmedPage() {
 
   const loadWorkstations = useCallback(async () => {
     try {
-      const ws = await api.get<Workstation[]>('/workstations');
+      const ws = await api.get<any>('/workstations');
       setWorkstations(Array.isArray(ws) ? ws.filter(w => w.isActive !== false) : []);
     } catch {
       // silently ignore -- workstations are optional context

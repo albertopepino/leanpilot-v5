@@ -80,8 +80,8 @@ export default function SkillsPage() {
     setLoading(true);
     try {
       const [skillsData, matrixData] = await Promise.all([
-        api.get<Skill[]>('/skills'),
-        api.get<SkillMatrixEntry[]>('/skills/matrix'),
+        api.get<any>('/skills'),
+        api.get<any>('/skills/matrix'),
       ]);
       setSkills(Array.isArray(skillsData) ? skillsData : skillsData?.data || []);
       setMatrix(Array.isArray(matrixData) ? matrixData : matrixData?.data || []);

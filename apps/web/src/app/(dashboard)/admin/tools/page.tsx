@@ -70,7 +70,7 @@ export default function ToolsConfigPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.get<ToolConfig[]>('/site-config/tools');
+      const data = await api.get<any>('/site-config/tools');
       setTools(Array.isArray(data) ? data : []);
     } catch {
       toast('error', 'Failed to load tool configuration');

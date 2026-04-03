@@ -334,7 +334,7 @@ export default function FiveSPage() {
   const [showConfirmComplete, setShowConfirmComplete] = useState(false);
 
   const loadAudits = useCallback(() => {
-    api.get<FiveSAudit[]>('/tools/five-s')
+    api.get<any>('/tools/five-s')
       .then(data => setAudits(Array.isArray(data) ? data : data?.data || []))
       .catch(() => setAudits([]))
       .finally(() => setLoading(false));
@@ -345,7 +345,7 @@ export default function FiveSPage() {
   // Load workstations for area dropdown
   const [wsFailed, setWsFailed] = useState(false);
   useEffect(() => {
-    api.get<Workstation[]>('/workstations')
+    api.get<any>('/workstations')
       .then(data => { setWorkstations(Array.isArray(data) ? data : []); setWsFailed(false); })
       .catch(() => { setWorkstations([]); setWsFailed(true); })
       .finally(() => setWsLoaded(true));

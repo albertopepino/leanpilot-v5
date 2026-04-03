@@ -142,7 +142,7 @@ export default function AndonBoardPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const ws = await api.get<Workstation[]>('/workstations');
+      const ws = await api.get<any>('/workstations');
       setWorkstations(Array.isArray(ws) ? ws.filter(w => w.isActive !== false) : []);
       setOnline(true);
       setLastUpdate(new Date());

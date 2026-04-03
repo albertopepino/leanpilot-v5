@@ -126,7 +126,7 @@ export default function ActionsPage() {
   useEffect(() => {
     loadActions();
     loadSummary();
-    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : u?.data || [])).catch(() => {});
+    api.get<any>('/users').then(u => setUsers(Array.isArray(u) ? u : u?.data || [])).catch(() => {});
   }, [loadActions, loadSummary]);
 
   const createAction = async () => {

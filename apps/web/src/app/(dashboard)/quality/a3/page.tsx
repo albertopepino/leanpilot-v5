@@ -92,7 +92,7 @@ export default function A3Page() {
   const loadReports = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<A3Report[]>('/a3');
+      const data = await api.get<any>('/a3');
       setReports(Array.isArray(data) ? data : []);
     } catch (e: any) {
       setError(e.message);

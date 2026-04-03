@@ -193,9 +193,9 @@ export default function EquipmentPage() {
     setDetailLoading(true);
     try {
       const [plansData, logsData, ciltData, metricsData] = await Promise.all([
-        api.get<MaintenancePlan[]>(`/maintenance/plans?workstationId=${wsId}`),
-        api.get<MaintenanceLog[]>(`/maintenance/logs?workstationId=${wsId}`),
-        api.get<CiltCheck[]>(`/maintenance/cilt?workstationId=${wsId}`),
+        api.get<any>(`/maintenance/plans?workstationId=${wsId}`),
+        api.get<any>(`/maintenance/logs?workstationId=${wsId}`),
+        api.get<any>(`/maintenance/cilt?workstationId=${wsId}`),
         api.get<MaintenanceMetrics>(`/maintenance/metrics?workstationId=${wsId}`),
       ]);
       setPlans(Array.isArray(plansData) ? plansData : []);

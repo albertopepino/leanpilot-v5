@@ -57,7 +57,7 @@ export function NotificationBell() {
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<Notification[]>('/notifications?limit=20');
+      const data = await api.get<any>('/notifications?limit=20');
       setNotifications(Array.isArray(data) ? data : []);
     } catch {
       // silent

@@ -354,7 +354,7 @@ export default function SafetyPage() {
   const loadIncidents = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<SafetyIncident[]>('/safety/incidents');
+      const data = await api.get<any>('/safety/incidents');
       setIncidents(Array.isArray(data) ? data : data?.data || []);
     } catch {
       setIncidents([]);

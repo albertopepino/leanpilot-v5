@@ -133,7 +133,7 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       api.get<DashboardOverview>('/dashboard/overview').catch(() => null),
-      api.get<MudaSignal[]>('/gemba/muda-signals').catch(() => []),
+      api.get<any>('/gemba/muda-signals').catch(() => []),
       api.get<OeeData>('/dashboard/oee').catch(() => null),
     ]).then(([overview, signals, oeeData]) => {
       setData(overview);

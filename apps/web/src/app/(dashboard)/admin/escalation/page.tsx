@@ -64,7 +64,7 @@ export default function EscalationPage() {
 
   const loadRules = useCallback(async () => {
     try {
-      const data = await api.get<EscalationRule[]>('/escalation');
+      const data = await api.get<any>('/escalation');
       setRules(Array.isArray(data) ? data : []);
     } catch {
       setRules([]);

@@ -286,7 +286,7 @@ export default function ShopFloorPage() {
   const loadWorkstations = useCallback(async () => {
     setLoading(true);
     try {
-      const wsRes = await api.get<Workstation[]>('/workstations');
+      const wsRes = await api.get<any>('/workstations');
       const wsList = Array.isArray(wsRes) ? wsRes : wsRes?.data || [];
       setWorkstations(wsList.filter((w: any) => w.isActive !== false));
     } catch (e: any) {
@@ -300,7 +300,7 @@ export default function ShopFloorPage() {
     setLoading(true);
     try {
       const [pos, run] = await Promise.all([
-        api.get<AvailablePO[]>(`/shopfloor/workstation/${wsId}/pos`),
+        api.get<any>(`/shopfloor/workstation/${wsId}/pos`),
         api.get<ActiveRun>(`/shopfloor/workstation/${wsId}/active-run`).catch(() => null),
       ]);
       setAvailablePOs(Array.isArray(pos) ? pos : pos?.data || []);
@@ -321,7 +321,7 @@ export default function ShopFloorPage() {
 
   const loadReasonCodes = useCallback(async (category: string) => {
     try {
-      const codes = await api.get<ReasonCode[]>(`/shopfloor/reason-codes?category=${category}`);
+      const codes = await api.get<any>(`/shopfloor/reason-codes?category=${category}`);
       setReasonCodes(Array.isArray(codes) ? codes : codes?.data || []);
     } catch { /* ignore */ }
   }, []);
@@ -451,7 +451,7 @@ export default function ShopFloorPage() {
       setCloseNote('');
       // Refresh POs
       if (selectedWs) {
-        const pos = await api.get<AvailablePO[]>(`/shopfloor/workstation/${selectedWs.id}/pos`);
+        const pos = await api.get<any>(`/shopfloor/workstation/${selectedWs.id}/pos`);
         setAvailablePOs(Array.isArray(pos) ? pos : pos?.data || []);
       }
     } catch (e: any) {

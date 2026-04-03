@@ -130,10 +130,10 @@ export default function QualityPage() {
     setLoading(true);
     try {
       const [insp, tmpl, ncr, ord] = await Promise.all([
-        api.get<Inspection[]>('/quality/inspections').catch(() => []),
-        api.get<Template[]>('/quality/templates').catch(() => []),
-        api.get<NCR[]>('/quality/ncr').catch(() => []),
-        api.get<OrderSummary[]>('/orders').catch(() => []),
+        api.get<any>('/quality/inspections').catch(() => []),
+        api.get<any>('/quality/templates').catch(() => []),
+        api.get<any>('/quality/ncr').catch(() => []),
+        api.get<any>('/orders').catch(() => []),
       ]);
       setInspections(Array.isArray(insp) ? insp : insp?.data || []);
       setTemplates(Array.isArray(tmpl) ? tmpl : tmpl?.data || []);

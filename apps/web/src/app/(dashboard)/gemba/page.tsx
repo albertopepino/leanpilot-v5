@@ -339,8 +339,8 @@ export default function GembaPage() {
 
   useEffect(() => {
     loadWalks();
-    api.get<Workstation[]>('/workstations').then(ws => setWorkstations(Array.isArray(ws) ? ws : ws?.data || [])).catch(() => {});
-    api.get<UserOption[]>('/users').then(u => setUsers(Array.isArray(u) ? u : u?.data || [])).catch(() => {});
+    api.get<any>('/workstations').then(ws => setWorkstations(Array.isArray(ws) ? ws : ws?.data || [])).catch(() => {});
+    api.get<any>('/users').then(u => setUsers(Array.isArray(u) ? u : u?.data || [])).catch(() => {});
   }, [loadWalks]);
 
   const openWalk = async (id: string) => {
