@@ -1,0 +1,41 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy workspace root
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY apps/api/ ./apps/api/
+COPY packages/ ./packages/
+
+# Install dependencies
+RUN npm ci --workspace=apps/api --include-workspace-root
+
+# Generate Prisma client
+RUN cd apps/api && npx prisma generate
+
+# Build
+RUN cd apps/api && npm run build
+
+# ── Production ─────────────────────────────────────────────
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Security: non-root user
+RUN addgroup -g 1001 -S leanpilot && adduser -S leanpilot -u 1001
+
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+
+USER leanpilot
+
+WORKDIR /app/apps/api
+
+EXPOSE 3001
+
+# Run migrations then start
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
