@@ -336,6 +336,52 @@ export class QualityService {
     });
   }
 
+  // ── NCR → RCA ───────────────────────────────────────────────────
+
+  async getNcrRca(ncrId: string, siteId: string) {
+    // Verify NCR belongs to site
+    const ncr = await this.prisma.nonConformanceReport.findFirst({ where: { id: ncrId, siteId } });
+    if (!ncr) throw new NotFoundException('NCR not found');
+
+    const [fiveWhy, eightD] = await Promise.all([
+      this.prisma.fiveWhyAnalysis.findMany({
+        where: { ncrId, siteId },
+        include: {
+          analyst: { select: { id: true, firstName: true, lastName: true } },
+          steps: { orderBy: { stepNumber: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.eightDReport.findMany({
+        where: { ncrId, siteId },
+        include: {
+          teamLeader: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return { fiveWhy, eightD };
+  }
+
+  // ── NCR → CAPAs ────────────────────────────────────────────────
+
+  async getNcrCapas(ncrId: string, siteId: string) {
+    // Verify NCR belongs to site
+    const ncr = await this.prisma.nonConformanceReport.findFirst({ where: { id: ncrId, siteId } });
+    if (!ncr) throw new NotFoundException('NCR not found');
+
+    return this.prisma.correctiveAction.findMany({
+      where: { ncrId, siteId },
+      include: {
+        assignee: { select: { id: true, firstName: true, lastName: true } },
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
+        verifiedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   // ── SPC ──────────────────────────────────────────────────────────
 
   async getSpcData(checkpointId: string, siteId: string, limit = 50) {

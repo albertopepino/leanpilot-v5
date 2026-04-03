@@ -31,6 +31,7 @@ import { SkillsModule } from './skills/skills.module';
 import { SmedModule } from './smed/smed.module';
 import { SiteConfigModule } from './site-config/site-config.module';
 import { RolesModule } from './roles/roles.module';
+import { CapaModule } from './capa/capa.module';
 import { EscalationModule } from './escalation/escalation.module';
 import { EmailModule } from './email/email.module';
 import { HealthModule } from './health/health.module';
@@ -73,6 +74,7 @@ import { PermissionGuard } from './roles/permission.guard';
     SmedModule,
     SiteConfigModule,
     RolesModule,
+    CapaModule,
     EscalationModule,
     HealthModule,
   ],

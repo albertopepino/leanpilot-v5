@@ -155,6 +155,18 @@ export class QualityController {
     return this.quality.updateNcr(id, siteId, data);
   }
 
+  @Get('ncr/:id/rca')
+  @RequirePermission('quality', 'view')
+  async getNcrRca(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
+    return this.quality.getNcrRca(id, siteId);
+  }
+
+  @Get('ncr/:id/capas')
+  @RequirePermission('quality', 'view')
+  async getNcrCapas(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
+    return this.quality.getNcrCapas(id, siteId);
+  }
+
   @Post('ncr/:id/attachments')
   @RequirePermission('quality', 'participate')
   async addAttachment(

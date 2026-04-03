@@ -6,6 +6,8 @@ import FileUpload from '@/components/FileUpload';
 import {
   Plus, ChevronLeft, X, CheckCircle, AlertTriangle, Download,
   FileText, ClipboardList, BarChart3, AlertOctagon,
+  Search, GitBranch, HelpCircle, Shield, ShieldAlert,
+  Users, Calendar, ArrowRight, ExternalLink,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -87,6 +89,268 @@ const SEVERITY_BADGE: Record<string, string> = {
 };
 
 const NCR_STATUSES = ['open', 'investigating', 'containment', 'corrective_action', 'closed', 'verified'];
+
+// ===== NCR - Root Cause Analysis Section =====
+function NcrRcaSection({ ncrId, ncrTitle }: { ncrId: string; ncrTitle: string }) {
+  const [rcas, setRcas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get<any>(`/quality/ncr/${ncrId}/rca`)
+      .then(data => setRcas(Array.isArray(data) ? data : data?.data || []))
+      .catch(() => setRcas([]))
+      .finally(() => setLoading(false));
+  }, [ncrId]);
+
+  const startFiveWhy = async () => {
+    setCreating(true);
+    try {
+      const created = await api.post<any>('/rca/five-why', {
+        title: `RCA for NCR: ${ncrTitle}`,
+        problemStatement: `Root cause analysis for NCR: ${ncrTitle}`,
+        ncrId,
+      });
+      setRcas(prev => [created, ...prev]);
+    } catch {}
+    setCreating(false);
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+          <Search className="w-4 h-4" />
+          Root Cause Analyses
+        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={startFiveWhy}
+            disabled={creating}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            {creating ? 'Creating...' : 'Start 5-Why Analysis'}
+          </button>
+          <a
+            href="/quality/root-cause"
+            className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            View All
+          </a>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="animate-pulse space-y-2">
+          <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+          <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+        </div>
+      ) : rcas.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+          No root cause analyses linked to this NCR yet.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {rcas.map((rca: any) => {
+            const isExpanded = expanded === rca.id;
+            const method = rca.method || (rca.steps ? 'five-why' : rca.causes ? 'ishikawa' : 'eight-d');
+            const methodLabel = method === 'five-why' ? '5-Why' : method === 'ishikawa' ? 'Ishikawa' : '8D';
+            const methodColor = method === 'five-why' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+              : method === 'ishikawa' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+
+            return (
+              <div key={rca.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setExpanded(isExpanded ? null : rca.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${methodColor}`}>
+                      {methodLabel}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{rca.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-gray-400 capitalize">{rca.status?.replace(/_/g, ' ')}</span>
+                    <GitBranch className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                    {rca.problemStatement && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        <span className="font-medium">Problem:</span> {rca.problemStatement}
+                      </p>
+                    )}
+                    {/* 5-Why steps */}
+                    {rca.steps && rca.steps.length > 0 && (
+                      <div className="space-y-1.5">
+                        {rca.steps.map((step: any) => (
+                          <div key={step.id} className="text-xs">
+                            <span className="font-semibold text-gray-600 dark:text-gray-300">Why {step.stepNumber}:</span>{' '}
+                            <span className="text-gray-500 dark:text-gray-400">{step.question}</span>
+                            {step.answer && (
+                              <span className="text-gray-700 dark:text-gray-200 ml-1">- {step.answer}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Ishikawa causes */}
+                    {rca.causes && rca.causes.length > 0 && (
+                      <div className="space-y-1">
+                        {rca.causes.map((cause: any) => (
+                          <div key={cause.id} className="text-xs flex items-center gap-1.5">
+                            <span className="font-medium text-gray-500">{cause.category}:</span>
+                            <span className="text-gray-700 dark:text-gray-200">{cause.description}</span>
+                            {cause.isRootCause && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-full font-semibold">ROOT</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {rca.rootCause && (
+                      <p className="text-xs mt-2 text-green-700 dark:text-green-400">
+                        <span className="font-semibold">Root Cause:</span> {rca.rootCause}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== NCR - CAPA Section =====
+function NcrCapaSection({ ncrId, ncrTitle }: { ncrId: string; ncrTitle: string }) {
+  const [capas, setCAPAs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get<any>(`/quality/ncr/${ncrId}/capas`)
+      .then(data => setCAPAs(Array.isArray(data) ? data : data?.data || []))
+      .catch(() => setCAPAs([]))
+      .finally(() => setLoading(false));
+  }, [ncrId]);
+
+  const createCapa = async () => {
+    setCreating(true);
+    try {
+      const created = await api.post<any>('/capa', {
+        ncrId,
+        type: 'corrective',
+        title: `CAPA for NCR: ${ncrTitle}`,
+      });
+      setCAPAs(prev => [created, ...prev]);
+    } catch {}
+    setCreating(false);
+  };
+
+  const statusBg: Record<string, string> = {
+    open: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    implemented: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    verification: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    effective: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    ineffective: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  };
+
+  const typeBadge: Record<string, string> = {
+    corrective: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    preventive: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+          <Shield className="w-4 h-4" />
+          CAPAs
+        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={createCapa}
+            disabled={creating}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {creating ? 'Creating...' : 'Create CAPA from NCR'}
+          </button>
+          <a
+            href="/quality/capa"
+            className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            View All
+          </a>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="animate-pulse space-y-2">
+          <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+        </div>
+      ) : capas.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+          No CAPAs linked to this NCR yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                <th className="pb-2 font-medium">CAPA #</th>
+                <th className="pb-2 font-medium">Type</th>
+                <th className="pb-2 font-medium">Status</th>
+                <th className="pb-2 font-medium">Assignee</th>
+                <th className="pb-2 font-medium">Due Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {capas.map((capa: any) => (
+                <tr key={capa.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="py-2">
+                    <a href="/quality/capa" className="font-mono text-xs text-brand-600 hover:underline">
+                      {capa.capaNumber || capa.id?.slice(0, 8)}
+                    </a>
+                  </td>
+                  <td className="py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${typeBadge[capa.type] || ''}`}>
+                      {capa.type}
+                    </span>
+                  </td>
+                  <td className="py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${statusBg[capa.status] || statusBg.open}`}>
+                      {capa.status?.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-300">
+                    {capa.assignee ? `${capa.assignee.firstName} ${capa.assignee.lastName}` : '—'}
+                  </td>
+                  <td className="py-2 text-xs text-gray-500">
+                    {capa.dueDate ? new Date(capa.dueDate).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function QualityPage() {
   const [tab, setTab] = useState<Tab>('inspections');
@@ -800,6 +1064,12 @@ export default function QualityPage() {
                 }}
               />
             </div>
+
+            {/* Root Cause Analysis section */}
+            <NcrRcaSection ncrId={selectedNcr.id} ncrTitle={selectedNcr.title} />
+
+            {/* CAPA section */}
+            <NcrCapaSection ncrId={selectedNcr.id} ncrTitle={selectedNcr.title} />
 
             {/* Status transitions */}
             {selectedNcr.status !== 'verified' && (

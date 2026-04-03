@@ -45,6 +45,8 @@ const NAV_ITEMS: NavItem[] = [
     href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', toolSlug: 'quality', iconGradient: 'from-emerald-600 to-teal-500',
     children: [
       { href: '/quality/documents', label: 'Documents', icon: FileText, group: 'quality', minLevel: 'view' },
+      { href: '/quality/root-cause', label: 'Root Cause', icon: Search, group: 'problem_solving', minLevel: 'view' },
+      { href: '/quality/capa', label: 'CAPA Register', icon: ClipboardCheck, group: 'quality', minLevel: 'view' },
     ],
   },
   // ── Safety ──────────────────────────────────────────────────
