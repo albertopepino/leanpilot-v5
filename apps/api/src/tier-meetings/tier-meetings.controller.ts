@@ -20,12 +20,14 @@ export class TierMeetingsController {
     @Query('tier') tier?: string,
     @Query('date') date?: string,
     @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
     return this.tierMeetings.findAll(siteId, {
       tier: tier ? parseInt(tier, 10) : undefined,
       date,
       status,
-    });
+    }, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

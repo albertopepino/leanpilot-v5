@@ -1,12 +1,99 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, Component, type ReactNode, type ErrorInfo } from 'react';
 import { api, auth } from '@/lib/api';
 import {
   Factory, ArrowLeft, Play, AlertTriangle, Wrench, Pause,
   Clock, ShieldAlert, CalendarOff, Flag, ChevronRight,
-  Plus, Minus, Send, X, CheckCircle2, Loader2,
+  Plus, Minus, Send, X, CheckCircle2, Loader2, WifiOff, Wifi,
 } from 'lucide-react';
+
+// ── Error Boundary ────────────────────────────────────────────────────
+
+interface ErrorBoundaryState { hasError: boolean; error: Error | null }
+
+class ShopFloorErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[ShopFloor] Render error:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-8">
+          <AlertTriangle className="w-16 h-16 text-red-400 mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+          <p className="text-gray-400 mb-6 text-center max-w-md">
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-8 py-4 bg-blue-600 active:bg-blue-700 rounded-xl font-bold text-lg"
+            style={{ minHeight: 56, touchAction: 'manipulation' }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ── useOnlineStatus hook ──────────────────────────────────────────────
+
+function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [showReconnected, setShowReconnected] = useState(false);
+  const wasOfflineRef = useRef(false);
+
+  useEffect(() => {
+    const goOnline = () => {
+      setIsOnline(true);
+      if (wasOfflineRef.current) {
+        setShowReconnected(true);
+        setTimeout(() => setShowReconnected(false), 3000);
+      }
+      wasOfflineRef.current = false;
+    };
+    const goOffline = () => {
+      setIsOnline(false);
+      wasOfflineRef.current = true;
+    };
+
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  return { isOnline, showReconnected };
+}
+
+// ── Retry wrapper ─────────────────────────────────────────────────────
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): Promise<T> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error('Retry failed'); // unreachable, satisfies TS
+}
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -123,6 +210,77 @@ export default function ShopFloorPage() {
   const [numpadTarget, setNumpadTarget] = useState<'produced' | 'scrap' | null>(null);
   const [numpadValue, setNumpadValue] = useState('');
 
+  // ── Online status ─────────────────────────────────────────────────
+  const { isOnline, showReconnected } = useOnlineStatus();
+
+  // ── Screen Wake Lock ──────────────────────────────────────────────
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  const acquireWakeLock = useCallback(async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        wakeLockRef.current?.addEventListener('release', () => {
+          wakeLockRef.current = null;
+        });
+      }
+    } catch {
+      // Wake Lock API not supported or permission denied — ignore
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    wakeLockRef.current?.release();
+    wakeLockRef.current = null;
+  }, []);
+
+  // Acquire wake lock when on the board step, release otherwise
+  useEffect(() => {
+    if (step === 'board') {
+      acquireWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+    return () => releaseWakeLock();
+  }, [step, acquireWakeLock, releaseWakeLock]);
+
+  // Re-acquire wake lock on visibility change (tab focus)
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && step === 'board') {
+        acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [step, acquireWakeLock]);
+
+  // ── Auto-refresh active run every 30s while on board ──────────────
+  useEffect(() => {
+    if (step !== 'board' || !selectedWs) return;
+    const interval = setInterval(async () => {
+      try {
+        const run = await api.get<ActiveRun>(`/shopfloor/workstation/${selectedWs.id}/active-run`).catch(() => null);
+        if (run) {
+          // Only update if counts changed to avoid unnecessary re-renders
+          setActiveRun(prev => {
+            if (!prev) return run;
+            if (prev.producedQuantity !== run.producedQuantity || prev.scrapQuantity !== run.scrapQuantity || prev.events?.length !== run.events?.length) {
+              return run;
+            }
+            return prev;
+          });
+          // Sync local counters if server has newer data
+          setProduced(prev => run.producedQuantity !== prev ? run.producedQuantity : prev);
+          setScrap(prev => run.scrapQuantity !== prev ? run.scrapQuantity : prev);
+        }
+      } catch {
+        // Silently ignore refresh failures — will retry next interval
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [step, selectedWs]);
+
   // ── Data fetching ──────────────────────────────────────────────────
 
   const loadWorkstations = useCallback(async () => {
@@ -184,7 +342,14 @@ export default function ShopFloorPage() {
       // Browser back pressed — go to previous step instead of leaving page
       setStep(prev => {
         if (prev === 'close') return 'board';
-        if (prev === 'board' || prev === 'po') {
+        if (prev === 'board') {
+          // Warn if there's an active run (activeRun is captured in closure via ref-like state)
+          // We can't easily access activeRun here, so push state back and let goBack handle it
+          setSelectedWs(null);
+          setActiveRun(null);
+          return 'workstation';
+        }
+        if (prev === 'po') {
           setSelectedWs(null);
           setActiveRun(null);
           return 'workstation';
@@ -214,7 +379,7 @@ export default function ShopFloorPage() {
     if (!selectedWs) return;
     try {
       setLoading(true);
-      await api.post('/shopfloor/start-run', { phaseId: po.phaseId, workstationId: selectedWs.id });
+      await withRetry(() => api.post('/shopfloor/start-run', { phaseId: po.phaseId, workstationId: selectedWs.id }));
       await loadPOsForWorkstation(selectedWs.id);
     } catch (e: any) {
       setError(e.message);
@@ -225,12 +390,12 @@ export default function ShopFloorPage() {
   const changeStatus = async (status: string, reasonCode?: string, notes?: string) => {
     if (!selectedWs) return;
     try {
-      await api.post('/shopfloor/status-change', {
+      await withRetry(() => api.post('/shopfloor/status-change', {
         workstationId: selectedWs.id,
         status,
         ...(reasonCode ? { reasonCode } : {}),
         ...(notes ? { notes } : {}),
-      });
+      }));
       // Refresh active run
       const run = await api.get<ActiveRun>(`/shopfloor/workstation/${selectedWs.id}/active-run`).catch(() => null);
       setActiveRun(run);
@@ -260,7 +425,7 @@ export default function ShopFloorPage() {
   const sendFlag = async () => {
     if (!selectedWs || !flagNote.trim()) return;
     try {
-      await api.post('/shopfloor/flag', { workstationId: selectedWs.id, notes: flagNote });
+      await withRetry(() => api.post('/shopfloor/flag', { workstationId: selectedWs.id, notes: flagNote }));
       setShowFlag(false);
       setFlagNote('');
       // Refresh
@@ -275,11 +440,11 @@ export default function ShopFloorPage() {
     if (!activeRun) return;
     try {
       setLoading(true);
-      await api.post(`/shopfloor/close-run/${activeRun.id}`, {
+      await withRetry(() => api.post(`/shopfloor/close-run/${activeRun.id}`, {
         producedQuantity: produced,
         scrapQuantity: scrap,
         notes: closeNote || undefined,
-      });
+      }));
       setActiveRun(null);
       setStep('po');
       setCloseNote('');
@@ -297,6 +462,10 @@ export default function ShopFloorPage() {
 
   const goBack = () => {
     if (step === 'close') { setStep('board'); return; }
+    if (step === 'board' && activeRun) {
+      const ok = window.confirm('You have an active run. Going back won\'t close it. Continue?');
+      if (!ok) return;
+    }
     if (step === 'board' || step === 'po') { setStep('workstation'); setSelectedWs(null); setActiveRun(null); return; }
   };
 
@@ -319,7 +488,32 @@ export default function ShopFloorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white select-none">
+    <ShopFloorErrorBoundary>
+    {/* touch-action: manipulation prevents double-tap zoom on all buttons */}
+    {/* eslint-disable-next-line react/no-unknown-property */}
+    <style>{`
+      .shopfloor-root button, .shopfloor-root a, .shopfloor-root [role="button"] {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .shopfloor-root button { min-height: 48px; }
+    `}</style>
+    <div className="shopfloor-root min-h-screen bg-gray-900 text-white select-none">
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="px-4 py-3 bg-red-900/80 border-b border-red-700 flex items-center gap-3">
+          <WifiOff className="w-5 h-5 text-red-300 flex-shrink-0" />
+          <span className="text-sm text-red-200 font-medium">No network connection — actions will retry when online</span>
+        </div>
+      )}
+      {/* Reconnected banner */}
+      {showReconnected && isOnline && (
+        <div className="px-4 py-3 bg-green-900/80 border-b border-green-700 flex items-center gap-3">
+          <Wifi className="w-5 h-5 text-green-300 flex-shrink-0" />
+          <span className="text-sm text-green-200 font-medium">Reconnected</span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center gap-3">
@@ -730,5 +924,6 @@ export default function ShopFloorPage() {
         </div>
       )}
     </div>
+    </ShopFloorErrorBoundary>
   );
 }

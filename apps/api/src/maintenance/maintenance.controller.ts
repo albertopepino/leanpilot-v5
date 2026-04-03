@@ -84,8 +84,10 @@ export class MaintenanceController {
     @CurrentUser('siteId') siteId: string,
     @Query('workstationId') workstationId?: string,
     @Query('type') type?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.maintenance.findLogs(siteId, { workstationId, type });
+    return this.maintenance.findLogs(siteId, { workstationId, type }, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Post('logs')

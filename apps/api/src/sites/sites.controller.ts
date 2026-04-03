@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SitesService } from './sites.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,8 +18,12 @@ export class SitesController {
   @Get()
   @Roles('manager')
   @ApiOperation({ summary: 'List sites for current corporate' })
-  async findAll(@CurrentUser('corporateId') corporateId: string) {
-    return this.sites.findAllByCorporate(corporateId);
+  async findAll(
+    @CurrentUser('corporateId') corporateId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.sites.findAllByCorporate(corporateId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

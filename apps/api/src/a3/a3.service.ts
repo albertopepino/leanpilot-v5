@@ -7,15 +7,26 @@ const VALID_STATUSES = ['draft', 'in_progress', 'review', 'completed', 'closed']
 export class A3Service {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(siteId: string) {
-    return this.prisma.a3Report.findMany({
-      where: { siteId },
-      include: {
-        owner: { select: { id: true, firstName: true, lastName: true } },
-        sponsor: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.a3Report.findMany({
+        where,
+        include: {
+          owner: { select: { id: true, firstName: true, lastName: true } },
+          sponsor: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.a3Report.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

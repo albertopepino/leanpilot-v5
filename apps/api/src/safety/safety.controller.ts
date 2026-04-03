@@ -23,8 +23,10 @@ export class SafetyController {
     @Query('status') status?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.safety.findIncidents(siteId, { type, severity, status, dateFrom, dateTo });
+    return this.safety.findIncidents(siteId, { type, severity, status, dateFrom, dateTo }, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get('incidents/:id')

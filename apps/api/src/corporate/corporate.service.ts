@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { DashboardService } from '../dashboard/dashboard.service';
 
 @Injectable()
 export class CorporateService {
+  private readonly logger = new Logger(CorporateService.name);
+
   constructor(
     private prisma: PrismaService,
     private dashboard: DashboardService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
   async getOverview(corporateId: string) {
@@ -110,6 +115,10 @@ export class CorporateService {
   }
 
   async getConsolidatedOee(corporateId: string, period = 'week') {
+    const cacheKey = `corporate:oee:${corporateId}:${period}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const sites = await this.prisma.site.findMany({
       where: { corporateId, isActive: true },
       select: { id: true, name: true, location: true },
@@ -167,7 +176,7 @@ export class CorporateService {
           totalScrap: totalScrap,
         });
       } catch (e) {
-        console.error(`OEE calculation failed for site ${site.id}:`, e);
+        this.logger.error(`OEE calculation failed for site ${site.id}`, e instanceof Error ? e.stack : e);
         siteOees.push({
           siteId: site.id, siteName: site.name, location: site.location,
           oee: 0, availability: 0, performance: 0, quality: 0,
@@ -185,11 +194,13 @@ export class CorporateService {
       ? Math.round(activeSites.reduce((s, o) => s + o.oee, 0) / activeSites.length * 100) / 100
       : 0;
 
-    return {
+    const result = {
       overallOee: avgOee,
       totalProduced: totalProd,
       totalScrap: totalScrap,
       sites: siteOees,
     };
+    await this.cache.set(cacheKey, result, 60000);
+    return result;
   }
 }

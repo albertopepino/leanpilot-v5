@@ -21,7 +21,9 @@ export class SafetyService {
     status?: string;
     dateFrom?: string;
     dateTo?: string;
-  }) {
+  }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = { siteId };
     if (filters?.type && VALID_TYPES.includes(filters.type)) {
       where.type = filters.type;
@@ -38,16 +40,23 @@ export class SafetyService {
       if (filters.dateTo) where.date.lte = new Date(filters.dateTo);
     }
 
-    return this.prisma.safetyIncident.findMany({
-      where,
-      include: {
-        reporter: { select: { id: true, firstName: true, lastName: true } },
-        workstation: { select: { id: true, name: true } },
-        investigator: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { attachments: true } },
-      },
-      orderBy: { date: 'desc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.safetyIncident.findMany({
+        where,
+        include: {
+          reporter: { select: { id: true, firstName: true, lastName: true } },
+          workstation: { select: { id: true, name: true } },
+          investigator: { select: { id: true, firstName: true, lastName: true } },
+          _count: { select: { attachments: true } },
+        },
+        orderBy: { date: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.safetyIncident.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findIncidentById(id: string, siteId: string) {
@@ -157,6 +166,11 @@ export class SafetyService {
   }) {
     const incident = await this.prisma.safetyIncident.findFirst({ where: { id, siteId } });
     if (!incident) throw new NotFoundException('Safety incident not found');
+
+    // ISO 45001: Closed safety incidents are immutable records
+    if (incident.status === 'closed') {
+      throw new BadRequestException('Cannot modify a closed safety incident — create a new incident referencing the original instead');
+    }
 
     if (data.type && !VALID_TYPES.includes(data.type)) {
       throw new BadRequestException(`Invalid type. Must be: ${VALID_TYPES.join(', ')}`);

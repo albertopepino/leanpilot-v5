@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Factory, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 
 interface Workstation {
   id: string;
@@ -46,11 +47,24 @@ function elapsed(since: string): string {
   return `${hrs}h ${mins % 60}m`;
 }
 
+/** Resolve the WebSocket URL for the shopfloor namespace */
+function getSocketUrl(): string {
+  if (typeof window === 'undefined') return '';
+  // In production, connect to the same host; in dev, connect to the API server
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  return `${apiUrl}/shopfloor`;
+}
+
 export default function AndonBoardPage() {
   const [workstations, setWorkstations] = useState<Workstation[]>([]);
   const [online, setOnline] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [loaded, setLoaded] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Extract siteId from first workstation (all belong to same site via API)
+  const siteIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -65,19 +79,88 @@ export default function AndonBoardPage() {
     }
   }, []);
 
+  // WebSocket connection
+  useEffect(() => {
+    const socket = io(getSocketUrl(), {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: Infinity,
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setWsConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      setWsConnected(false);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
+  // Listen for status events once we know the siteId
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || workstations.length === 0) return;
+
+    // Derive siteId from workstations endpoint URL (site-scoped)
+    // We listen for all status events and match by workstation ID
+    // Since the API is site-scoped, we need to figure out the siteId.
+    // We'll subscribe to events for all workstation IDs we know about.
+    const workstationIds = new Set(workstations.map(w => w.id));
+
+    // Listen on a wildcard-ish approach: the server emits status:${siteId}
+    // We don't know the siteId on the frontend, so we use a catch-all listener
+    const onAnyEvent = (eventName: string, payload: {
+      workstationId: string;
+      workstationName?: string;
+      status?: string;
+      reasonCode?: string;
+      notes?: string;
+      operatorName?: string;
+      timestamp?: string;
+    }) => {
+      if (!eventName.startsWith('status:')) return;
+      if (!payload?.workstationId || !workstationIds.has(payload.workstationId)) return;
+
+      setWorkstations(prev => prev.map(ws => {
+        if (ws.id !== payload.workstationId) return ws;
+        return {
+          ...ws,
+          currentStatus: payload.status || ws.currentStatus,
+          statusSince: payload.timestamp || ws.statusSince,
+        };
+      }));
+      setLastUpdate(new Date());
+    };
+
+    socket.onAny(onAnyEvent);
+
+    return () => {
+      socket.offAny(onAnyEvent);
+    };
+  }, [workstations.length > 0]); // Re-subscribe when workstations first load
+
+  // Initial fetch + polling fallback (30s when WebSocket connected, 5s when not)
   useEffect(() => {
     refresh();
-    let interval = setInterval(refresh, 5000);
+    const pollInterval = wsConnected ? 30000 : 5000;
+    let interval = setInterval(refresh, pollInterval);
     const onVisibility = () => {
       clearInterval(interval);
       if (!document.hidden) {
         refresh();
-        interval = setInterval(refresh, 5000);
+        interval = setInterval(refresh, pollInterval);
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
-  }, [refresh]);
+  }, [refresh, wsConnected]);
 
   // Force re-render every minute for elapsed time updates
   const [, setTick] = useState(0);
@@ -113,6 +196,17 @@ export default function AndonBoardPage() {
           <span className="text-2xl font-bold tracking-tight">ANDON BOARD</span>
         </div>
         <div className="flex items-center gap-4 text-sm">
+          {wsConnected ? (
+            <span className="flex items-center gap-1.5 text-green-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              LIVE
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-yellow-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-yellow-400" />
+              POLLING
+            </span>
+          )}
           <span className="text-gray-400">
             {lastUpdate.toLocaleTimeString()}
           </span>

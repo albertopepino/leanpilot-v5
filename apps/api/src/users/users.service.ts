@@ -16,7 +16,9 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   /** List users visible to the requester based on role/scope */
-  async findAll(currentUser: { id: string; role: string; siteId: string; corporateId: string }) {
+  async findAll(currentUser: { id: string; role: string; siteId: string; corporateId: string }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = {};
 
     if (currentUser.role === 'corporate_admin') {
@@ -28,23 +30,30 @@ export class UsersService {
       where.siteId = currentUser.siteId;
     }
 
-    return this.prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        siteId: true,
-        corporateId: true,
-        isActive: true,
-        lastLogin: true,
-        createdAt: true,
-        site: { select: { name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          siteId: true,
+          corporateId: true,
+          isActive: true,
+          lastLogin: true,
+          createdAt: true,
+          site: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, callerCorporateId: string) {

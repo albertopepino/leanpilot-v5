@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, UseGuards, Delete } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,8 +17,12 @@ export class UsersController {
   @Get()
   @Roles('manager')
   @ApiOperation({ summary: 'List users (scoped by role)' })
-  async findAll(@CurrentUser() user: any) {
-    return this.users.findAll(user);
+  async findAll(
+    @CurrentUser() user: any,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.users.findAll(user, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

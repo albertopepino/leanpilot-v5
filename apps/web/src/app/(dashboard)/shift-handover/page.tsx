@@ -5,8 +5,81 @@ import { api } from '@/lib/api';
 import {
   AlertTriangle, CheckCircle2, XCircle, Clock, Factory,
   ShieldAlert, FileWarning, Wrench, ArrowDownCircle, RefreshCw,
+  Printer, Activity,
 } from 'lucide-react';
 import { SkeletonList } from '@/components/ui/Skeleton';
+
+// ===== Print Styles =====
+
+const PRINT_STYLES = `
+@media print {
+  /* Hide navigation, sidebar, header, and interactive controls */
+  nav, header, aside, [data-sidebar],
+  .no-print, [data-no-print] {
+    display: none !important;
+  }
+
+  /* Reset page layout */
+  body, html {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+  }
+
+  /* Full width content */
+  main, [role="main"], .print-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Show print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 12pt;
+    padding-bottom: 8pt;
+    border-bottom: 2pt solid black;
+  }
+
+  /* Override dark mode colors */
+  * {
+    color: black !important;
+    background: white !important;
+    border-color: #ccc !important;
+  }
+
+  /* Cards / sections */
+  .print-section {
+    page-break-inside: avoid;
+    margin-bottom: 12pt;
+  }
+
+  .print-break-before {
+    page-break-before: always;
+  }
+
+  /* Tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 4pt 6pt !important;
+    font-size: 9pt !important;
+  }
+
+  /* Workstation grid: 2 columns for print */
+  .ws-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8pt !important;
+  }
+}
+`;
 
 // ===== Types =====
 
@@ -23,6 +96,7 @@ interface HandoverNote {
   productName: string;
   produced: number;
   scrap: number;
+  notes?: string | null;
 }
 
 interface WorkstationSummary {
@@ -91,6 +165,15 @@ interface ShiftHandoverData {
   };
 }
 
+interface OeeData {
+  siteOee: {
+    availability: number;
+    performance: number;
+    quality: number;
+    oee: number;
+  };
+}
+
 // ===== Helpers =====
 
 const STATUS_COLORS: Record<string, string> = {
@@ -121,6 +204,14 @@ const SEVERITY_BADGE: Record<string, string> = {
   serious: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+const SEVERITY_BORDER: Record<string, string> = {
+  minor: 'border-l-yellow-400',
+  major: 'border-l-orange-500',
+  critical: 'border-l-red-600',
+  moderate: 'border-l-orange-500',
+  serious: 'border-l-red-600',
+};
+
 function detectShift(): string {
   const hour = new Date().getHours();
   if (hour >= 6 && hour < 14) return 'morning';
@@ -129,9 +220,9 @@ function detectShift(): string {
 }
 
 const SHIFT_OPTIONS = [
-  { key: 'morning', label: 'Morning (06:00–14:00)', hours: 8 },
-  { key: 'afternoon', label: 'Afternoon (14:00–22:00)', hours: 8 },
-  { key: 'night', label: 'Night (22:00–06:00)', hours: 8 },
+  { key: 'morning', label: 'Morning (06:00-14:00)', hours: 8 },
+  { key: 'afternoon', label: 'Afternoon (14:00-22:00)', hours: 8 },
+  { key: 'night', label: 'Night (22:00-06:00)', hours: 8 },
   { key: 'last12', label: 'Last 12 hours', hours: 12 },
   { key: 'last24', label: 'Last 24 hours', hours: 24 },
 ];
@@ -145,23 +236,56 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function oeeColor(value: number): string {
+  if (value >= 85) return 'text-emerald-600 dark:text-emerald-400';
+  if (value >= 60) return 'text-amber-600 dark:text-amber-400';
+  return 'text-red-600 dark:text-red-400';
+}
+
+function oeeBg(value: number): string {
+  if (value >= 85) return 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800';
+  if (value >= 60) return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
+  return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+}
+
+/** Map shift period to OEE API period param */
+function shiftToOeePeriod(shift: string): string {
+  if (shift === 'last24') return 'day';
+  if (shift === 'last12') return 'day';
+  return 'day'; // shift periods are sub-day, closest OEE bucket is "day"
+}
+
 // ===== Component =====
 
 export default function ShiftHandoverPage() {
   const [data, setData] = useState<ShiftHandoverData | null>(null);
+  const [oeeData, setOeeData] = useState<OeeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [shift, setShift] = useState(detectShift());
   const [refreshing, setRefreshing] = useState(false);
 
   const hours = SHIFT_OPTIONS.find(s => s.key === shift)?.hours || 8;
+  const shiftLabel = SHIFT_OPTIONS.find(s => s.key === shift)?.label || shift;
 
   const loadData = useCallback(() => {
     setRefreshing(true);
-    api.get<ShiftHandoverData>(`/dashboard/shift-handover?hours=${hours}`)
-      .then(d => setData(d))
+    const oeePeriod = shiftToOeePeriod(shift);
+    Promise.all([
+      api.get<ShiftHandoverData>(`/dashboard/shift-handover?hours=${hours}`),
+      api.get<OeeData>(`/dashboard/oee?period=${oeePeriod}`).catch(() => null),
+    ])
+      .then(([handover, oee]) => {
+        setData(handover);
+        setOeeData(oee);
+      })
       .catch(() => setData(null))
       .finally(() => { setLoading(false); setRefreshing(false); });
-  }, [hours]);
+  }, [hours, shift]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -194,10 +318,27 @@ export default function ShiftHandoverPage() {
     || attentionItems.ncrs.length > 0
     || attentionItems.safetyIncidents.length > 0;
 
+  // Workstation status summary
+  const wsProducing = workstations.filter(ws => ws.currentStatus === 'running' && ws.currentPO).length;
+  const wsIdle = workstations.filter(ws => ws.currentStatus === 'idle' || (ws.currentStatus === 'running' && !ws.currentPO)).length;
+  const wsDown = workstations.filter(ws => ['breakdown', 'maintenance'].includes(ws.currentStatus)).length;
+  const wsOther = workstations.length - wsProducing - wsIdle - wsDown;
+
+  const siteOee = oeeData?.siteOee;
+  const todayStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 print-content">
+      {/* Injected print styles */}
+      <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
+
+      {/* Print-only header */}
+      <div className="print-header hidden">
+        Shift Handover Report — {todayStr} — {shiftLabel}
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4 no-print" data-no-print>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shift Handover</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
@@ -215,6 +356,13 @@ export default function ShiftHandoverPage() {
             ))}
           </select>
           <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Print Report
+          </button>
+          <button
             onClick={loadData}
             disabled={refreshing}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
@@ -226,7 +374,7 @@ export default function ShiftHandoverPage() {
       </div>
 
       {/* Totals Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 print-section">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{totals.totalProduced}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Produced</p>
@@ -249,9 +397,37 @@ export default function ShiftHandoverPage() {
         </div>
       </div>
 
+      {/* OEE Summary */}
+      {siteOee && (
+        <div className="print-section">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-violet-500" />
+            OEE Summary
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {([
+              { label: 'Availability', value: siteOee.availability },
+              { label: 'Performance', value: siteOee.performance },
+              { label: 'Quality', value: siteOee.quality },
+              { label: 'OEE', value: siteOee.oee },
+            ] as const).map(({ label, value }) => (
+              <div
+                key={label}
+                className={`rounded-xl border p-4 text-center ${oeeBg(value)}`}
+              >
+                <p className={`text-3xl font-bold tabular-nums ${oeeColor(value)}`}>
+                  {value.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 font-medium">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Attention Items */}
       {hasAttention && (
-        <div className="space-y-4">
+        <div className="space-y-4 print-section">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             Attention Items
@@ -266,7 +442,7 @@ export default function ShiftHandoverPage() {
               </h3>
               <div className="space-y-2">
                 {attentionItems.breakdowns.map((b, i) => (
-                  <div key={i} className="flex items-start justify-between text-sm">
+                  <div key={i} className="flex items-start justify-between text-sm border-l-4 border-l-red-600 pl-3">
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">
                         {b.workstationCode || b.workstationName}
@@ -274,7 +450,9 @@ export default function ShiftHandoverPage() {
                       {b.reasonCode && <span className="text-gray-500 dark:text-gray-400 ml-2">({b.reasonCode})</span>}
                       {b.notes && <p className="text-gray-600 dark:text-gray-300 text-xs mt-0.5">{b.notes}</p>}
                     </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap ml-3">{timeAgo(b.timestamp)}</span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap ml-3">
+                      {formatTime(b.timestamp)} ({timeAgo(b.timestamp)})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -290,7 +468,10 @@ export default function ShiftHandoverPage() {
               </h3>
               <div className="space-y-2">
                 {attentionItems.ncrs.map(ncr => (
-                  <div key={ncr.id} className="flex items-start justify-between text-sm">
+                  <div
+                    key={ncr.id}
+                    className={`flex items-start justify-between text-sm border-l-4 ${SEVERITY_BORDER[ncr.severity] || 'border-l-gray-300'} pl-3`}
+                  >
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">{ncr.title}</span>
                       <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${SEVERITY_BADGE[ncr.severity] || ''}`}>
@@ -305,7 +486,9 @@ export default function ShiftHandoverPage() {
                         <span className="text-xs text-red-600 dark:text-red-400 ml-2">{ncr.defectQuantity} defective</span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap ml-3">{timeAgo(ncr.createdAt)}</span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap ml-3">
+                      {formatTime(ncr.createdAt)} ({timeAgo(ncr.createdAt)})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -321,7 +504,10 @@ export default function ShiftHandoverPage() {
               </h3>
               <div className="space-y-2">
                 {attentionItems.safetyIncidents.map(si => (
-                  <div key={si.id} className="flex items-start justify-between text-sm">
+                  <div
+                    key={si.id}
+                    className={`flex items-start justify-between text-sm border-l-4 ${SEVERITY_BORDER[si.severity] || 'border-l-gray-300'} pl-3`}
+                  >
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">{si.title}</span>
                       <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${SEVERITY_BADGE[si.severity] || ''}`}>
@@ -330,7 +516,9 @@ export default function ShiftHandoverPage() {
                       <span className="text-gray-500 dark:text-gray-400 ml-2 text-xs capitalize">{si.type.replace(/_/g, ' ')}</span>
                       <span className="text-gray-400 ml-2 text-xs">{si.location}</span>
                     </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap ml-3">{timeAgo(si.createdAt)}</span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap ml-3">
+                      {formatTime(si.createdAt)} ({timeAgo(si.createdAt)})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -340,94 +528,139 @@ export default function ShiftHandoverPage() {
       )}
 
       {/* Workstation Grid */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+      <div className="print-section print-break-before">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
           <Factory className="w-5 h-5 text-blue-500" />
           Workstations
         </h2>
+        {/* Status summary line */}
+        {workstations.length > 0 && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> {wsProducing} producing</span>
+            <span className="mx-2">|</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> {wsIdle} idle</span>
+            <span className="mx-2">|</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {wsDown} down</span>
+            {wsOther > 0 && (
+              <>
+                <span className="mx-2">|</span>
+                <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> {wsOther} other</span>
+              </>
+            )}
+          </p>
+        )}
         {workstations.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-sm">No active workstations found.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {workstations.map(ws => (
-              <div
-                key={ws.workstationId}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                      {ws.workstationCode || ws.workstationName}
-                    </h3>
-                    {ws.workstationCode && ws.workstationName !== ws.workstationCode && (
-                      <p className="text-xs text-gray-400 truncate">{ws.workstationName}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 ws-grid">
+            {workstations.map(ws => {
+              const isProducing = ws.currentStatus === 'running' && ws.currentPO;
+              const isIdle = ws.currentStatus === 'idle' || (ws.currentStatus === 'running' && !ws.currentPO);
+
+              return (
+                <div
+                  key={ws.workstationId}
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                        {ws.workstationCode || ws.workstationName}
+                      </h3>
+                      {ws.workstationCode && ws.workstationName !== ws.workstationCode && (
+                        <p className="text-xs text-gray-400 truncate">{ws.workstationName}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[ws.currentStatus] || 'bg-gray-400'}`} />
+                      <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">
+                        {STATUS_LABELS[ws.currentStatus] || ws.currentStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Producing / Idle indicator */}
+                  <div className="mb-2 flex items-center gap-1.5 text-xs">
+                    {isProducing ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-emerald-700 dark:text-emerald-400 font-medium">Producing</span>
+                      </>
+                    ) : isIdle ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-gray-400" />
+                        <span className="text-gray-500 dark:text-gray-400">Idle</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[ws.currentStatus] || 'bg-gray-400'}`} />
+                        <span className="text-gray-500 dark:text-gray-400 capitalize">
+                          {STATUS_LABELS[ws.currentStatus] || ws.currentStatus}
+                        </span>
+                      </>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[ws.currentStatus] || 'bg-gray-400'}`} />
-                    <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">
-                      {STATUS_LABELS[ws.currentStatus] || ws.currentStatus}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Current PO */}
-                {ws.currentPO ? (
-                  <div className="mb-2 text-xs">
-                    <span className="text-gray-500 dark:text-gray-400">PO: </span>
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{ws.currentPO.poNumber}</span>
-                    <span className="text-gray-400 ml-1">({ws.currentPO.productName})</span>
-                  </div>
-                ) : (
-                  <div className="mb-2 text-xs text-gray-400">No active PO</div>
-                )}
+                  {/* Current PO */}
+                  {ws.currentPO ? (
+                    <div className="mb-2 text-xs">
+                      <span className="text-gray-500 dark:text-gray-400">PO: </span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">{ws.currentPO.poNumber}</span>
+                      <span className="text-gray-400 ml-1">({ws.currentPO.productName})</span>
+                    </div>
+                  ) : (
+                    <div className="mb-2 text-xs text-gray-400">No active PO</div>
+                  )}
 
-                {/* Production counts */}
-                <div className="flex items-center gap-4 text-xs mb-2">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-gray-700 dark:text-gray-300 tabular-nums">{ws.produced} produced</span>
-                  </div>
-                  {ws.scrap > 0 && (
+                  {/* Production counts */}
+                  <div className="flex items-center gap-4 text-xs mb-2">
                     <div className="flex items-center gap-1">
-                      <XCircle className="w-3.5 h-3.5 text-red-500" />
-                      <span className="text-red-600 dark:text-red-400 tabular-nums">{ws.scrap} scrap</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-gray-700 dark:text-gray-300 tabular-nums">{ws.produced} produced</span>
+                    </div>
+                    {ws.scrap > 0 && (
+                      <div className="flex items-center gap-1">
+                        <XCircle className="w-3.5 h-3.5 text-red-500" />
+                        <span className="text-red-600 dark:text-red-400 tabular-nums">{ws.scrap} scrap</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status changes this shift */}
+                  {ws.statusChanges.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Events this shift</p>
+                      {ws.statusChanges.slice(0, 3).map((e, i) => (
+                        <div key={i} className="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1.5 mb-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[e.status || ''] || 'bg-gray-400'}`} />
+                          <span className="capitalize">{STATUS_LABELS[e.status || ''] || e.status}</span>
+                          {e.reasonCode && <span className="text-gray-400">({e.reasonCode})</span>}
+                          <span className="text-gray-400 ml-auto" title={formatTime(e.timestamp)}>
+                            {formatTime(e.timestamp)} ({timeAgo(e.timestamp)})
+                          </span>
+                        </div>
+                      ))}
+                      {ws.statusChanges.length > 3 && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">+{ws.statusChanges.length - 3} more</p>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {/* Status changes this shift */}
-                {ws.statusChanges.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Events this shift</p>
-                    {ws.statusChanges.slice(0, 3).map((e, i) => (
-                      <div key={i} className="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1.5 mb-0.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[e.status || ''] || 'bg-gray-400'}`} />
-                        <span className="capitalize">{STATUS_LABELS[e.status || ''] || e.status}</span>
-                        {e.reasonCode && <span className="text-gray-400">({e.reasonCode})</span>}
-                        <span className="text-gray-400 ml-auto">{timeAgo(e.timestamp)}</span>
-                      </div>
-                    ))}
-                    {ws.statusChanges.length > 3 && (
-                      <p className="text-[10px] text-gray-400 mt-0.5">+{ws.statusChanges.length - 3} more</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Handover Notes */}
+      {/* Handover Notes / Completed Runs */}
       {(() => {
         const allNotes = workstations.flatMap(ws =>
           ws.handoverNotes.map(n => ({ ...n, workstationName: ws.workstationName, workstationCode: ws.workstationCode })),
         );
         if (allNotes.length === 0) return null;
         return (
-          <div>
+          <div className="print-section print-break-before">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
               <ArrowDownCircle className="w-5 h-5 text-indigo-500" />
               Completed Runs (Handover Notes)
@@ -441,6 +674,7 @@ export default function ShiftHandoverPage() {
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Product</th>
                     <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Produced</th>
                     <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Scrap</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Notes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -455,6 +689,13 @@ export default function ShiftHandoverPage() {
                           <span className="text-red-600 dark:text-red-400">{n.scrap}</span>
                         ) : (
                           <span className="text-gray-400">0</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 max-w-xs">
+                        {n.notes ? (
+                          <span className="text-gray-500 dark:text-gray-400 italic text-xs">{n.notes}</span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600 text-xs">--</span>
                         )}
                       </td>
                     </tr>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,8 +15,12 @@ export class OrdersController {
 
   @Get()
   @Roles('viewer')
-  async findAll(@CurrentUser('siteId') siteId: string) {
-    return this.orders.findAllBySite(siteId);
+  async findAll(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.orders.findAllBySite(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

@@ -19,8 +19,10 @@ export class SmedController {
     @CurrentUser('siteId') siteId: string,
     @Query('workstationId') workstationId?: string,
     @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.smed.findAll(siteId, { workstationId, status });
+    return this.smed.findAll(siteId, { workstationId, status }, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

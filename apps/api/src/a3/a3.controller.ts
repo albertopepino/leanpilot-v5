@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { A3Service } from './a3.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,8 +15,12 @@ export class A3Controller {
 
   @Get()
   @Roles('operator')
-  async findAll(@CurrentUser('siteId') siteId: string) {
-    return this.a3.findAll(siteId);
+  async findAll(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.a3.findAll(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

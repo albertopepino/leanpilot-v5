@@ -64,6 +64,7 @@ model Site {
   a3Reports          A3Report[]
   skills             Skill[]
   smedAnalyses       SmedAnalysis[]
+  toolConfigs        SiteToolConfig[]
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -1124,4 +1125,19 @@ model SmedActivity {
   analysis SmedAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   @@map("smed_activities")
+}
+
+// ===== V5: SITE TOOL CONFIGURATION =====
+
+model SiteToolConfig {
+  id        String  @id @default(cuid())
+  siteId    String
+  toolSlug  String  // e.g. "five-s", "kaizen", "smed", "gemba", "safety", etc.
+  isEnabled Boolean @default(true)
+  minRole   String  @default("operator") // minimum role to access this tool at this site
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, toolSlug])
+  @@map("site_tool_configs")
 }

@@ -17,8 +17,12 @@ export class QualityController {
 
   @Get('templates')
   @Roles('operator')
-  async getTemplates(@CurrentUser('siteId') siteId: string) {
-    return this.quality.getTemplates(siteId);
+  async getTemplates(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.quality.getTemplates(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Post('templates')
@@ -55,8 +59,12 @@ export class QualityController {
 
   @Get('inspections')
   @Roles('operator')
-  async getInspections(@CurrentUser('siteId') siteId: string) {
-    return this.quality.getInspections(siteId);
+  async getInspections(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.quality.getInspections(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Post('inspections')
@@ -97,8 +105,12 @@ export class QualityController {
 
   @Get('ncr')
   @Roles('operator')
-  async getNcrs(@CurrentUser('siteId') siteId: string) {
-    return this.quality.getNcrs(siteId);
+  async getNcrs(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.quality.getNcrs(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Post('ncr')

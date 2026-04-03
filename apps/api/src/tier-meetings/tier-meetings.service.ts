@@ -9,20 +9,29 @@ export class TierMeetingsService {
     tier?: number;
     date?: string;
     status?: string;
-  }) {
+  }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = { siteId };
     if (filters.tier) where.tier = filters.tier;
     if (filters.date) where.date = filters.date;
     if (filters.status) where.status = filters.status;
 
-    return this.prisma.tierMeeting.findMany({
-      where,
-      include: {
-        leader: { select: { id: true, firstName: true, lastName: true } },
-        items: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.tierMeeting.findMany({
+        where,
+        include: {
+          leader: { select: { id: true, firstName: true, lastName: true } },
+          items: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.tierMeeting.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

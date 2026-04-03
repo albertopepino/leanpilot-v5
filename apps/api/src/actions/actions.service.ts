@@ -16,7 +16,9 @@ export class ActionsService {
     assigneeId?: string;
     source?: string;
     overdue?: boolean;
-  }) {
+  }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = { siteId };
 
     if (filters.status) where.status = filters.status;
@@ -29,14 +31,21 @@ export class ActionsService {
       where.status = { notIn: ['completed', 'cancelled'] };
     }
 
-    return this.prisma.action.findMany({
-      where,
-      include: {
-        assignee: { select: { id: true, firstName: true, lastName: true } },
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { dueDate: 'asc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.action.findMany({
+        where,
+        include: {
+          assignee: { select: { id: true, firstName: true, lastName: true } },
+          createdBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { dueDate: 'asc' },
+        take,
+        skip,
+      }),
+      this.prisma.action.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

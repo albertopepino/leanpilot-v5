@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -51,8 +51,9 @@ async function bootstrap() {
 
   const port = process.env.API_PORT || 3001;
   await app.listen(port);
-  console.log(`🏭 LeanPilot API running on http://localhost:${port}`);
-  console.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`LeanPilot API running on http://localhost:${port}`);
+  logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 
 bootstrap();

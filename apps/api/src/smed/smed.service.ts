@@ -10,20 +10,29 @@ export class SmedService {
   async findAll(siteId: string, filters: {
     workstationId?: string;
     status?: string;
-  }) {
+  }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = { siteId };
     if (filters.workstationId) where.workstationId = filters.workstationId;
     if (filters.status) where.status = filters.status;
 
-    return this.prisma.smedAnalysis.findMany({
-      where,
-      include: {
-        workstation: { select: { id: true, name: true, code: true } },
-        analyst: { select: { id: true, firstName: true, lastName: true } },
-        activities: { orderBy: { sequence: 'asc' } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.smedAnalysis.findMany({
+        where,
+        include: {
+          workstation: { select: { id: true, name: true, code: true } },
+          analyst: { select: { id: true, firstName: true, lastName: true } },
+          activities: { orderBy: { sequence: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.smedAnalysis.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

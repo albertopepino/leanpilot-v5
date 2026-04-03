@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface AuditLogEntry {
@@ -15,6 +15,8 @@ export interface AuditLogEntry {
 
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /** Append an immutable audit log entry */
@@ -36,7 +38,7 @@ export class AuditService {
     } catch {
       // Audit logging must never crash the main operation
       // In production, send to a dead-letter queue or stderr
-      console.error('[AuditLog] Failed to write audit entry:', entry.action, entry.entityType);
+      this.logger.error(`Failed to write audit entry: ${entry.action} ${entry.entityType}`);
     }
   }
 

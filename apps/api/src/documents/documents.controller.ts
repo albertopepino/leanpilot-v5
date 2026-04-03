@@ -21,8 +21,10 @@ export class DocumentsController {
     @Query('category') category?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.documents.findAll(siteId, { category, status, search });
+    return this.documents.findAll(siteId, { category, status, search }, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

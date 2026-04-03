@@ -7,14 +7,25 @@ import { UpdateSiteDto } from './dto/update-site.dto';
 export class SitesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAllByCorporate(corporateId: string) {
-    return this.prisma.site.findMany({
-      where: { corporateId },
-      include: {
-        _count: { select: { users: true, workstations: true } },
-      },
-      orderBy: { name: 'asc' },
-    });
+  async findAllByCorporate(corporateId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { corporateId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.site.findMany({
+        where,
+        include: {
+          _count: { select: { users: true, workstations: true } },
+        },
+        orderBy: { name: 'asc' },
+        take,
+        skip,
+      }),
+      this.prisma.site.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, corporateId: string) {

@@ -18,8 +18,12 @@ export class RootCauseController {
   @Get('five-why')
   @Roles('viewer')
   @ApiOperation({ summary: 'List all Five-Why analyses' })
-  async findFiveWhy(@CurrentUser('siteId') siteId: string) {
-    return this.rootCause.findFiveWhy(siteId);
+  async findFiveWhy(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.rootCause.findFiveWhy(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get('five-why/:id')
@@ -84,8 +88,12 @@ export class RootCauseController {
   @Get('ishikawa')
   @Roles('viewer')
   @ApiOperation({ summary: 'List all Ishikawa analyses' })
-  async findIshikawa(@CurrentUser('siteId') siteId: string) {
-    return this.rootCause.findIshikawa(siteId);
+  async findIshikawa(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.rootCause.findIshikawa(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get('ishikawa/:id')
@@ -161,8 +169,12 @@ export class RootCauseController {
   @Get('eight-d')
   @Roles('viewer')
   @ApiOperation({ summary: 'List 8D reports' })
-  async findEightD(@CurrentUser('siteId') siteId: string) {
-    return this.rootCause.findEightD(siteId);
+  async findEightD(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.rootCause.findEightD(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get('eight-d/:id')

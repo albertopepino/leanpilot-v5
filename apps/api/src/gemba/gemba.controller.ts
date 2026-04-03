@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GembaService } from './gemba.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,8 +15,12 @@ export class GembaController {
 
   @Get()
   @Roles('manager')
-  async findAll(@CurrentUser('siteId') siteId: string) {
-    return this.gemba.findAllBySite(siteId);
+  async findAll(
+    @CurrentUser('siteId') siteId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.gemba.findAllBySite(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get('muda-signals')

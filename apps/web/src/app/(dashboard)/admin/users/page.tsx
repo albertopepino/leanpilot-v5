@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api, auth } from '@/lib/api';
-import { UserPlus, Search, Shield, X, Loader2 } from 'lucide-react';
+import { UserPlus, Search, Shield, X, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SkeletonList } from '@/components/ui/Skeleton';
 
@@ -32,6 +32,12 @@ export default function UsersPage() {
   const [createError, setCreateError] = useState('');
   const { toast } = useToast();
 
+  // Edit user state
+  const [editUser, setEditUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', role: '', isActive: true, password: '' });
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
   const currentUser = auth.getUser();
 
   const loadUsers = () => {
@@ -47,7 +53,65 @@ export default function UsersPage() {
     `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  const allowedRoles = ALL_ROLES.filter(r => ROLE_LEVEL[r] < (ROLE_LEVEL[currentUser?.role] || 0));
+  const currentLevel = ROLE_LEVEL[currentUser?.role] || 0;
+  const allowedRoles = ALL_ROLES.filter(r => ROLE_LEVEL[r] < currentLevel);
+
+  const openEditModal = (u: any) => {
+    if (ROLE_LEVEL[u.role] >= currentLevel) return; // can't edit peers or above
+    setEditUser(u);
+    setEditForm({
+      firstName: u.firstName || '',
+      lastName: u.lastName || '',
+      role: u.role || 'operator',
+      isActive: u.isActive !== false,
+      password: '',
+    });
+    setEditError('');
+  };
+
+  const saveUser = async () => {
+    if (!editUser) return;
+    setSaving(true);
+    setEditError('');
+    try {
+      const changes: Record<string, any> = {};
+      if (editForm.firstName !== editUser.firstName) changes.firstName = editForm.firstName;
+      if (editForm.lastName !== editUser.lastName) changes.lastName = editForm.lastName;
+      if (editForm.role !== editUser.role) changes.role = editForm.role;
+      if (editForm.isActive !== editUser.isActive) changes.isActive = editForm.isActive;
+      if (editForm.password) changes.password = editForm.password;
+
+      if (Object.keys(changes).length === 0) {
+        setEditUser(null);
+        return;
+      }
+
+      await api.patch('/users/' + editUser.id, changes);
+      setEditUser(null);
+      loadUsers();
+      toast('success', 'User updated');
+    } catch (e: any) {
+      setEditError(e.message || 'Failed to update user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deactivateUser = async () => {
+    if (!editUser) return;
+    setSaving(true);
+    setEditError('');
+    try {
+      await api.delete('/users/' + editUser.id);
+      setEditUser(null);
+      loadUsers();
+      toast('success', 'User deactivated');
+    } catch (e: any) {
+      setEditError(e.message || 'Failed to deactivate user');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const createUser = async () => {
     if (!form.firstName || !form.email || !form.password) {
@@ -126,7 +190,11 @@ export default function UsersPage() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {filtered.map(u => (
-                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <tr
+                  key={u.id}
+                  onClick={() => openEditModal(u)}
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${ROLE_LEVEL[u.role] < currentLevel ? 'cursor-pointer' : ''}`}
+                >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-xs font-medium text-brand-700 dark:text-brand-300">
@@ -246,6 +314,106 @@ export default function UsersPage() {
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                 Create User
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit User Modal ──────────────────────────────────────── */}
+      {editUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit User</h2>
+              <button onClick={() => setEditUser(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              {editError && (
+                <div className="p-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
+                  {editError}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={editForm.firstName}
+                    onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={editForm.lastName}
+                    onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none capitalize"
+                >
+                  {allowedRoles.map(r => (
+                    <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">New Password (leave blank to keep)</label>
+                <input
+                  type="password"
+                  value={editForm.password}
+                  onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                  placeholder="Min 8 characters"
+                />
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                <button
+                  type="button"
+                  onClick={() => setEditForm(f => ({ ...f, isActive: !f.isActive }))}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  {editForm.isActive
+                    ? <ToggleRight className="w-8 h-8 text-green-500" />
+                    : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+              <button
+                onClick={deactivateUser}
+                disabled={saving}
+                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Deactivate
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditUser(null)}
+                  className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveUser}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>

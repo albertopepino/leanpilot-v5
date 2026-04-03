@@ -126,7 +126,9 @@ export class MaintenanceService {
 
   // ===== LOGS =====
 
-  async findLogs(siteId: string, filters?: { workstationId?: string; type?: string }) {
+  async findLogs(siteId: string, filters?: { workstationId?: string; type?: string }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = { siteId };
     if (filters?.workstationId) {
       where.workstationId = filters.workstationId;
@@ -135,15 +137,22 @@ export class MaintenanceService {
       where.type = filters.type;
     }
 
-    return this.prisma.maintenanceLog.findMany({
-      where,
-      include: {
-        workstation: { select: { id: true, name: true } },
-        performedBy: { select: { id: true, firstName: true, lastName: true } },
-        plan: { select: { id: true, name: true } },
-      },
-      orderBy: { performedAt: 'desc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.maintenanceLog.findMany({
+        where,
+        include: {
+          workstation: { select: { id: true, name: true } },
+          performedBy: { select: { id: true, firstName: true, lastName: true } },
+          plan: { select: { id: true, name: true } },
+        },
+        orderBy: { performedAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.maintenanceLog.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async createLog(siteId: string, userId: string, data: {

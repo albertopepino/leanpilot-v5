@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -26,10 +29,16 @@ import { TierMeetingsModule } from './tier-meetings/tier-meetings.module';
 import { A3Module } from './a3/a3.module';
 import { SkillsModule } from './skills/skills.module';
 import { SmedModule } from './smed/smed.module';
+import { SiteConfigModule } from './site-config/site-config.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.register({ isGlobal: true, ttl: 30000, max: 100 }),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 1000, limit: 10 },   // 10 req/sec per IP
+      { name: 'medium', ttl: 60000, limit: 100 }, // 100 req/min per IP
+    ]),
     PrismaModule,
     AuditModule,
     AuthModule,
@@ -56,6 +65,10 @@ import { SmedModule } from './smed/smed.module';
     A3Module,
     SkillsModule,
     SmedModule,
+    SiteConfigModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

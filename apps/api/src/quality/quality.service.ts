@@ -10,15 +10,26 @@ export class QualityService {
 
   // ── Templates ────────────────────────────────────────────────────
 
-  async getTemplates(siteId: string) {
-    return this.prisma.qualityTemplate.findMany({
-      where: { siteId, isActive: true },
-      include: {
-        createdBy: { select: { firstName: true, lastName: true } },
-        _count: { select: { checkpoints: true, inspections: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getTemplates(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId, isActive: true };
+
+    const [data, total] = await Promise.all([
+      this.prisma.qualityTemplate.findMany({
+        where,
+        include: {
+          createdBy: { select: { firstName: true, lastName: true } },
+          _count: { select: { checkpoints: true, inspections: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.qualityTemplate.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async getTemplate(id: string, siteId: string) {
@@ -74,17 +85,28 @@ export class QualityService {
 
   // ── Inspections ──────────────────────────────────────────────────
 
-  async getInspections(siteId: string) {
-    return this.prisma.qualityInspection.findMany({
-      where: { siteId },
-      include: {
-        template: { select: { name: true } },
-        inspector: { select: { firstName: true, lastName: true } },
-        workstation: { select: { name: true, code: true } },
-        _count: { select: { results: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getInspections(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.qualityInspection.findMany({
+        where,
+        include: {
+          template: { select: { name: true } },
+          inspector: { select: { firstName: true, lastName: true } },
+          workstation: { select: { name: true, code: true } },
+          _count: { select: { results: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.qualityInspection.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async getInspection(id: string, siteId: string) {
@@ -194,17 +216,28 @@ export class QualityService {
 
   // ── NCR ──────────────────────────────────────────────────────────
 
-  async getNcrs(siteId: string) {
-    return this.prisma.nonConformanceReport.findMany({
-      where: { siteId },
-      include: {
-        reporter: { select: { firstName: true, lastName: true } },
-        workstation: { select: { name: true, code: true } },
-        order: { select: { poNumber: true, productName: true } },
-        _count: { select: { attachments: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getNcrs(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.nonConformanceReport.findMany({
+        where,
+        include: {
+          reporter: { select: { firstName: true, lastName: true } },
+          workstation: { select: { name: true, code: true } },
+          order: { select: { poNumber: true, productName: true } },
+          _count: { select: { attachments: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.nonConformanceReport.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async getNcr(id: string, siteId: string) {
@@ -263,6 +296,11 @@ export class QualityService {
   }) {
     const ncr = await this.prisma.nonConformanceReport.findFirst({ where: { id, siteId } });
     if (!ncr) throw new NotFoundException('NCR not found');
+
+    // ISO 9001: Closed NCRs are immutable quality records
+    if (ncr.status === 'closed') {
+      throw new BadRequestException('Cannot modify a closed NCR — create a new NCR referencing the original instead');
+    }
 
     if (data.status && !NCR_STATUSES.includes(data.status)) {
       throw new BadRequestException(`Invalid status. Must be one of: ${NCR_STATUSES.join(', ')}`);

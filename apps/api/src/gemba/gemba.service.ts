@@ -5,15 +5,26 @@ import { PrismaService } from '../prisma/prisma.service';
 export class GembaService {
   constructor(private prisma: PrismaService) {}
 
-  async findAllBySite(siteId: string) {
-    return this.prisma.gembaWalk.findMany({
-      where: { siteId },
-      include: {
-        walker: { select: { firstName: true, lastName: true } },
-        _count: { select: { observations: true } },
-      },
-      orderBy: { startedAt: 'desc' },
-    });
+  async findAllBySite(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.gembaWalk.findMany({
+        where,
+        include: {
+          walker: { select: { firstName: true, lastName: true } },
+          _count: { select: { observations: true } },
+        },
+        orderBy: { startedAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.gembaWalk.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

@@ -7,11 +7,22 @@ const VALID_CATEGORIES = ['technical', 'safety', 'quality', 'leadership', 'proce
 export class SkillsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(siteId: string) {
-    return this.prisma.skill.findMany({
-      where: { siteId },
-      orderBy: { name: 'asc' },
-    });
+  async findAll(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.skill.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        take,
+        skip,
+      }),
+      this.prisma.skill.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async create(siteId: string, data: {

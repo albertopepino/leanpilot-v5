@@ -5,17 +5,28 @@ import { PrismaService } from '../prisma/prisma.service';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAllBySite(siteId: string) {
-    return this.prisma.productionOrder.findMany({
-      where: { siteId },
-      include: {
-        phases: {
-          include: { workstation: { select: { name: true, code: true } } },
-          orderBy: { sequence: 'asc' },
+  async findAllBySite(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.productionOrder.findMany({
+        where,
+        include: {
+          phases: {
+            include: { workstation: { select: { name: true, code: true } } },
+            orderBy: { sequence: 'asc' },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.productionOrder.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

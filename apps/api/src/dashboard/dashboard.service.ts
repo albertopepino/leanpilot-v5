@@ -1,12 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
+  ) {}
 
   /** Overview: Losses + Attention signals */
   async getOverview(siteId: string) {
+    const cacheKey = `dashboard:overview:${siteId}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
@@ -118,7 +127,7 @@ export class DashboardService {
       where: { siteId, status: 'in_progress' },
     });
 
-    return {
+    const result = {
       losses: {
         ...losses,
         totalHours: Math.round(totalLossHours * 10) / 10,
@@ -136,10 +145,16 @@ export class DashboardService {
         totalWorkstations: workstations.length,
       },
     };
+    await this.cache.set(cacheKey, result, 30000);
+    return result;
   }
 
   /** Shift Handover: summary of last N hours across all workstations */
   async getShiftHandover(siteId: string, hours = 8) {
+    const cacheKey = `dashboard:handover:${siteId}:${hours}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
     // All active workstations
@@ -196,14 +211,24 @@ export class DashboardService {
         });
 
         // Handover notes from completed runs
-        const handoverNotes = shiftRuns
-          .filter(r => r.status === 'completed' && r.phase?.order)
-          .map(r => ({
-            poNumber: r.phase.order.poNumber,
-            productName: r.phase.order.productName,
-            produced: r.producedQuantity,
-            scrap: r.scrapQuantity,
-          }));
+        const completedRuns = shiftRuns.filter(r => r.status === 'completed' && r.phase?.order);
+        const handoverNotes = await Promise.all(
+          completedRuns.map(async (r) => {
+            // Get last event with notes for this run (po_end or status_change)
+            const lastNote = await this.prisma.workstationEvent.findFirst({
+              where: { productionRunId: r.id, notes: { not: null } },
+              orderBy: { timestamp: 'desc' },
+              select: { notes: true },
+            });
+            return {
+              poNumber: r.phase.order.poNumber,
+              productName: r.phase.order.productName,
+              produced: r.producedQuantity,
+              scrap: r.scrapQuantity,
+              notes: lastNote?.notes || null,
+            };
+          }),
+        );
 
         return {
           workstationId: ws.id,
@@ -278,7 +303,7 @@ export class DashboardService {
         .map(e => ({ ...e, workstationName: ws.workstationName, workstationCode: ws.workstationCode })),
     );
 
-    return {
+    const result = {
       period: { since: since.toISOString(), hours },
       workstations: workstationSummaries,
       attentionItems: {
@@ -294,10 +319,16 @@ export class DashboardService {
         totalWorkstations: workstations.length,
       },
     };
+    await this.cache.set(cacheKey, result, 15000);
+    return result;
   }
 
   /** OEE: Availability × Performance × Quality per workstation */
   async getOee(siteId: string, workstationId?: string, period = 'week') {
+    const cacheKey = `dashboard:oee:${siteId}:${workstationId || 'all'}:${period}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const now = new Date();
     const periodMs = period === 'day' ? 24 * 60 * 60 * 1000
       : period === 'month' ? 30 * 24 * 60 * 60 * 1000
@@ -396,7 +427,7 @@ export class DashboardService {
       });
     }
 
-    return {
+    const result = {
       period,
       since: since.toISOString(),
       workstations: results,
@@ -409,10 +440,16 @@ export class DashboardService {
           }
         : { availability: 0, performance: 0, quality: 0, oee: 0 },
     };
+    await this.cache.set(cacheKey, result, 60000);
+    return result;
   }
 
   /** Pareto / Loss waterfall: 6 big losses ranked by hours */
   async getPareto(siteId: string, period = 'week') {
+    const cacheKey = `dashboard:pareto:${siteId}:${period}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
     const now = new Date();
     const periodMs = period === 'day' ? 24 * 60 * 60 * 1000
       : period === 'month' ? 30 * 24 * 60 * 60 * 1000
@@ -545,12 +582,14 @@ export class DashboardService {
       };
     });
 
-    return {
+    const result = {
       period,
       since: since.toISOString(),
       totalPlannedHours: Math.round(totalPlannedHours * 10) / 10,
       totalLossHours: Math.round(totalLossHours * 10) / 10,
       losses: ranked,
     };
+    await this.cache.set(cacheKey, result, 60000);
+    return result;
   }
 }

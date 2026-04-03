@@ -28,6 +28,8 @@ export class ActionsController {
     @Query('assigneeId') assigneeId?: string,
     @Query('source') source?: string,
     @Query('overdue') overdue?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
     return this.actions.findAll(siteId, {
       status,
@@ -35,7 +37,7 @@ export class ActionsController {
       assigneeId,
       source,
       overdue: overdue === 'true',
-    });
+    }, limit ? +limit : 50, offset ? +offset : 0);
   }
 
   @Get(':id')

@@ -17,7 +17,9 @@ const NEXT_STATUS: Record<string, string[]> = {
 export class DocumentsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(siteId: string, filters?: { category?: string; status?: string; search?: string }) {
+  async findAll(siteId: string, filters?: { category?: string; status?: string; search?: string }, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
     const where: any = { siteId };
     if (filters?.category && VALID_CATEGORIES.includes(filters.category)) {
       where.category = filters.category;
@@ -37,15 +39,22 @@ export class DocumentsService {
       ];
     }
 
-    return this.prisma.document.findMany({
-      where,
-      include: {
-        createdBy: { select: { firstName: true, lastName: true } },
-        approvedBy: { select: { firstName: true, lastName: true } },
-        _count: { select: { revisions: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const [data, total] = await Promise.all([
+      this.prisma.document.findMany({
+        where,
+        include: {
+          createdBy: { select: { firstName: true, lastName: true } },
+          approvedBy: { select: { firstName: true, lastName: true } },
+          _count: { select: { revisions: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.document.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findById(id: string, siteId: string) {

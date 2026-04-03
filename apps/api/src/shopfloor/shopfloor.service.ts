@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ShopfloorGateway } from './shopfloor.gateway';
 
 @Injectable()
 export class ShopfloorService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private gateway: ShopfloorGateway,
+  ) {}
 
   /** Verify workstation belongs to caller's site */
   private async verifyWorkstationSite(workstationId: string, siteId: string) {
@@ -100,6 +104,22 @@ export class ShopfloorService {
       },
     });
 
+    // Emit real-time run started event
+    const ws = await this.prisma.workstation.findUnique({ where: { id: workstationId } });
+    this.gateway.emitStatusChange(siteId, {
+      workstationId,
+      workstationName: ws?.name || '',
+      status: 'running',
+      timestamp: new Date().toISOString(),
+    });
+    this.gateway.emitRunEvent(siteId, {
+      workstationId,
+      eventType: 'run_started',
+      poNumber: phase.order.poNumber,
+      productName: phase.order.productName,
+      timestamp: new Date().toISOString(),
+    });
+
     return run;
   }
 
@@ -113,12 +133,12 @@ export class ShopfloorService {
     if (!VALID_STATUSES.includes(data.status)) {
       throw new BadRequestException(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
-    await this.verifyWorkstationSite(workstationId, siteId);
+    const ws = await this.verifyWorkstationSite(workstationId, siteId);
     const activeRun = await this.prisma.productionRun.findFirst({
       where: { workstationId, status: 'active' },
     });
 
-    return this.prisma.workstationEvent.create({
+    const event = await this.prisma.workstationEvent.create({
       data: {
         workstationId,
         productionRunId: activeRun?.id || null,
@@ -129,6 +149,20 @@ export class ShopfloorService {
         notes: data.notes || null,
       },
     });
+
+    // Emit real-time status change
+    const operator = await this.prisma.user.findUnique({ where: { id: operatorId }, select: { firstName: true, lastName: true } });
+    this.gateway.emitStatusChange(siteId, {
+      workstationId,
+      workstationName: ws.name,
+      status: data.status,
+      reasonCode: data.reasonCode,
+      notes: data.notes,
+      operatorName: operator ? `${operator.firstName} ${operator.lastName}`.trim() : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
+    return event;
   }
 
   /** Flag (note without status change) */
@@ -138,7 +172,7 @@ export class ShopfloorService {
       where: { workstationId, status: 'active' },
     });
 
-    return this.prisma.workstationEvent.create({
+    const event = await this.prisma.workstationEvent.create({
       data: {
         workstationId,
         productionRunId: activeRun?.id || null,
@@ -147,6 +181,15 @@ export class ShopfloorService {
         notes,
       },
     });
+
+    // Emit real-time flag event
+    this.gateway.emitRunEvent(siteId, {
+      workstationId,
+      eventType: 'flag',
+      timestamp: new Date().toISOString(),
+    });
+
+    return event;
   }
 
   /** Close production run (end of shift / end of PO) */
@@ -193,6 +236,26 @@ export class ShopfloorService {
         eventType: 'status_change',
         status: 'idle',
       },
+    });
+
+    // Emit real-time run closed + idle status events
+    const ws = await this.prisma.workstation.findUnique({ where: { id: run.workstationId } });
+    const phase = await this.prisma.productionOrderPhase.findUnique({
+      where: { id: run.phaseId },
+      include: { order: { select: { poNumber: true, productName: true } } },
+    });
+    this.gateway.emitRunEvent(siteId, {
+      workstationId: run.workstationId,
+      eventType: 'run_closed',
+      poNumber: phase?.order.poNumber,
+      productName: phase?.order.productName,
+      timestamp: new Date().toISOString(),
+    });
+    this.gateway.emitStatusChange(siteId, {
+      workstationId: run.workstationId,
+      workstationName: ws?.name || '',
+      status: 'idle',
+      timestamp: new Date().toISOString(),
     });
 
     return updated;

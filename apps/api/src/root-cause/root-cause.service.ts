@@ -14,15 +14,26 @@ export class RootCauseService {
 
   // ===== FIVE WHY =====
 
-  async findFiveWhy(siteId: string) {
-    return this.prisma.fiveWhyAnalysis.findMany({
-      where: { siteId },
-      include: {
-        analyst: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { steps: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findFiveWhy(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.fiveWhyAnalysis.findMany({
+        where,
+        include: {
+          analyst: { select: { id: true, firstName: true, lastName: true } },
+          _count: { select: { steps: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.fiveWhyAnalysis.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findFiveWhyById(id: string, siteId: string) {
@@ -124,15 +135,26 @@ export class RootCauseService {
 
   // ===== ISHIKAWA =====
 
-  async findIshikawa(siteId: string) {
-    return this.prisma.ishikawaAnalysis.findMany({
-      where: { siteId },
-      include: {
-        analyst: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { causes: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findIshikawa(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.ishikawaAnalysis.findMany({
+        where,
+        include: {
+          analyst: { select: { id: true, firstName: true, lastName: true } },
+          _count: { select: { causes: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.ishikawaAnalysis.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findIshikawaById(id: string, siteId: string) {
@@ -232,14 +254,25 @@ export class RootCauseService {
 
   // ===== 8D =====
 
-  async findEightD(siteId: string) {
-    return this.prisma.eightDReport.findMany({
-      where: { siteId },
-      include: {
-        teamLeader: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findEightD(siteId: string, limit = 50, offset = 0) {
+    const take = Math.min(Math.max(1, limit), 200);
+    const skip = Math.max(0, offset);
+    const where = { siteId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.eightDReport.findMany({
+        where,
+        include: {
+          teamLeader: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.eightDReport.count({ where }),
+    ]);
+
+    return { data, total, limit: take, offset: skip };
   }
 
   async findEightDById(id: string, siteId: string) {
