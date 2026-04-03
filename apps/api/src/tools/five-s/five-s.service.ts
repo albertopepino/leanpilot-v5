@@ -96,6 +96,95 @@ export class FiveSService {
     return this.findById(auditId, siteId);
   }
 
+  async getTrends(siteId: string, area?: string, months = 6) {
+    const since = new Date();
+    since.setMonth(since.getMonth() - months);
+
+    const where: any = { siteId, status: 'completed', completedAt: { gte: since } };
+    if (area) where.area = area;
+
+    const audits = await this.prisma.fiveSAudit.findMany({
+      where,
+      include: { scores: true },
+      orderBy: { completedAt: 'asc' },
+    });
+
+    // Group by month
+    const monthMap: Record<string, {
+      sort: number[]; set_in_order: number[]; shine: number[];
+      standardize: number[]; sustain: number[]; safety: number[];
+      totals: number[]; percentages: number[];
+    }> = {};
+
+    for (const audit of audits) {
+      const monthKey = audit.completedAt
+        ? audit.completedAt.toISOString().slice(0, 7)
+        : audit.createdAt.toISOString().slice(0, 7);
+
+      if (!monthMap[monthKey]) {
+        monthMap[monthKey] = {
+          sort: [], set_in_order: [], shine: [],
+          standardize: [], sustain: [], safety: [],
+          totals: [], percentages: [],
+        };
+      }
+
+      for (const score of audit.scores) {
+        const cat = score.category as keyof typeof monthMap[string];
+        if (monthMap[monthKey][cat] && Array.isArray(monthMap[monthKey][cat])) {
+          (monthMap[monthKey][cat] as number[]).push(score.score);
+        }
+      }
+      monthMap[monthKey].totals.push(audit.totalScore);
+      monthMap[monthKey].percentages.push(audit.percentage);
+    }
+
+    const avg = (arr: number[]) => arr.length > 0
+      ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10
+      : 0;
+
+    const monthlyTrends = Object.entries(monthMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => ({
+        month,
+        sort: avg(data.sort),
+        set_in_order: avg(data.set_in_order),
+        shine: avg(data.shine),
+        standardize: avg(data.standardize),
+        sustain: avg(data.sustain),
+        safety: avg(data.safety),
+        total: avg(data.totals),
+        percentage: avg(data.percentages),
+      }));
+
+    // Area breakdown
+    const areaWhere: any = { siteId, status: 'completed', completedAt: { gte: since } };
+    const areaAudits = await this.prisma.fiveSAudit.findMany({
+      where: areaWhere,
+      orderBy: { completedAt: 'desc' },
+    });
+
+    const areaMap: Record<string, { latest: number; count: number }> = {};
+    for (const a of areaAudits) {
+      if (!areaMap[a.area]) {
+        areaMap[a.area] = { latest: a.percentage, count: 0 };
+      }
+      areaMap[a.area].count++;
+    }
+
+    const areas = Object.entries(areaMap).map(([areaName, data]) => ({
+      area: areaName,
+      latestScore: data.latest,
+      auditCount: data.count,
+    }));
+
+    return {
+      months: monthlyTrends,
+      areas,
+      insufficientData: audits.length < 3,
+    };
+  }
+
   async complete(auditId: string, siteId: string) {
     const audit = await this.prisma.fiveSAudit.findFirst({ where: { id: auditId, siteId } });
     if (!audit) throw new NotFoundException('Audit not found');

@@ -23,6 +23,15 @@ export class GembaController {
     return this.gemba.findAllBySite(siteId, limit ? +limit : 50, offset ? +offset : 0);
   }
 
+  @Get('waste-pareto')
+  @RequirePermission('continuous_improvement', 'view')
+  async getWastePareto(
+    @CurrentUser('siteId') siteId: string,
+    @Query('months') months?: string,
+  ) {
+    return this.gemba.getWastePareto(siteId, months ? parseInt(months, 10) : 3);
+  }
+
   @Get('muda-signals')
   @RequirePermission('continuous_improvement', 'view')
   async getMudaSignals(@CurrentUser('siteId') siteId: string) {

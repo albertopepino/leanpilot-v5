@@ -6,7 +6,7 @@ import FileUpload from '@/components/FileUpload';
 import {
   ShieldAlert, Plus, Search, ChevronRight, X,
   AlertTriangle, AlertOctagon, HardHat, Flame,
-  Calendar, MapPin, Clock, User, FileText, HelpCircle, Info,
+  Calendar, MapPin, Clock, User, FileText, HelpCircle, Info, TrendingUp,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -14,6 +14,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
 
 // ===== TYPES =====
 interface SafetyIncident {
@@ -144,6 +148,170 @@ const NearMissInterpretation = ({ ratio }: { ratio: number }) => {
     </div>
   );
 };
+
+// ── Safety Trends types ────────────────────────────────────────
+interface SafetyTrendMonth {
+  month: string;
+  injury: number;
+  near_miss: number;
+  property_damage: number;
+  total: number;
+  nearMissRatio: number;
+}
+
+interface SafetyTrendsResponse {
+  insufficientData?: boolean;
+  daysSinceInjury?: number;
+  trir?: number;
+  months?: SafetyTrendMonth[];
+}
+
+function SafetyAnalyticsSection() {
+  const [trends, setTrends] = useState<SafetyTrendsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<SafetyTrendsResponse>('/safety/trends?months=12')
+      .then(data => setTrends(data))
+      .catch(() => setTrends(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="h-48 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!trends || trends.insufficientData) {
+    return (
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="text-center py-6">
+          <TrendingUp className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Trends will appear after 2 months of incident data.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const daysSafe = trends.daysSinceInjury ?? 0;
+  const trir = trends.trir ?? 0;
+  const months = trends.months || [];
+
+  const trirColor = trir < 2 ? 'text-green-600 dark:text-green-400' : trir <= 5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400';
+  const trirBg = trir < 2 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : trir <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+
+  return (
+    <div className="mb-6 space-y-4">
+      {/* Big counter: days without injury + TRIR */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white text-center">
+          <p className="text-sm font-medium text-green-100 uppercase tracking-wider mb-2">Days Without Injury</p>
+          <p className="text-6xl font-black tabular-nums">{daysSafe}</p>
+          <p className="text-sm text-green-200 mt-2">Keep the streak going!</p>
+        </div>
+        <div className={`rounded-2xl p-6 text-center border ${trirBg}`}>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">TRIR</p>
+          <p className={`text-5xl font-black tabular-nums ${trirColor}`}>{trir.toFixed(2)}</p>
+          <p className="text-xs text-gray-400 mt-2">Total Recordable Incident Rate</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {trir < 2 ? 'Excellent safety performance' : trir <= 5 ? 'Room for improvement' : 'Needs immediate attention'}
+          </p>
+        </div>
+      </div>
+
+      {/* Monthly trend stacked bar chart + near-miss ratio line */}
+      {months.length > 0 && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="font-medium text-gray-900 dark:text-white mb-4">Monthly Incidents by Type</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={months} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="injury" stackId="a" fill="#ef4444" name="Injury" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="near_miss" stackId="a" fill="#eab308" name="Near Miss" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="property_damage" stackId="a" fill="#f97316" name="Property Damage" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="font-medium text-gray-900 dark:text-white mb-4">Near-Miss Ratio Trend</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+              Higher ratio = better reporting culture (target: &gt;80%)
+            </p>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={months} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  tickFormatter={(v: number) => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                  }}
+                  formatter={(val: number) => [`${val.toFixed(1)}%`, 'Near-Miss Ratio']}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="nearMissRatio"
+                  stroke="#3b82f6"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: '#3b82f6' }}
+                  name="Near-Miss %"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type View = 'list' | 'detail' | 'create';
 
@@ -302,6 +470,9 @@ export default function SafetyPage() {
             <Plus className="w-4 h-4" /> Report Incident
           </button>
         </div>
+
+        {/* Analytics section */}
+        <SafetyAnalyticsSection />
 
         {/* Metrics */}
         {metrics && (

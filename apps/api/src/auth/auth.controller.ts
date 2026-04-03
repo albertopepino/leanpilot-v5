@@ -17,7 +17,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ short: { ttl: 60000, limit: 5 } }) // 5 login attempts per minute per IP
+  @Throttle({ short: { ttl: 60000, limit: 20 } }) // 20 login attempts per minute per IP
   @ApiOperation({ summary: 'Login with email and password' })
   async login(@Body() dto: LoginDto) {
     return this.auth.login(dto);

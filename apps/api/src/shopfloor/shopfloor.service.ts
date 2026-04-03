@@ -150,6 +150,13 @@ export class ShopfloorService {
       },
     });
 
+    // Clear escalation logs when breakdown resolved
+    if (data.status === 'running') {
+      await this.prisma.escalationLog.deleteMany({
+        where: { sourceType: 'workstation', sourceId: workstationId },
+      });
+    }
+
     // Emit real-time status change
     const operator = await this.prisma.user.findUnique({ where: { id: operatorId }, select: { firstName: true, lastName: true } });
     this.gateway.emitStatusChange(siteId, {

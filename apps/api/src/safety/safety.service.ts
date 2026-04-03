@@ -258,6 +258,69 @@ export class SafetyService {
     };
   }
 
+  // ===== TRENDS =====
+
+  async getTrends(siteId: string, months = 12) {
+    const since = new Date();
+    since.setMonth(since.getMonth() - months);
+
+    const incidents = await this.prisma.safetyIncident.findMany({
+      where: { siteId, date: { gte: since } },
+      select: {
+        type: true,
+        outcome: true,
+        isOshaRecordable: true,
+        date: true,
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    // Group by month
+    const monthMap: Record<string, {
+      total: number; injury: number; near_miss: number;
+      property_damage: number; environmental: number; first_aid: number;
+    }> = {};
+
+    for (const inc of incidents) {
+      const monthKey = inc.date.toISOString().slice(0, 7);
+      if (!monthMap[monthKey]) {
+        monthMap[monthKey] = { total: 0, injury: 0, near_miss: 0, property_damage: 0, environmental: 0, first_aid: 0 };
+      }
+      monthMap[monthKey].total++;
+      const typeKey = inc.type as keyof typeof monthMap[string];
+      if (typeKey in monthMap[monthKey]) {
+        (monthMap[monthKey] as any)[typeKey]++;
+      }
+    }
+
+    const monthlyData = Object.entries(monthMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => ({ month, ...data }));
+
+    // Days since last recordable injury
+    const recordableIncidents = incidents.filter((i) => i.isOshaRecordable);
+    let daysSinceLastInjury: number | null = null;
+    if (recordableIncidents.length > 0) {
+      const lastRecordable = recordableIncidents[recordableIncidents.length - 1];
+      daysSinceLastInjury = Math.floor(
+        (Date.now() - lastRecordable.date.getTime()) / (1000 * 60 * 60 * 24),
+      );
+    }
+
+    // Near-miss ratio trend by month
+    const nearMissRatioTrend = monthlyData.map((m) => ({
+      month: m.month,
+      ratio: m.total > 0 ? Math.round((m.near_miss / m.total) * 1000) / 10 : 0,
+    }));
+
+    return {
+      months: monthlyData,
+      daysSinceLastInjury,
+      nearMissRatioTrend,
+      insufficientData: incidents.length < 5,
+    };
+  }
+
   // ===== ATTACHMENTS =====
 
   async addAttachment(incidentId: string, siteId: string, userId: string, data: {

@@ -6,12 +6,17 @@ import FileUpload from '@/components/FileUpload';
 import {
   Eye, Plus, CheckCircle2, Clock, ChevronRight, X, Send,
   AlertTriangle, Loader2, ArrowLeft, Download, Calendar, UserIcon, ClipboardList,
+  TrendingUp, BarChart3,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend, Cell,
+} from 'recharts';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -87,6 +92,207 @@ const STATUS_BADGE: Record<string, string> = {
   addressed:     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   closed:        'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
+
+// ── Waste Pareto types ─────────────────────────────────────────
+interface WasteCount {
+  category: string;
+  count: number;
+  label: string;
+}
+
+interface AreaHeatmapRow {
+  area: string;
+  count: number;
+}
+
+interface WasteParetoResponse {
+  insufficientData?: boolean;
+  wasteCounts?: WasteCount[];
+  areaHeatmap?: AreaHeatmapRow[];
+}
+
+const WASTE_LABELS: Record<string, string> = {
+  waiting: 'Waiting',
+  overproduction: 'Overproduction',
+  inventory: 'Inventory',
+  motion: 'Motion',
+  transportation: 'Transportation',
+  over_processing: 'Over-processing',
+  defect: 'Defect',
+  talent: 'Talent',
+};
+
+const WASTE_COLORS: Record<string, string> = {
+  waiting: '#f59e0b',
+  overproduction: '#ef4444',
+  inventory: '#6366f1',
+  motion: '#3b82f6',
+  transportation: '#06b6d4',
+  over_processing: '#8b5cf6',
+  defect: '#f43f5e',
+  talent: '#10b981',
+};
+
+function WasteParetoSection() {
+  const [data, setData] = useState<WasteParetoResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    api.get<WasteParetoResponse>('/gemba/waste-pareto?months=3')
+      .then(d => setData(d))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="h-48 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || data.insufficientData) {
+    return (
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="text-center py-6">
+          <BarChart3 className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Complete more Gemba walks to see waste analysis.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const wastes = (data.wasteCounts || []).sort((a, b) => b.count - a.count);
+  const totalCount = wastes.reduce((s, w) => s + w.count, 0);
+
+  // Build pareto data with cumulative %
+  let cumulative = 0;
+  const paretoData = wastes.map(w => {
+    cumulative += w.count;
+    return {
+      name: WASTE_LABELS[w.category] || w.label || w.category,
+      count: w.count,
+      cumulative: totalCount > 0 ? (cumulative / totalCount) * 100 : 0,
+      fill: WASTE_COLORS[w.category] || '#6b7280',
+    };
+  });
+
+  const areas = data.areaHeatmap || [];
+  const maxAreaCount = Math.max(...areas.map(a => a.count), 1);
+
+  return (
+    <div className="mb-6">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-brand-600" />
+          <span className="font-medium text-gray-900 dark:text-white">Waste Analysis (Last 3 Months)</span>
+          <span className="text-xs text-gray-400">{totalCount} observations</span>
+        </div>
+        <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      {expanded && (
+        <div className="mt-2 space-y-4">
+          {/* Pareto chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="font-medium text-gray-900 dark:text-white mb-4">Waste Pareto Chart</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={paretoData} margin={{ top: 8, right: 30, bottom: 0, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#6b7280' }}
+                  angle={-30}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis
+                  yAxisId="left"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  domain={[0, 100]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  tickFormatter={(v: number) => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                  }}
+                  formatter={(val: number, name: string) => {
+                    if (name === 'Cumulative %') return [`${val.toFixed(1)}%`, name];
+                    return [val, name];
+                  }}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="count" fill="#3b82f6" name="Count" radius={[4, 4, 0, 0]} barSize={32}>
+                  {paretoData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.fill} />
+                  ))}
+                </Bar>
+                <Line yAxisId="right" type="monotone" dataKey="cumulative" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} name="Cumulative %" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Area heatmap */}
+          {areas.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-4">Observations by Area</h3>
+              <div className="space-y-2">
+                {areas.sort((a, b) => b.count - a.count).map(area => {
+                  const intensity = area.count / maxAreaCount;
+                  const bgOpacity = Math.max(0.1, intensity);
+                  return (
+                    <div key={area.area} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate shrink-0">{area.area}</span>
+                      <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-6 relative overflow-hidden">
+                        <div
+                          className="h-6 rounded-full transition-all"
+                          style={{
+                            width: `${(area.count / maxAreaCount) * 100}%`,
+                            backgroundColor: `rgba(239, 68, 68, ${bgOpacity})`,
+                          }}
+                        />
+                        <span className="absolute inset-y-0 left-2 flex items-center text-xs font-medium text-gray-700 dark:text-gray-200">
+                          {area.count}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type View = 'list' | 'detail' | 'add-obs' | 'obs-detail';
 
@@ -342,6 +548,11 @@ export default function GembaPage() {
       )}
 
       {loading && <SkeletonList count={3} />}
+
+      {/* ── Waste Pareto (list view only) ─────────────────────────── */}
+      {view === 'list' && !loading && walks.length > 0 && (
+        <WasteParetoSection />
+      )}
 
       {/* ── Walk List ─────────────────────────────────────────────── */}
       {view === 'list' && !loading && (

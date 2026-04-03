@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FiveSService } from './five-s.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -27,6 +27,16 @@ export class FiveSController {
     @Body() body: { area: string },
   ) {
     return this.fiveS.create(siteId, auditorId, body.area);
+  }
+
+  @Get('trends')
+  @RequirePermission('continuous_improvement', 'view')
+  async getTrends(
+    @CurrentUser('siteId') siteId: string,
+    @Query('area') area?: string,
+    @Query('months') months?: string,
+  ) {
+    return this.fiveS.getTrends(siteId, area, months ? parseInt(months, 10) : 6);
   }
 
   @Get(':id')

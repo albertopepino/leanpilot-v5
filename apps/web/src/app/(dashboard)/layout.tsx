@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/api';
 import {
   Factory, LayoutDashboard, Users, Building2, ClipboardCheck,
-  Lightbulb, Settings, LogOut, Menu, X,
+  Lightbulb, Settings, LogOut, Menu, X, Bell,
   Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
   Wrench, ShieldAlert, Search, PackageCheck, ArrowLeftRight,
   CheckSquare, Users2, FileBarChart, GraduationCap, Timer,
@@ -29,30 +29,24 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
+  // ── Core ────────────────────────────────────────────────────
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconGradient: 'from-blue-600 to-indigo-600' },
   { href: '/shift-handover', label: 'Shift Handover', icon: ArrowLeftRight, group: 'shift_management', minLevel: 'view', iconGradient: 'from-teal-500 to-cyan-500' },
   { href: '/orders', label: 'Orders', icon: PackageCheck, group: 'production', minLevel: 'view', iconGradient: 'from-blue-500 to-indigo-500' },
   { href: '/corporate', label: 'Corporate', icon: Building2, systemRole: 'corporate_admin', iconGradient: 'from-slate-600 to-slate-500' },
+  // ── Lean Tools (core 6) ─────────────────────────────────────
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, group: 'continuous_improvement', minLevel: 'manage', iconGradient: 'from-cyan-600 to-blue-500' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, group: 'continuous_improvement', minLevel: 'participate', iconGradient: 'from-orange-500 to-amber-500' },
-  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, group: 'continuous_improvement', minLevel: 'participate', iconGradient: 'from-violet-600 to-purple-500' },
-  { href: '/actions', label: 'Actions', icon: CheckSquare, group: 'continuous_improvement', minLevel: 'view', iconGradient: 'from-rose-500 to-pink-500' },
-  { href: '/tier-meetings', label: 'Tier Meetings', icon: Users2, group: 'shift_management', minLevel: 'participate', iconGradient: 'from-indigo-500 to-violet-500' },
   { href: '/equipment', label: 'Equipment', icon: Wrench, group: 'maintenance', minLevel: 'view', iconGradient: 'from-slate-600 to-slate-500' },
-  {
-    href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', iconGradient: 'from-emerald-600 to-teal-500',
-    children: [
-      { href: '/quality/documents', label: 'Documents', icon: FileText, group: 'quality', minLevel: 'view' },
-      { href: '/quality/root-cause', label: 'Root Cause', icon: Search, group: 'problem_solving', minLevel: 'view' },
-      { href: '/quality/a3', label: 'A3 Reports', icon: FileBarChart, group: 'problem_solving', minLevel: 'view' },
-    ],
-  },
+  { href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', iconGradient: 'from-emerald-600 to-teal-500' },
+  // ── Safety ──────────────────────────────────────────────────
   { section: 'Safety', href: '/safety', label: 'Safety', icon: ShieldAlert, group: 'safety', minLevel: 'view', iconGradient: 'from-red-500 to-orange-500' },
-  { href: '/skills', label: 'Skills Matrix', icon: GraduationCap, group: 'people', minLevel: 'view', iconGradient: 'from-emerald-500 to-teal-500' },
-  { href: '/smed', label: 'SMED', icon: Timer, group: 'problem_solving', minLevel: 'participate', iconGradient: 'from-cyan-500 to-blue-500' },
+  // ── System ──────────────────────────────────────────────────
   { section: 'System', href: '/admin/users', label: 'Users', icon: Users, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/admin/roles', label: 'Roles', icon: ShieldCheck, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/admin/escalation', label: 'Escalation', icon: Bell, group: 'people', minLevel: 'manage', iconGradient: 'from-amber-500 to-orange-500' },
   { href: '/settings', label: 'Settings', icon: Settings, iconGradient: 'from-gray-500 to-gray-400' },
+  // ── External (Shop Floor) ───────────────────────────────────
   { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, group: 'production', minLevel: 'participate', external: true, iconGradient: 'from-indigo-500 to-blue-500' },
   { href: '/andon', label: 'Andon Board', icon: Radio, group: 'production', minLevel: 'view', external: true, iconGradient: 'from-red-500 to-orange-500' },
 ];

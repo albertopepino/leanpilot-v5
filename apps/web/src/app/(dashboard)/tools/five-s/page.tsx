@@ -4,12 +4,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import FileUpload from '@/components/FileUpload';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star, Download, HelpCircle } from 'lucide-react';
+import { Plus, ClipboardCheck, ChevronLeft, CheckCircle, X, Star, Download, HelpCircle, TrendingUp } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
+import {
+  Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, Tooltip, Legend,
+} from 'recharts';
+import { Sparkline } from '@/components/ui/charts';
 
 interface Workstation {
   id: string;
@@ -146,6 +151,159 @@ const ScoreCriteriaTooltip = ({ categoryKey }: { categoryKey: string }) => {
     </div>
   );
 };
+
+// ── 5S Trends types ────────────────────────────────────────────
+interface FiveSCategoryScore {
+  sort: number;
+  set_in_order: number;
+  shine: number;
+  standardize: number;
+  sustain: number;
+  safety: number;
+}
+
+interface FiveSAreaScore {
+  area: string;
+  latestPercentage: number;
+  latestDate: string;
+}
+
+interface FiveSTrendsResponse {
+  insufficientData?: boolean;
+  currentScores?: FiveSCategoryScore;
+  previousScores?: FiveSCategoryScore;
+  areaScores?: FiveSAreaScore[];
+  monthlyTotals?: { month: string; percentage: number }[];
+}
+
+const RADAR_LABELS: Record<string, string> = {
+  sort: 'Sort',
+  set_in_order: 'Set in Order',
+  shine: 'Shine',
+  standardize: 'Standardize',
+  sustain: 'Sustain',
+  safety: 'Safety',
+};
+
+function FiveSTrendsSection() {
+  const [trends, setTrends] = useState<FiveSTrendsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<FiveSTrendsResponse>('/tools/five-s/trends?months=6')
+      .then(data => setTrends(data))
+      .catch(() => setTrends(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="h-48 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!trends || trends.insufficientData) {
+    return (
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="text-center py-6">
+          <TrendingUp className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Complete 3 more audits to unlock trend analytics.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Build radar chart data
+  const radarData = Object.keys(RADAR_LABELS).map(key => ({
+    category: RADAR_LABELS[key],
+    current: trends.currentScores?.[key as keyof FiveSCategoryScore] ?? 0,
+    previous: trends.previousScores?.[key as keyof FiveSCategoryScore] ?? 0,
+  }));
+
+  const areas = trends.areaScores || [];
+  const monthly = trends.monthlyTotals || [];
+
+  return (
+    <div className="mb-6 space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Radar chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="font-medium text-gray-900 dark:text-white mb-4 text-center">Current vs Previous Audit</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <RechartsRadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+              <PolarGrid stroke="#e5e7eb" />
+              <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#6b7280' }} />
+              <PolarRadiusAxis angle={30} domain={[0, 5]} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+              <Radar name="Current" dataKey="current" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} strokeWidth={2} />
+              <Radar name="Previous" dataKey="previous" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.1} strokeWidth={1.5} />
+              <Tooltip
+                contentStyle={{
+                  background: 'rgba(255,255,255,0.95)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                }}
+              />
+              <Legend />
+            </RechartsRadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Area comparison + sparkline */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="font-medium text-gray-900 dark:text-white mb-4">Area Scores</h3>
+          {areas.length > 0 ? (
+            <div className="space-y-3">
+              {areas.map(area => {
+                const pct = area.latestPercentage;
+                const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-red-500';
+                return (
+                  <div key={area.area}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{area.area}</span>
+                      <span className={`text-sm font-mono font-bold ${
+                        pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>{pct}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className={`h-2 rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{new Date(area.latestDate).toLocaleDateString()}</p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-4">No area data available</p>
+          )}
+
+          {/* Sparkline trend */}
+          {monthly.length > 1 && (
+            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                6-Month Trend
+              </h4>
+              <Sparkline data={monthly.map(m => m.percentage)} color="#3b82f6" height={48} />
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                <span>{monthly[0]?.month}</span>
+                <span>{monthly[monthly.length - 1]?.month}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type View = 'list' | 'create' | 'detail' | 'scoring';
 
@@ -393,6 +551,9 @@ export default function FiveSPage() {
             New Audit
           </button>
         </div>
+
+        {/* Trends section */}
+        {!loading && audits.length > 0 && <FiveSTrendsSection />}
 
         {loading ? (
           <SkeletonList count={3} />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Factory, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Factory, Wifi, WifiOff, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 interface Workstation {
@@ -37,20 +37,36 @@ const STATUS_LABELS: Record<string, string> = {
   planned_stop: 'PLANNED STOP',
 };
 
-function elapsed(since: string): string {
-  if (!since) return '—';
+// Escalation tier thresholds (minutes)
+const TIER_THRESHOLDS = { L1: 10, L2: 30, L3: 60 };
+
+function elapsedMinutes(since: string): number {
+  if (!since) return 0;
   const ms = Date.now() - new Date(since).getTime();
-  if (isNaN(ms)) return '—';
+  if (isNaN(ms) || ms < 0) return 0;
+  return Math.floor(ms / 60000);
+}
+
+function elapsed(since: string): string {
+  if (!since) return '\u2014';
+  const ms = Date.now() - new Date(since).getTime();
+  if (isNaN(ms)) return '\u2014';
   const mins = Math.floor(ms / 60000);
   if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
   return `${hrs}h ${mins % 60}m`;
 }
 
+function getEscalationTier(mins: number): { tier: string; color: string; strobe: boolean } | null {
+  if (mins >= TIER_THRESHOLDS.L3) return { tier: 'L3', color: 'bg-red-500 text-white', strobe: true };
+  if (mins >= TIER_THRESHOLDS.L2) return { tier: 'L2', color: 'bg-orange-500 text-white', strobe: false };
+  if (mins >= TIER_THRESHOLDS.L1) return { tier: 'L1', color: 'bg-yellow-500 text-black', strobe: false };
+  return null;
+}
+
 /** Resolve the WebSocket URL for the shopfloor namespace */
 function getSocketUrl(): string {
   if (typeof window === 'undefined') return '';
-  // In production, connect to the same host; in dev, connect to the API server
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   return `${apiUrl}/shopfloor`;
 }
@@ -63,8 +79,66 @@ export default function AndonBoardPage() {
   const [wsConnected, setWsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
-  // Extract siteId from first workstation (all belong to same site via API)
-  const siteIdRef = useRef<string | null>(null);
+  // Audio alert state
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const prevBreakdownIds = useRef<Set<string>>(new Set());
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Load audio preference from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('andon_audio_enabled');
+      if (saved === 'true') setAudioEnabled(true);
+    }
+  }, []);
+
+  const toggleAudio = () => {
+    setAudioEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('andon_audio_enabled', String(next));
+      return next;
+    });
+  };
+
+  // Play a subtle alert beep using Web Audio API
+  const playAlertSound = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {
+      // Audio not available
+    }
+  }, []);
+
+  // Detect new breakdowns and play alert
+  useEffect(() => {
+    if (!audioEnabled || !loaded) return;
+    const currentBreakdownIds = new Set(
+      workstations.filter(ws => ws.currentStatus === 'breakdown').map(ws => ws.id)
+    );
+    // Check for NEW breakdowns (not in previous set)
+    let hasNew = false;
+    currentBreakdownIds.forEach(id => {
+      if (!prevBreakdownIds.current.has(id)) hasNew = true;
+    });
+    if (hasNew) {
+      playAlertSound();
+    }
+    prevBreakdownIds.current = currentBreakdownIds;
+  }, [workstations, audioEnabled, loaded, playAlertSound]);
 
   const refresh = useCallback(async () => {
     try {
@@ -108,14 +182,8 @@ export default function AndonBoardPage() {
     const socket = socketRef.current;
     if (!socket || workstations.length === 0) return;
 
-    // Derive siteId from workstations endpoint URL (site-scoped)
-    // We listen for all status events and match by workstation ID
-    // Since the API is site-scoped, we need to figure out the siteId.
-    // We'll subscribe to events for all workstation IDs we know about.
     const workstationIds = new Set(workstations.map(w => w.id));
 
-    // Listen on a wildcard-ish approach: the server emits status:${siteId}
-    // We don't know the siteId on the frontend, so we use a catch-all listener
     const onAnyEvent = (eventName: string, payload: {
       workstationId: string;
       workstationName?: string;
@@ -162,10 +230,10 @@ export default function AndonBoardPage() {
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
   }, [refresh, wsConnected]);
 
-  // Force re-render every minute for elapsed time updates
+  // Force re-render every 30 seconds for elapsed time updates and escalation tier changes
   const [, setTick] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setTick(v => v + 1), 60000);
+    const t = setInterval(() => setTick(v => v + 1), 30000);
     return () => clearInterval(t);
   }, []);
 
@@ -189,6 +257,17 @@ export default function AndonBoardPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Strobe CSS animation */}
+      <style jsx global>{`
+        @keyframes strobe {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .animate-strobe {
+          animation: strobe 1s ease-in-out infinite;
+        }
+      `}</style>
+
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 bg-gray-900 border-b border-gray-800">
         <div className="flex items-center gap-3">
@@ -196,6 +275,17 @@ export default function AndonBoardPage() {
           <span className="text-2xl font-bold tracking-tight">ANDON BOARD</span>
         </div>
         <div className="flex items-center gap-4 text-sm">
+          {/* Audio toggle */}
+          <button
+            onClick={toggleAudio}
+            className={`p-1.5 rounded-lg transition-colors ${
+              audioEnabled ? 'bg-blue-600/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'
+            }`}
+            aria-label={audioEnabled ? 'Disable audio alerts' : 'Enable audio alerts'}
+            title={audioEnabled ? 'Audio alerts on' : 'Audio alerts off'}
+          >
+            {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+          </button>
           {wsConnected ? (
             <span className="flex items-center gap-1.5 text-green-400 font-semibold">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -228,11 +318,28 @@ export default function AndonBoardPage() {
       >
         {workstations.map(ws => {
           const cfg = STATUS_COLORS[ws.currentStatus] || STATUS_COLORS.idle;
+          const isBreakdown = ws.currentStatus === 'breakdown';
+          const mins = isBreakdown ? elapsedMinutes(ws.statusSince) : 0;
+          const escalation = isBreakdown ? getEscalationTier(mins) : null;
+
           return (
             <div
               key={ws.id}
-              className={`${cfg.bg} rounded-2xl p-6 flex flex-col justify-between ${cfg.pulse ? 'animate-pulse' : ''}`}
+              className={`${cfg.bg} rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden ${
+                escalation?.strobe ? 'animate-strobe' : cfg.pulse ? 'animate-pulse' : ''
+              }`}
             >
+              {/* Escalation tier badge */}
+              {escalation && (
+                <div className="absolute top-4 right-4">
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-black tracking-wider ${escalation.color} ${
+                    escalation.strobe ? 'shadow-lg shadow-red-500/50' : ''
+                  }`}>
+                    {escalation.tier}
+                  </span>
+                </div>
+              )}
+
               <div>
                 <div className="text-lg font-medium opacity-80">{ws.code}</div>
                 <div className="text-3xl xl:text-4xl font-black leading-tight mt-1">{ws.name}</div>
@@ -241,9 +348,20 @@ export default function AndonBoardPage() {
                 <div className="text-2xl xl:text-3xl font-black tracking-wider">
                   {STATUS_LABELS[ws.currentStatus] || ws.currentStatus.toUpperCase()}
                 </div>
-                <div className="text-lg opacity-70 mt-1">
-                  {elapsed(ws.statusSince)}
-                </div>
+
+                {/* Breakdown: show prominent DOWN XX min */}
+                {isBreakdown && mins > 0 ? (
+                  <div className="mt-2">
+                    <span className="text-3xl xl:text-4xl font-black text-white/90">
+                      DOWN {mins} min
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-lg opacity-70 mt-1">
+                    {elapsed(ws.statusSince)}
+                  </div>
+                )}
+
                 {ws.currentPO && (
                   <div className="mt-3 text-base opacity-80">
                     <span className="font-bold">{ws.currentPO.poNumber}</span>

@@ -16,6 +16,21 @@ export class DashboardController {
     return this.dashboard.getOverview(siteId);
   }
 
+  @Get('oee-trend')
+  async getOeeTrend(
+    @CurrentUser('siteId') siteId: string,
+    @Query('workstationId') workstationId?: string,
+    @Query('period') period?: string,
+    @Query('granularity') granularity?: string,
+  ) {
+    return this.dashboard.getOeeTrend(
+      siteId,
+      workstationId,
+      period || '30d',
+      (granularity === 'week' ? 'week' : 'day') as 'day' | 'week',
+    );
+  }
+
   @Get('oee')
   async getOee(
     @CurrentUser('siteId') siteId: string,

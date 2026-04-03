@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Gauge, TrendingUp, Clock, Zap, CheckCircle, Download } from 'lucide-react';
+import { Gauge, TrendingUp, TrendingDown, Clock, Zap, CheckCircle, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend,
+} from 'recharts';
 
 interface WSData {
   workstationId: string;
@@ -99,6 +102,125 @@ function MetricCard({ icon: Icon, label, value, sub, color }: { icon: any; label
           <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
           <p className="text-lg font-bold text-gray-900 dark:text-white">{value}</p>
           {sub && <p className="text-xs text-gray-400">{sub}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── OEE Trend types ────────────────────────────────────────────
+interface OEETrendPoint {
+  date: string;
+  oee: number;
+  availability: number;
+  performance: number;
+  quality: number;
+}
+
+interface OEETrendResponse {
+  insufficientData?: boolean;
+  points?: OEETrendPoint[];
+  thisWeek?: { oee: number };
+  lastWeek?: { oee: number };
+}
+
+function OEETrendChart() {
+  const [trend, setTrend] = useState<OEETrendResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<OEETrendResponse>('/dashboard/oee-trend?period=30d')
+      .then(data => setTrend(data))
+      .catch(() => setTrend(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
+        <div className="h-64 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!trend || trend.insufficientData) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
+        <h3 className="font-medium text-gray-900 dark:text-white mb-3">OEE Trend (30 days)</h3>
+        <div className="text-center py-8">
+          <TrendingUp className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Need more production data to show trends. Run at least 5 shifts to start seeing OEE trends.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const points = trend.points || [];
+  const thisWeekOee = trend.thisWeek?.oee ?? 0;
+  const lastWeekOee = trend.lastWeek?.oee ?? 0;
+  const delta = thisWeekOee - lastWeekOee;
+  const deltaPositive = delta >= 0;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
+      <h3 className="font-medium text-gray-900 dark:text-white mb-4">OEE Trend (30 days)</h3>
+      {points.length > 0 && (
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={points} margin={{ top: 8, right: 16, bottom: 0, left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: '#9ca3af' }}
+            />
+            <YAxis
+              domain={[0, 100]}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: '#9ca3af' }}
+              tickFormatter={(v: number) => `${v}%`}
+            />
+            <Tooltip
+              contentStyle={{
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                fontSize: '13px',
+              }}
+              formatter={(val: number, name: string) => [`${val.toFixed(1)}%`, name]}
+            />
+            <Legend />
+            <ReferenceLine y={85} stroke="#9ca3af" strokeDasharray="8 4" label={{ value: 'Target 85%', position: 'insideTopRight', fill: '#9ca3af', fontSize: 11 }} />
+            <Line type="monotone" dataKey="oee" stroke="#3b82f6" strokeWidth={3} dot={false} name="OEE" />
+            <Line type="monotone" dataKey="availability" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Availability" />
+            <Line type="monotone" dataKey="performance" stroke="#f97316" strokeWidth={1.5} dot={false} name="Performance" />
+            <Line type="monotone" dataKey="quality" stroke="#a855f7" strokeWidth={1.5} dot={false} name="Quality" />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+
+      {/* Week-over-week comparison */}
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <span className="text-sm text-gray-500 dark:text-gray-400">This week vs last week:</span>
+        <div className="flex items-center gap-1.5">
+          {deltaPositive ? (
+            <ArrowUp className="w-4 h-4 text-green-500" />
+          ) : (
+            <ArrowDown className="w-4 h-4 text-red-500" />
+          )}
+          <span className={`text-sm font-bold ${deltaPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {deltaPositive ? '+' : ''}{delta.toFixed(1)}%
+          </span>
+          <span className="text-xs text-gray-400">
+            ({thisWeekOee.toFixed(1)}% vs {lastWeekOee.toFixed(1)}%)
+          </span>
         </div>
       </div>
     </div>
@@ -232,6 +354,9 @@ export default function OEEPage() {
           </div>
         </div>
       )}
+
+      {/* OEE Trend Chart */}
+      <OEETrendChart />
     </div>
   );
 }

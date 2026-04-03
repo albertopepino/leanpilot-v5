@@ -131,6 +131,73 @@ export class GembaService {
     });
   }
 
+  /** Waste Pareto: count observations by waste category */
+  async getWastePareto(siteId: string, months = 3) {
+    const since = new Date();
+    since.setMonth(since.getMonth() - months);
+
+    const observations = await this.prisma.gembaObservation.findMany({
+      where: {
+        walk: { siteId },
+        createdAt: { gte: since },
+      },
+      select: {
+        wasteCategory: true,
+        workstationId: true,
+      },
+    });
+
+    // Build workstation area lookup
+    const wsIds = [...new Set(observations.map((o) => o.workstationId).filter(Boolean))] as string[];
+    const workstations = wsIds.length > 0
+      ? await this.prisma.workstation.findMany({
+          where: { id: { in: wsIds } },
+          select: { id: true, area: true },
+        })
+      : [];
+    const wsAreaMap: Record<string, string> = {};
+    for (const ws of workstations) {
+      wsAreaMap[ws.id] = ws.area || 'Unassigned';
+    }
+
+    // Count by waste category
+    const categoryCount: Record<string, number> = {};
+    const areaCount: Record<string, number> = {};
+
+    for (const obs of observations) {
+      categoryCount[obs.wasteCategory] = (categoryCount[obs.wasteCategory] || 0) + 1;
+      const area = obs.workstationId ? (wsAreaMap[obs.workstationId] || 'Unassigned') : 'Unassigned';
+      areaCount[area] = (areaCount[area] || 0) + 1;
+    }
+
+    // Sort descending by count
+    const sorted = Object.entries(categoryCount)
+      .sort(([, a], [, b]) => b - a);
+
+    const totalObservations = observations.length;
+    let cumulative = 0;
+    const wastes = sorted.map(([category, count]) => {
+      cumulative += count;
+      return {
+        category,
+        count,
+        percentage: totalObservations > 0 ? Math.round((count / totalObservations) * 1000) / 10 : 0,
+        cumulativePercentage: totalObservations > 0 ? Math.round((cumulative / totalObservations) * 1000) / 10 : 0,
+      };
+    });
+
+    const byArea = Object.entries(areaCount)
+      .sort(([, a], [, b]) => b - a)
+      .map(([area, count]) => ({ area, count }));
+
+    return {
+      wastes,
+      byArea,
+      totalObservations,
+      insufficientData: totalObservations < 5,
+    };
+  }
+
   /** Get open muda signals for overview */
   async getOpenMudaSignals(siteId: string) {
     return this.prisma.gembaObservation.findMany({

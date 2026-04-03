@@ -111,6 +111,16 @@ export class SafetyController {
     return this.safety.getMetrics(siteId);
   }
 
+  @Get('trends')
+  @RequirePermission('safety', 'view')
+  @ApiOperation({ summary: 'Safety trends: incidents by month, near-miss ratio trend, days since last injury' })
+  async getTrends(
+    @CurrentUser('siteId') siteId: string,
+    @Query('months') months?: string,
+  ) {
+    return this.safety.getTrends(siteId, months ? parseInt(months, 10) : 12);
+  }
+
   @Post('incidents/:id/attachments')
   @RequirePermission('safety', 'participate')
   @ApiOperation({ summary: 'Upload attachment to safety incident' })

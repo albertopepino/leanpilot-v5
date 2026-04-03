@@ -66,6 +66,7 @@ model Site {
   smedAnalyses       SmedAnalysis[]
   toolConfigs        SiteToolConfig[]
   customRoles        CustomRole[]
+  escalationRules    EscalationRule[]
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -1176,4 +1177,36 @@ model SiteToolConfig {
 
   @@unique([siteId, toolSlug])
   @@map("site_tool_configs")
+}
+
+// ===== V5: ESCALATION ENGINE (Digital Andon) =====
+
+model EscalationRule {
+  id               String   @id @default(cuid())
+  siteId           String
+  name             String
+  isActive         Boolean  @default(true)
+  triggerType      String   // breakdown, safety_incident, ncr_critical, action_overdue
+  conditionMinutes Int      @default(10)
+  notifyGroup      String   // permission feature group to notify
+  notifyLevel      String   // minimum permission level
+  escalationTier   Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, name])
+  @@map("escalation_rules")
+}
+
+model EscalationLog {
+  id         String   @id @default(cuid())
+  ruleId     String
+  sourceType String
+  sourceId   String
+  notifiedAt DateTime @default(now())
+
+  @@unique([ruleId, sourceId])
+  @@map("escalation_logs")
 }

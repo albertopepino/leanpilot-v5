@@ -444,6 +444,154 @@ export class DashboardService {
     return result;
   }
 
+  /** OEE Trend: daily/weekly data points over a period */
+  async getOeeTrend(siteId: string, workstationId?: string, period = '30d', granularity: 'day' | 'week' = 'day') {
+    const cacheKey = `dashboard:oee-trend:${siteId}:${workstationId || 'all'}:${period}:${granularity}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    // Parse period string (7d, 30d, 90d)
+    const periodMatch = period.match(/^(\d+)d$/);
+    const days = periodMatch ? parseInt(periodMatch[1], 10) : 30;
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    const wsFilter = workstationId
+      ? { id: workstationId, siteId }
+      : { siteId, isActive: true };
+
+    const workstations = await this.prisma.workstation.findMany({ where: wsFilter });
+
+    // Build time buckets
+    const buckets: Array<{ start: Date; end: Date; label: string }> = [];
+    if (granularity === 'week') {
+      const current = new Date(startDate);
+      while (current < now) {
+        const bucketEnd = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+        buckets.push({
+          start: new Date(current),
+          end: bucketEnd > now ? now : bucketEnd,
+          label: current.toISOString().split('T')[0],
+        });
+        current.setTime(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+    } else {
+      const current = new Date(startDate);
+      while (current < now) {
+        const bucketEnd = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+        buckets.push({
+          start: new Date(current),
+          end: bucketEnd > now ? now : bucketEnd,
+          label: current.toISOString().split('T')[0],
+        });
+        current.setTime(current.getTime() + 24 * 60 * 60 * 1000);
+      }
+    }
+
+    // Pre-fetch all runs and events for the entire period for efficiency
+    const allRuns = await this.prisma.productionRun.findMany({
+      where: {
+        workstationId: { in: workstations.map((w) => w.id) },
+        startedAt: { gte: startDate },
+        status: 'completed',
+      },
+      include: { phase: { select: { cycleTimeSeconds: true } } },
+    });
+
+    const allEvents = await this.prisma.workstationEvent.findMany({
+      where: {
+        workstationId: { in: workstations.map((w) => w.id) },
+        eventType: 'status_change',
+        timestamp: { gte: startDate },
+      },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const points: Array<{
+      date: string;
+      availability: number;
+      performance: number;
+      quality: number;
+      oee: number;
+    }> = [];
+
+    for (const bucket of buckets) {
+      const bucketStartMs = bucket.start.getTime();
+      const bucketEndMs = bucket.end.getTime();
+      const bucketDays = (bucketEndMs - bucketStartMs) / (24 * 60 * 60 * 1000);
+
+      let totalPlannedMinutes = 0;
+      let totalDowntimeMinutes = 0;
+      let totalProduced = 0;
+      let totalScrap = 0;
+      let totalIdealRunMinutes = 0;
+
+      for (const ws of workstations) {
+        const plannedMinutes = (ws.plannedHoursPerDay ?? 8) * 60 * bucketDays;
+        totalPlannedMinutes += plannedMinutes;
+
+        // Filter events for this workstation and bucket
+        const wsEvents = allEvents.filter(
+          (e) => e.workstationId === ws.id &&
+            new Date(e.timestamp).getTime() >= bucketStartMs &&
+            new Date(e.timestamp).getTime() < bucketEndMs,
+        );
+
+        // Calculate downtime
+        let downtimeMinutes = 0;
+        for (let i = 0; i < wsEvents.length - 1; i++) {
+          const e = wsEvents[i];
+          if (e.status && e.status !== 'running' && e.status !== 'idle' && e.status !== 'planned_stop') {
+            const duration = (new Date(wsEvents[i + 1].timestamp).getTime() - new Date(e.timestamp).getTime()) / 60000;
+            downtimeMinutes += duration;
+          }
+        }
+        if (wsEvents.length > 0) {
+          const last = wsEvents[wsEvents.length - 1];
+          if (last.status && last.status !== 'running' && last.status !== 'idle' && last.status !== 'planned_stop') {
+            downtimeMinutes += (bucketEndMs - new Date(last.timestamp).getTime()) / 60000;
+          }
+        }
+        totalDowntimeMinutes += downtimeMinutes;
+
+        // Filter runs for this workstation and bucket
+        const wsRuns = allRuns.filter(
+          (r) => r.workstationId === ws.id &&
+            new Date(r.startedAt).getTime() >= bucketStartMs &&
+            new Date(r.startedAt).getTime() < bucketEndMs,
+        );
+
+        totalProduced += wsRuns.reduce((s, r) => s + r.producedQuantity, 0);
+        totalScrap += wsRuns.reduce((s, r) => s + r.scrapQuantity, 0);
+        totalIdealRunMinutes += wsRuns.reduce(
+          (s, r) => s + ((r.phase.cycleTimeSeconds || 60) * r.producedQuantity), 0,
+        ) / 60;
+      }
+
+      const operatingMinutes = Math.max(0, totalPlannedMinutes - totalDowntimeMinutes);
+      const availability = totalPlannedMinutes > 0 ? operatingMinutes / totalPlannedMinutes : 0;
+      const performance = operatingMinutes > 0 ? Math.min(1, totalIdealRunMinutes / operatingMinutes) : 0;
+      const goodCount = totalProduced - totalScrap;
+      const quality = totalProduced > 0 ? goodCount / totalProduced : 1;
+      const oee = availability * performance * quality;
+
+      points.push({
+        date: bucket.label,
+        availability: Math.round(availability * 1000) / 10,
+        performance: Math.round(performance * 1000) / 10,
+        quality: Math.round(quality * 1000) / 10,
+        oee: Math.round(oee * 1000) / 10,
+      });
+    }
+
+    const result = {
+      points,
+      insufficientData: points.length < 5,
+    };
+    await this.cache.set(cacheKey, result, 60000);
+    return result;
+  }
+
   /** Pareto / Loss waterfall: 6 big losses ranked by hours */
   async getPareto(siteId: string, period = 'week') {
     const cacheKey = `dashboard:pareto:${siteId}:${period}`;

@@ -322,6 +322,23 @@ async function main() {
     ],
   }).catch(() => {});
 
+  // 9. Escalation Rules (Milan)
+  const escalationRules = [
+    { name: 'Breakdown L1 — Shift Leader', triggerType: 'breakdown', conditionMinutes: 10, notifyGroup: 'shift_management', notifyLevel: 'manage', escalationTier: 1 },
+    { name: 'Breakdown L2 — Maintenance', triggerType: 'breakdown', conditionMinutes: 30, notifyGroup: 'maintenance', notifyLevel: 'manage', escalationTier: 2 },
+    { name: 'Breakdown L3 — Plant Manager', triggerType: 'breakdown', conditionMinutes: 60, notifyGroup: 'people', notifyLevel: 'manage', escalationTier: 3 },
+    { name: 'Safety Critical — Immediate', triggerType: 'safety_incident', conditionMinutes: 0, notifyGroup: 'safety', notifyLevel: 'manage', escalationTier: 1 },
+    { name: 'NCR Critical — Immediate', triggerType: 'ncr_critical', conditionMinutes: 0, notifyGroup: 'quality', notifyLevel: 'manage', escalationTier: 1 },
+    { name: 'Action Overdue — 24h', triggerType: 'action_overdue', conditionMinutes: 1440, notifyGroup: 'continuous_improvement', notifyLevel: 'manage', escalationTier: 1 },
+  ];
+  for (const rule of escalationRules) {
+    await prisma.escalationRule.upsert({
+      where: { siteId_name: { siteId: milan.id, name: rule.name } },
+      update: {},
+      create: { ...rule, siteId: milan.id },
+    });
+  }
+
   console.log('Seed complete!');
   console.log('');
   console.log('Demo accounts (password: password123):');
