@@ -247,7 +247,10 @@ export default function AndonBoardPage() {
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         @keyframes strobe { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes borderPulse { 0%, 100% { border-color: rgba(239,68,68,0.6); } 50% { border-color: rgba(239,68,68,0.15); } }
-        @keyframes glowPulse { 0%, 100% { box-shadow: var(--glow-base); } 50% { box-shadow: var(--glow-bright); } }
+        @keyframes glowPulse {
+          0%, 100% { box-shadow: var(--glow-base); transform: scale(1); opacity: 1; }
+          50% { box-shadow: var(--glow-bright); transform: scale(1.015); opacity: 0.85; }
+        }
         @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(200vh); } }
         @keyframes glow-breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
         .animate-strobe { animation: strobe 0.8s ease-in-out infinite; }
