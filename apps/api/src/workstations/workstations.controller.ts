@@ -14,13 +14,13 @@ export class WorkstationsController {
   constructor(private workstations: WorkstationsService) {}
 
   @Get()
-  @RequirePermission('maintenance', 'view')
+  @RequirePermission('production', 'view')
   async findAll(@CurrentUser('siteId') siteId: string) {
     return this.workstations.findAllBySite(siteId);
   }
 
   @Get(':id')
-  @RequirePermission('maintenance', 'view')
+  @RequirePermission('production', 'view')
   async findById(@Param('id') id: string, @CurrentUser('siteId') siteId: string) {
     return this.workstations.findById(id, siteId);
   }
