@@ -55,11 +55,11 @@ export default function ReasonCodesPage() {
 
   const loadCodes = async () => {
     try {
-      const res = await api.get<ReasonCode[]>('/shopfloor/reason-codes/all');
+      const res = await api.get<any>('/shopfloor/reason-codes/all');
       setCodes(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error(err);
-      toast('Failed to load reason codes', 'error');
+      toast('error', 'Failed to load reason codes');
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export default function ReasonCodesPage() {
 
   const handleAdd = async (category: string) => {
     if (!addForm.code.trim() || !addForm.label.trim()) {
-      toast('Code and label are required', 'error');
+      toast('error', 'Code and label are required');
       return;
     }
     setSaving(true);
@@ -87,7 +87,7 @@ export default function ReasonCodesPage() {
         color: addForm.color,
         sortOrder: maxSort + 1,
       });
-      toast('Reason code created', 'success');
+      toast('success', 'Reason code created');
       setAddingCategory(null);
       setAddForm({ code: '', label: '', color: '#6b7280' });
       loadCodes();
@@ -105,7 +105,7 @@ export default function ReasonCodesPage() {
         label: editForm.label.trim(),
         color: editForm.color,
       });
-      toast('Reason code updated', 'success');
+      toast('success', 'Reason code updated');
       setEditingId(null);
       loadCodes();
     } catch (err: any) {
@@ -131,7 +131,7 @@ export default function ReasonCodesPage() {
     setSaving(true);
     try {
       await api.delete(`/shopfloor/reason-codes/${id}`);
-      toast('Reason code deleted', 'success');
+      toast('success', 'Reason code deleted');
       setDeleteConfirmId(null);
       loadCodes();
     } catch (err: any) {
