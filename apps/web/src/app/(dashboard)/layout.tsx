@@ -56,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/roles', label: 'Roles', icon: ShieldCheck, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/admin/tools', label: 'Tools', icon: Settings, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/admin/escalation', label: 'Escalation', icon: Bell, group: 'people', minLevel: 'manage', iconGradient: 'from-amber-500 to-orange-500' },
+  { href: '/admin/reason-codes', label: 'Reason Codes', icon: Settings, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/settings', label: 'Settings', icon: Settings, iconGradient: 'from-gray-500 to-gray-400' },
   // ── External (Shop Floor) ───────────────────────────────────
   { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, group: 'production', minLevel: 'participate', external: true, iconGradient: 'from-indigo-500 to-blue-500' },

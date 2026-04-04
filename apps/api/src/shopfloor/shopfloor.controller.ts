@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ShopfloorService } from './shopfloor.service';
@@ -32,6 +32,40 @@ export class ShopfloorController {
   ) {
     const run = await this.shopfloor.getActiveRun(workstationId, siteId);
     return res.json(run ?? null);
+  }
+
+  @Get('reason-codes/all')
+  @RequirePermission('people', 'manage')
+  async getAllReasonCodes(@CurrentUser('siteId') siteId: string) {
+    return this.shopfloor.getAllReasonCodes(siteId);
+  }
+
+  @Post('reason-codes')
+  @RequirePermission('people', 'manage')
+  async createReasonCode(
+    @CurrentUser('siteId') siteId: string,
+    @Body() body: { category: string; code: string; label: string; color?: string; sortOrder?: number },
+  ) {
+    return this.shopfloor.createReasonCode(siteId, body);
+  }
+
+  @Patch('reason-codes/:id')
+  @RequirePermission('people', 'manage')
+  async updateReasonCode(
+    @Param('id') id: string,
+    @CurrentUser('siteId') siteId: string,
+    @Body() body: { label?: string; color?: string; sortOrder?: number; isActive?: boolean },
+  ) {
+    return this.shopfloor.updateReasonCode(id, siteId, body);
+  }
+
+  @Delete('reason-codes/:id')
+  @RequirePermission('people', 'manage')
+  async deleteReasonCode(
+    @Param('id') id: string,
+    @CurrentUser('siteId') siteId: string,
+  ) {
+    return this.shopfloor.deleteReasonCode(id, siteId);
   }
 
   @Get('reason-codes')

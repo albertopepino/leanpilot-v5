@@ -309,4 +309,33 @@ export class ShopfloorService {
       orderBy: { sortOrder: 'asc' },
     });
   }
+
+  /** Get all reason codes for admin management */
+  async getAllReasonCodes(siteId: string) {
+    return this.prisma.reasonCode.findMany({
+      where: { siteId },
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
+    });
+  }
+
+  /** Create a new reason code */
+  async createReasonCode(siteId: string, data: { category: string; code: string; label: string; color?: string; sortOrder?: number }) {
+    return this.prisma.reasonCode.create({
+      data: { siteId, ...data, color: data.color || '#6b7280' },
+    });
+  }
+
+  /** Update an existing reason code */
+  async updateReasonCode(id: string, siteId: string, data: { label?: string; color?: string; sortOrder?: number; isActive?: boolean }) {
+    const rc = await this.prisma.reasonCode.findFirst({ where: { id, siteId } });
+    if (!rc) throw new NotFoundException('Reason code not found');
+    return this.prisma.reasonCode.update({ where: { id }, data });
+  }
+
+  /** Delete a reason code */
+  async deleteReasonCode(id: string, siteId: string) {
+    const rc = await this.prisma.reasonCode.findFirst({ where: { id, siteId } });
+    if (!rc) throw new NotFoundException('Reason code not found');
+    return this.prisma.reasonCode.delete({ where: { id } });
+  }
 }
