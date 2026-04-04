@@ -156,6 +156,27 @@ export default function EquipmentPage() {
   const [logCost, setLogCost] = useState('');
   const [logSaving, setLogSaving] = useState(false);
 
+  // Add workstation form
+  const [showAddWs, setShowAddWs] = useState(false);
+  const [wsName, setWsName] = useState('');
+  const [wsCode, setWsCode] = useState('');
+  const [wsType, setWsType] = useState('machine');
+  const [wsArea, setWsArea] = useState('');
+  const [wsSaving, setWsSaving] = useState(false);
+
+  const createWorkstation = async () => {
+    if (!wsName.trim() || !wsCode.trim()) return;
+    setWsSaving(true);
+    try {
+      await api.post('/workstations', { name: wsName.trim(), code: wsCode.trim(), type: wsType, area: wsArea.trim() || 'General' });
+      toast('success', 'Workstation created');
+      setShowAddWs(false); setWsName(''); setWsCode(''); setWsType('machine'); setWsArea('');
+      loadWorkstations();
+    } catch (e: any) {
+      toast('error', e.message || 'Failed to create workstation');
+    } finally { setWsSaving(false); }
+  };
+
   // CILT form
   const [ciltCleaning, setCiltCleaning] = useState(false);
   const [ciltInspection, setCiltInspection] = useState(false);
@@ -312,7 +333,45 @@ export default function EquipmentPage() {
               TPM &amp; CILT — Workstation maintenance and autonomous care
             </p>
           </div>
+          <button onClick={() => setShowAddWs(true)} className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm">
+            <Plus className="w-4 h-4" /> Add Workstation
+          </button>
         </div>
+
+        {/* Add Workstation Form */}
+        {showAddWs && (
+          <div className="mb-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">New Workstation</h3>
+              <button onClick={() => setShowAddWs(false)}><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Name *</label>
+                <input type="text" value={wsName} onChange={e => setWsName(e.target.value)} placeholder="e.g. CNC Lathe 3" className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Code *</label>
+                <input type="text" value={wsCode} onChange={e => setWsCode(e.target.value)} placeholder="e.g. CNC-03" className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Type</label>
+                <select value={wsType} onChange={e => setWsType(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none">
+                  <option value="machine">Machine</option>
+                  <option value="line">Line</option>
+                  <option value="manual">Manual Station</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Area</label>
+                <input type="text" value={wsArea} onChange={e => setWsArea(e.target.value)} placeholder="e.g. Machining" className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" />
+              </div>
+            </div>
+            <button onClick={createWorkstation} disabled={!wsName.trim() || !wsCode.trim() || wsSaving} className="w-full py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm disabled:opacity-50">
+              {wsSaving ? 'Creating...' : 'Create Workstation'}
+            </button>
+          </div>
+        )}
 
         {/* Metrics bar */}
         {overdue.length > 0 && (

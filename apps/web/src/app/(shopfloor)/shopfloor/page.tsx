@@ -165,7 +165,7 @@ type Step = 'workstation' | 'po' | 'board' | 'close';
 function elapsed(since: string): string {
   if (!since) return '—';
   const ms = Date.now() - new Date(since).getTime();
-  if (isNaN(ms)) return '—';
+  if (isNaN(ms) || ms < 0) return '0m';
   const mins = Math.floor(ms / 60000);
   if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
