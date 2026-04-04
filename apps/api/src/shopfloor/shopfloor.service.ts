@@ -204,6 +204,7 @@ export class ShopfloorService {
     producedQuantity: number;
     scrapQuantity: number;
     notes?: string;
+    completePo?: boolean;
   }) {
     const run = await this.prisma.productionRun.findFirst({
       where: { id: runId },
@@ -244,6 +245,25 @@ export class ShopfloorService {
         status: 'idle',
       },
     });
+
+    // If completePo, mark the phase (and possibly the order) as completed
+    if (data.completePo) {
+      await this.prisma.productionOrderPhase.update({
+        where: { id: run.phaseId },
+        data: { status: 'completed' },
+      });
+      // Check if all phases of this order are completed
+      const orderPhases = await this.prisma.productionOrderPhase.findMany({
+        where: { orderId: (await this.prisma.productionOrderPhase.findUnique({ where: { id: run.phaseId } }))?.orderId || '' },
+      });
+      const allCompleted = orderPhases.every(p => p.status === 'completed');
+      if (allCompleted && orderPhases.length > 0) {
+        await this.prisma.productionOrder.update({
+          where: { id: orderPhases[0].orderId },
+          data: { status: 'completed' },
+        });
+      }
+    }
 
     // Emit real-time run closed + idle status events
     const ws = await this.prisma.workstation.findUnique({ where: { id: run.workstationId } });

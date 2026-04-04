@@ -74,7 +74,7 @@ export class ShopfloorController {
   @RequirePermission('production', 'participate')
   async closeRun(
     @Param('runId') runId: string,
-    @Body() body: { producedQuantity: number; scrapQuantity: number; notes?: string },
+    @Body() body: { producedQuantity: number; scrapQuantity: number; notes?: string; completePo?: boolean },
     @CurrentUser('id') operatorId: string,
     @CurrentUser('siteId') siteId: string,
   ) {
