@@ -5,7 +5,7 @@ interface SkeletonProps {
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
     <div
-      className={`animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 ${className}`}
+      className={`skeleton-shimmer rounded-[var(--radius-md)] ${className}`}
       aria-hidden="true"
     />
   );
@@ -13,7 +13,7 @@ export function Skeleton({ className = '' }: SkeletonProps) {
 
 export function SkeletonCard() {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+    <div className="surface-card p-5">
       <div className="flex items-center justify-between mb-3">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-5 w-20 rounded-full" />

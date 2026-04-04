@@ -24,19 +24,14 @@ export function GlassCard({
   hover = false,
   padding = 'md',
 }: GlassCardProps) {
-  const base = `
-    bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl
-    rounded-2xl border border-white/20 dark:border-gray-700/50
-    shadow-lg shadow-gray-200/40 dark:shadow-none
-    dark:ring-1 dark:ring-gray-700/50
-    ${PADDING[padding]}
-    transition-all duration-200
-  `;
+  const base = `surface-glass ${PADDING[padding]}`;
 
   const hoverClass =
     hover || onClick
-      ? 'hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-300/40 dark:hover:ring-gray-600 cursor-pointer'
+      ? 'hover:-translate-y-0.5 hover:shadow-lg cursor-pointer'
       : '';
+
+  const style = { transition: `all var(--motion-base) ease` };
 
   if (onClick) {
     return (
@@ -44,11 +39,16 @@ export function GlassCard({
         type="button"
         onClick={onClick}
         className={`w-full text-left ${base} ${hoverClass} ${className}`}
+        style={style}
       >
         {children}
       </button>
     );
   }
 
-  return <div className={`${base} ${hoverClass} ${className}`}>{children}</div>;
+  return (
+    <div className={`${base} ${hoverClass} ${className}`} style={style}>
+      {children}
+    </div>
+  );
 }

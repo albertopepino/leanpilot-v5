@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Sparkline } from './charts';
 
-type Variant = 'blue' | 'green' | 'orange' | 'purple' | 'slate';
+type Variant = 'blue' | 'green' | 'orange' | 'amber' | 'purple' | 'slate';
 
 const VARIANT_MAP: Record<Variant, {
   bg: string;
@@ -13,34 +13,40 @@ const VARIANT_MAP: Record<Variant, {
   sparkColor: string;
 }> = {
   blue: {
-    bg: 'bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900',
-    iconBg: 'bg-blue-500/20',
-    accent: 'text-blue-300',
-    sparkColor: '#60a5fa',
+    bg: 'bg-gradient-to-br from-blue-600 to-blue-700',
+    iconBg: 'bg-blue-400/20',
+    accent: 'text-blue-200',
+    sparkColor: '#93c5fd',
   },
   green: {
-    bg: 'bg-gradient-to-br from-slate-800 via-emerald-900 to-teal-900',
-    iconBg: 'bg-emerald-500/20',
-    accent: 'text-emerald-300',
-    sparkColor: '#34d399',
+    bg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    iconBg: 'bg-emerald-400/20',
+    accent: 'text-emerald-200',
+    sparkColor: '#6ee7b7',
   },
   orange: {
-    bg: 'bg-gradient-to-br from-slate-800 via-orange-900 to-amber-900',
-    iconBg: 'bg-orange-500/20',
-    accent: 'text-amber-300',
-    sparkColor: '#fbbf24',
+    bg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    iconBg: 'bg-amber-400/20',
+    accent: 'text-amber-200',
+    sparkColor: '#fcd34d',
+  },
+  amber: {
+    bg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    iconBg: 'bg-amber-400/20',
+    accent: 'text-amber-200',
+    sparkColor: '#fcd34d',
   },
   purple: {
-    bg: 'bg-gradient-to-br from-slate-800 via-violet-900 to-purple-900',
-    iconBg: 'bg-violet-500/20',
-    accent: 'text-violet-300',
-    sparkColor: '#a78bfa',
+    bg: 'bg-gradient-to-br from-violet-600 to-purple-700',
+    iconBg: 'bg-violet-400/20',
+    accent: 'text-violet-200',
+    sparkColor: '#c4b5fd',
   },
   slate: {
-    bg: 'bg-gradient-to-br from-gray-800 to-slate-900',
-    iconBg: 'bg-gray-500/20',
-    accent: 'text-gray-300',
-    sparkColor: '#94a3b8',
+    bg: 'bg-gradient-to-br from-slate-600 to-slate-700',
+    iconBg: 'bg-slate-400/20',
+    accent: 'text-slate-200',
+    sparkColor: '#cbd5e1',
   },
 };
 
@@ -105,23 +111,22 @@ export function GradientStatCard({
 
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor =
-    trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-gray-400';
+    trend === 'up' ? 'text-emerald-200' : trend === 'down' ? 'text-red-200' : 'text-white/50';
 
   return (
     <div
-      className={`${v.bg} rounded-2xl p-5 text-white
+      className={`${v.bg} rounded-[var(--radius-xl)] p-5 text-white
                   relative overflow-hidden group
-                  hover:-translate-y-1 hover:shadow-2xl transition-all duration-300`}
-      style={{ animationDelay: `${delay}ms` }}
+                  hover:-translate-y-1 hover:shadow-2xl`}
+      style={{ animationDelay: `${delay}ms`, transition: 'all var(--motion-base) ease' }}
     >
-      {/* Subtle noise texture overlay */}
-      <div className="absolute inset-0 opacity-[0.03]"
-        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")' }} />
+      {/* Decorative blur orb */}
+      <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10 blur-2xl" />
 
       <div className="relative z-10">
         {/* Header row */}
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/50">{label}</p>
+          <p className="text-card-label text-white/70">{label}</p>
           <div className={`w-9 h-9 rounded-xl ${v.iconBg} backdrop-blur-sm
                           flex items-center justify-center`}>
             <Icon className="w-4.5 h-4.5 text-white/80" />
@@ -131,7 +136,7 @@ export function GradientStatCard({
         {/* Value + trend */}
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-3xl font-extrabold tracking-tight tabular-nums leading-none">
+            <p className="text-kpi text-white leading-none">
               {prefix}{animated}{suffix}
             </p>
             {trend && (

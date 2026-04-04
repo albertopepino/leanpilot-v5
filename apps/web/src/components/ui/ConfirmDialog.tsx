@@ -17,16 +17,16 @@ interface ConfirmDialogProps {
 
 const VARIANT_STYLES = {
   danger: {
-    icon: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
-    button: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+    icon: 'bg-[var(--danger-soft)] text-red-600 dark:text-red-400',
+    button: 'bg-[var(--danger)] hover:brightness-110 focus:ring-red-500',
   },
   warning: {
-    icon: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
-    button: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
+    icon: 'bg-[var(--warning-soft)] text-amber-600 dark:text-amber-400',
+    button: 'bg-[var(--warning)] hover:brightness-110 focus:ring-amber-500',
   },
   info: {
-    icon: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-    button: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
+    icon: 'bg-[var(--info-soft)] text-cyan-600 dark:text-cyan-400',
+    button: 'bg-[var(--info)] hover:brightness-110 focus:ring-cyan-500',
   },
 };
 
@@ -53,31 +53,39 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6
-                      ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+      <div
+        className="relative max-w-md w-full mx-4 p-6 rounded-[var(--radius-xl)] shadow-[var(--shadow-lg)] animate-scale-in"
+        style={{
+          background: 'var(--surface-0)',
+          border: '1px solid var(--border-default)',
+        }}
+      >
         <button onClick={onCancel} className="absolute top-4 right-4 p-1 rounded-lg
           hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-          <X className="w-4 h-4 text-gray-400" />
+          <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
         </button>
 
         <div className="flex gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${styles.icon}`}>
+          <div className={`w-10 h-10 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0 ${styles.icon}`}>
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{message}</p>
+            <h3 className="text-base font-semibold" style={{ color: 'var(--text-strong)' }}>{title}</h3>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{message}</p>
           </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
           <button ref={cancelRef} onClick={onCancel} disabled={loading}
-            className="px-4 py-2 text-sm font-medium rounded-xl text-gray-700 dark:text-gray-300
-              bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            className="px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] transition-colors"
+            style={{
+              background: 'var(--surface-2)',
+              color: 'var(--text-strong)',
+            }}>
             {cancelLabel}
           </button>
           <button onClick={onConfirm} disabled={loading}
-            className={`px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors
+            className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] text-white transition-colors
               focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${styles.button}`}>
             {loading ? 'Processing...' : confirmLabel}
           </button>

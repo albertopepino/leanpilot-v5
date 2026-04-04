@@ -3,34 +3,35 @@ interface CardProps {
   className?: string;
   onClick?: () => void;
   hover?: boolean;
-  padding?: 'sm' | 'md' | 'lg';
+  interactive?: boolean;
+  padding?: 'sm' | 'md' | 'lg' | 'none';
 }
 
 const PADDING = {
+  none: '',
   sm: 'p-3',
   md: 'p-5',
   lg: 'p-6',
 };
 
-export function Card({ children, className = '', onClick, hover = false, padding = 'md' }: CardProps) {
-  const base = `bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm ${PADDING[padding]}`;
-  const hoverClass = hover || onClick
-    ? 'hover:shadow-md hover:border-brand-300 dark:hover:border-brand-600 transition-all cursor-pointer'
-    : '';
+export function Card({ children, className = '', onClick, hover = false, interactive = false, padding = 'md' }: CardProps) {
+  const isInteractive = interactive || hover || !!onClick;
+  const base = isInteractive ? 'interactive-card' : 'surface-card';
+  const padClass = PADDING[padding];
 
   if (onClick) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`w-full text-left ${base} ${hoverClass} ${className}`}
+        className={`w-full text-left ${base} ${padClass} ${className}`}
       >
         {children}
       </button>
     );
   }
 
-  return <div className={`${base} ${hoverClass} ${className}`}>{children}</div>;
+  return <div className={`${base} ${padClass} ${className}`}>{children}</div>;
 }
 
 export function CardHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -38,9 +39,9 @@ export function CardHeader({ children, className = '' }: { children: React.React
 }
 
 export function CardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={`font-medium text-gray-900 dark:text-white ${className}`}>{children}</h3>;
+  return <h3 className={`font-medium ${className}`} style={{ color: 'var(--text-strong)' }}>{children}</h3>;
 }
 
 export function CardDescription({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <p className={`text-sm text-gray-500 dark:text-gray-400 ${className}`}>{children}</p>;
+  return <p className={`text-sm ${className}`} style={{ color: 'var(--text-muted)' }}>{children}</p>;
 }
