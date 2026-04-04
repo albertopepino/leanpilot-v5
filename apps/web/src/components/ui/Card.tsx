@@ -35,13 +35,27 @@ export function Card({ children, className = '', onClick, hover = false, interac
 }
 
 export function CardHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`mb-4 ${className}`}>{children}</div>;
+  return <div className={`mb-4 flex items-start justify-between gap-4 ${className}`}>{children}</div>;
 }
 
 export function CardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={`font-medium ${className}`} style={{ color: 'var(--text-strong)' }}>{children}</h3>;
+  return (
+    <h3
+      className={`text-[15px] font-semibold tracking-[-0.02em] ${className}`}
+      style={{ color: 'var(--text-strong)' }}
+    >
+      {children}
+    </h3>
+  );
 }
 
 export function CardDescription({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <p className={`text-sm ${className}`} style={{ color: 'var(--text-muted)' }}>{children}</p>;
+  return (
+    <p
+      className={`text-[13px] leading-6 ${className}`}
+      style={{ color: 'var(--text-muted)' }}
+    >
+      {children}
+    </p>
+  );
 }

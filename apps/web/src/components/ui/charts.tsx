@@ -137,7 +137,7 @@ export function TrendChart({
             <stop offset="100%" stopColor={color2} stopOpacity={0.01} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" vertical={false} />
         <XAxis
           dataKey="name"
           axisLine={false}
@@ -151,11 +151,11 @@ export function TrendChart({
         />
         <Tooltip
           contentStyle={{
-            background: 'rgba(255,255,255,0.95)',
+            background: 'rgba(255,255,255,0.96)',
             backdropFilter: 'blur(8px)',
-            border: '1px solid #e5e7eb',
-            borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(148,163,184,0.2)',
+            borderRadius: '16px',
+            boxShadow: '0 18px 40px rgba(15,23,42,0.12)',
             fontSize: '13px',
           }}
         />
@@ -197,7 +197,7 @@ export function HBarChart({ data, height = 220 }: HBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" horizontal={false} />
         <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af' }} />
         <YAxis
           type="category"
@@ -209,11 +209,11 @@ export function HBarChart({ data, height = 220 }: HBarChartProps) {
         />
         <Tooltip
           contentStyle={{
-            background: 'rgba(255,255,255,0.95)',
+            background: 'rgba(255,255,255,0.96)',
             backdropFilter: 'blur(8px)',
-            border: '1px solid #e5e7eb',
-            borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(148,163,184,0.2)',
+            borderRadius: '16px',
+            boxShadow: '0 18px 40px rgba(15,23,42,0.12)',
             fontSize: '13px',
           }}
           formatter={(val: number) => [`${val.toFixed(1)}h`, 'Hours']}

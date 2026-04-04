@@ -128,7 +128,7 @@ export function NotificationBell() {
       {/* Bell button */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="relative p-2 rounded-xl border border-transparent hover:border-blue-200/70 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-200"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -141,9 +141,9 @@ export function NotificationBell() {
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-3 w-80 sm:w-[26rem] bg-white/92 dark:bg-gray-900/92 rounded-[1.35rem] border border-gray-200/80 dark:border-gray-700/80 shadow-2xl shadow-slate-900/10 z-50 overflow-hidden backdrop-blur-xl">
           {/* Panel header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-[linear-gradient(180deg,rgba(37,99,235,0.07),transparent)]">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (

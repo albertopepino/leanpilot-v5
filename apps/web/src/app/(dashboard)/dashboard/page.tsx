@@ -1,21 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, auth } from '@/lib/api';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
-  AlertTriangle, Wrench, Pause, Clock, CalendarOff, ShieldAlert,
-  Activity, Eye, PackageX, Boxes, CircleAlert, Gauge, ShieldCheck,
-  ClipboardCheck, Lightbulb, ChevronRight, ArrowUpRight, Factory,
-  ArrowRight, Zap, Settings2, ChevronUp, ChevronDown, Check,
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  Boxes,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  ClipboardCheck,
+  Clock3,
+  Eye,
+  Factory,
+  Gauge,
+  Lightbulb,
+  PackageX,
+  Settings2,
+  ShieldCheck,
+  Siren,
+  Wrench,
 } from 'lucide-react';
-import { GlassCard } from '@/components/ui/GlassCard';
+import { api, auth } from '@/lib/api';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
 import { MetricCard } from '@/components/ui/MetricCard';
-import { ProgressRing, TrendChart, HBarChart, DonutChart } from '@/components/ui/charts';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-
-// ── Types ──────────────────────────────────────────────────────────────
+import { EmptyState } from '@/components/ui/EmptyState';
+import { DonutChart, HBarChart, ProgressRing } from '@/components/ui/charts';
 
 interface OeeWorkstation {
   workstationId: string;
@@ -62,103 +76,7 @@ interface MudaSignal {
   description: string;
   status: string;
   createdAt: string;
-  walk?: { date: string };
 }
-
-// ── Constants ──────────────────────────────────────────────────────────
-
-const LOSS_CONFIG = [
-  { key: 'breakdown' as const,    label: 'Breakdown',    color: '#ef4444', barColor: 'bg-red-500' },
-  { key: 'changeover' as const,   label: 'Changeover',   color: '#eab308', barColor: 'bg-yellow-500' },
-  { key: 'idle' as const,         label: 'Idle',          color: '#64748b', barColor: 'bg-slate-500' },
-  { key: 'maintenance' as const,  label: 'Maintenance',   color: '#3b82f6', barColor: 'bg-blue-500' },
-  { key: 'quality_hold' as const, label: 'Quality Hold',  color: '#a855f7', barColor: 'bg-purple-500' },
-  { key: 'planned_stop' as const, label: 'Planned Stop',  color: '#f97316', barColor: 'bg-orange-500' },
-];
-
-const SEVERITY_BADGE: Record<string, string> = {
-  high:   'bg-red-50 text-red-600 ring-1 ring-red-200/60 dark:bg-red-900/30 dark:text-red-400 dark:ring-red-700/50',
-  medium: 'bg-amber-50 text-amber-600 ring-1 ring-amber-200/60 dark:bg-amber-900/30 dark:text-amber-400 dark:ring-amber-700/50',
-  low:    'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60 dark:bg-emerald-900/30 dark:text-emerald-400 dark:ring-emerald-700/50',
-};
-
-const WASTE_LABELS: Record<string, string> = {
-  waiting: 'Waiting', overproduction: 'Overproduction', inventory: 'Inventory',
-  motion: 'Motion', transportation: 'Transportation', over_processing: 'Over-processing',
-  defect: 'Defects', talent: 'Unused Talent',
-};
-
-// Placeholder: real week trend data will come from API
-const WEEK_TREND: { name: string; value: number; value2: number }[] = [];
-
-function getGreetingKey(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'goodMorning';
-  if (hour < 17) return 'goodAfternoon';
-  return 'goodEvening';
-}
-
-function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-}
-
-function getShiftKey(): string {
-  const hour = new Date().getHours();
-  if (hour >= 6 && hour < 14) return 'morning';
-  if (hour >= 14 && hour < 22) return 'afternoon';
-  return 'night';
-}
-
-// ── Skeleton with shimmer ─────────────────────────────────────────────
-
-function DashboardSkeleton() {
-  return (
-    <div className="px-6 py-6 max-w-[1600px] mx-auto space-y-6">
-      <div className="relative h-40 rounded-[var(--radius-xl)] overflow-hidden skeleton-shimmer" />
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="relative h-36 rounded-[var(--radius-xl)] overflow-hidden skeleton-shimmer" />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 relative h-72 rounded-[var(--radius-xl)] overflow-hidden skeleton-shimmer" />
-        <div className="relative h-72 rounded-[var(--radius-xl)] overflow-hidden skeleton-shimmer" />
-      </div>
-    </div>
-  );
-}
-
-// ── Animated Loss Bar ─────────────────────────────────────────────────
-
-function LossBar({ label, hours, maxHours, barColor, index }: {
-  label: string; hours: number; maxHours: number; barColor: string; index: number;
-}) {
-  const pct = maxHours > 0 ? (hours / maxHours) * 100 : 0;
-  return (
-    <div
-      className="animate-fade-in-up"
-      style={{ animationDelay: `${0.3 + index * 0.08}s` }}
-    >
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
-        <span className="text-sm font-bold tabular-nums text-gray-900 dark:text-white">{hours.toFixed(1)}h</span>
-      </div>
-      <div className="h-3 rounded-full bg-gray-100 dark:bg-gray-700/50 overflow-hidden">
-        <div
-          className={`h-full rounded-full ${barColor} opacity-0 animate-[growBar_0.8s_ease-out_forwards]`}
-          style={{
-            width: `${pct}%`,
-            animationDelay: `${0.5 + index * 0.1}s`,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ── Dashboard Widget Config ────────────────────────────────────────────
 
 interface WidgetConfig {
   id: string;
@@ -168,47 +86,172 @@ interface WidgetConfig {
 const DASHBOARD_WIDGETS = [
   { id: 'kpis', label: 'KPI Cards', defaultVisible: true },
   { id: 'oee', label: 'OEE Overview', defaultVisible: true },
-  { id: 'charts', label: 'Production Trend & Quality', defaultVisible: true },
-  { id: 'losses', label: 'Loss Breakdown', defaultVisible: true },
+  { id: 'charts', label: 'Production Mix', defaultVisible: true },
+  { id: 'losses', label: 'Loss Analysis', defaultVisible: true },
   { id: 'muda', label: 'Muda Signals', defaultVisible: true },
   { id: 'actions', label: 'Quick Actions', defaultVisible: true },
 ];
 
-const DEFAULT_LAYOUT: WidgetConfig[] = DASHBOARD_WIDGETS.map(w => ({
+const DEFAULT_LAYOUT: WidgetConfig[] = DASHBOARD_WIDGETS.map((w) => ({
   id: w.id,
   visible: w.defaultVisible,
 }));
 
+const LOSS_CONFIG = [
+  { key: 'breakdown' as const, label: 'Breakdown', color: '#ef4444', tone: 'bg-red-500' },
+  { key: 'changeover' as const, label: 'Changeover', color: '#f59e0b', tone: 'bg-amber-500' },
+  { key: 'idle' as const, label: 'Idle', color: '#64748b', tone: 'bg-slate-500' },
+  { key: 'maintenance' as const, label: 'Maintenance', color: '#2563eb', tone: 'bg-blue-600' },
+  { key: 'quality_hold' as const, label: 'Quality Hold', color: '#0891b2', tone: 'bg-cyan-600' },
+  { key: 'planned_stop' as const, label: 'Planned Stop', color: '#f97316', tone: 'bg-orange-500' },
+];
+
+const WASTE_LABELS: Record<string, string> = {
+  waiting: 'Waiting',
+  overproduction: 'Overproduction',
+  inventory: 'Inventory',
+  motion: 'Motion',
+  transportation: 'Transportation',
+  over_processing: 'Over-processing',
+  defect: 'Defects',
+  talent: 'Unused Talent',
+};
+
+const SEVERITY_CLASS: Record<string, string> = {
+  high: 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900',
+  medium: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900',
+  low: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900',
+};
+
+function getGreetingKey(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'goodMorning';
+  if (hour < 17) return 'goodAfternoon';
+  return 'goodEvening';
+}
+
+function getShiftKey(): string {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 14) return 'morning';
+  if (hour >= 14 && hour < 22) return 'afternoon';
+  return 'night';
+}
+
+function formatDate(): string {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="px-6 py-6 max-w-[1600px] mx-auto space-y-6">
+      <div className="brand-panel h-56 skeleton-shimmer rounded-[1.4rem]" />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <div key={idx} className="h-36 rounded-[1.25rem] skeleton-shimmer" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-5">
+        <div className="h-[27rem] rounded-[1.25rem] skeleton-shimmer" />
+        <div className="h-[27rem] rounded-[1.25rem] skeleton-shimmer" />
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({
+  eyebrow,
+  title,
+  description,
+  action,
+  children,
+  className = '',
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={`relative overflow-hidden ${className}`}>
+      <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(37,99,235,0.35),transparent)]" />
+      <CardHeader className="mb-5">
+        <div>
+          <p className="text-section-title mb-1">{eyebrow}</p>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        {action}
+      </CardHeader>
+      {children}
+    </Card>
+  );
+}
+
+function LossBar({
+  label,
+  value,
+  maxValue,
+  tone,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  tone: string;
+}) {
+  const width = maxValue > 0 ? Math.max(6, (value / maxValue) * 100) : 0;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium text-[var(--text)]">{label}</span>
+        <span className="font-semibold tabular-nums text-[var(--text-strong)]">{value.toFixed(1)}h</span>
+      </div>
+      <div className="h-2.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+        <div
+          className={`h-full rounded-full ${tone}`}
+          style={{ width: `${width}%`, transition: 'width 600ms ease' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const t = useTranslations('dashboard');
+  const user = auth.getUser();
   const [data, setData] = useState<DashboardOverview | null>(null);
-  const [mudaSignals, setMudaSignals] = useState<MudaSignal[]>([]);
   const [oee, setOee] = useState<OeeData | null>(null);
+  const [mudaSignals, setMudaSignals] = useState<MudaSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [customizeMode, setCustomizeMode] = useState(false);
   const [widgetLayout, setWidgetLayout] = useState<WidgetConfig[]>(DEFAULT_LAYOUT);
-  const user = auth.getUser();
 
-  // Load saved layout + dashboard data
   useEffect(() => {
     Promise.all([
       api.get<DashboardOverview>('/dashboard/overview').catch(() => null),
-      api.get<any>('/gemba/muda-signals').catch(() => []),
       api.get<OeeData>('/dashboard/oee').catch(() => null),
+      api.get<MudaSignal[]>('/gemba/muda-signals').catch(() => []),
       api.get<{ layout: WidgetConfig[] | null }>('/dashboard/layout').catch(() => ({ layout: null })),
-    ]).then(([overview, signals, oeeData, layoutRes]) => {
-      setData(overview);
-      setMudaSignals(Array.isArray(signals) ? signals : []);
-      setOee(oeeData);
-      if (layoutRes?.layout && Array.isArray(layoutRes.layout)) {
-        const savedIds = new Set(layoutRes.layout.map((w: WidgetConfig) => w.id));
-        const merged = [
-          ...layoutRes.layout,
-          ...DEFAULT_LAYOUT.filter(w => !savedIds.has(w.id)),
-        ];
-        setWidgetLayout(merged);
-      }
-    }).finally(() => setLoading(false));
+    ])
+      .then(([overview, oeeData, signals, layoutRes]) => {
+        setData(overview);
+        setOee(oeeData);
+        setMudaSignals(Array.isArray(signals) ? signals : []);
+        if (layoutRes?.layout && Array.isArray(layoutRes.layout)) {
+          const savedIds = new Set(layoutRes.layout.map((w) => w.id));
+          setWidgetLayout([
+            ...layoutRes.layout,
+            ...DEFAULT_LAYOUT.filter((w) => !savedIds.has(w.id)),
+          ]);
+        }
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const saveLayout = (layout: WidgetConfig[]) => {
@@ -217,699 +260,376 @@ export default function DashboardPage() {
   };
 
   const toggleWidget = (id: string) => {
-    const updated = widgetLayout.map(w =>
-      w.id === id ? { ...w, visible: !w.visible } : w,
-    );
-    saveLayout(updated);
+    saveLayout(widgetLayout.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w)));
   };
 
   const moveWidget = (id: string, direction: 'up' | 'down') => {
-    const idx = widgetLayout.findIndex(w => w.id === id);
+    const idx = widgetLayout.findIndex((w) => w.id === id);
     if (idx < 0) return;
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= widgetLayout.length) return;
-    const updated = [...widgetLayout];
-    [updated[idx], updated[swapIdx]] = [updated[swapIdx], updated[idx]];
-    saveLayout(updated);
-  };
-
-  const isWidgetVisible = (id: string) => {
-    const w = widgetLayout.find(w => w.id === id);
-    return w ? w.visible : true;
+    const next = [...widgetLayout];
+    [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+    saveLayout(next);
   };
 
   if (loading) return <DashboardSkeleton />;
 
-  const losses = data?.losses;
   const production = data?.production;
   const attention = data?.attention;
-
-  const qualityRate = production && typeof production.scrapRate === 'number' ? Math.max(0, 100 - production.scrapRate) : 0;
-  const hasOeeData = oee?.siteOee && (oee.siteOee.availability > 0 || oee.siteOee.performance > 0 || oee.siteOee.quality > 0);
-
-  const lossBarData = LOSS_CONFIG
-    .map(l => ({ ...l, hours: (losses?.[l.key] as number) ?? 0 }))
-    .filter(l => l.hours > 0)
-    .sort((a, b) => b.hours - a.hours);
-  const maxLossHours = lossBarData.length > 0 ? lossBarData[0].hours : 1;
-
-  const produced = production?.totalProduced ?? 0;
-  const scrap = production?.totalScrap ?? 0;
+  const losses = data?.losses;
+  const siteOee = oee?.siteOee;
+  const qualityRate = production ? Math.max(0, 100 - (production.scrapRate || 0)) : 0;
+  const goodUnits = Math.max(0, (production?.totalProduced || 0) - (production?.totalScrap || 0));
   const donutData = [
-    { name: 'Good', value: Math.max(0, produced - scrap), color: '#10b981' },
-    { name: 'Scrap', value: scrap, color: '#ef4444' },
+    { name: 'Good', value: goodUnits, color: '#10b981' },
+    { name: 'Scrap', value: production?.totalScrap || 0, color: '#ef4444' },
   ];
+  const lossRows = LOSS_CONFIG
+    .map((item) => ({ ...item, value: losses?.[item.key] || 0 }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const lossMax = lossRows[0]?.value || 1;
+  const workstationBars = (oee?.workstations || [])
+    .slice()
+    .sort((a, b) => b.oee - a.oee)
+    .slice(0, 6)
+    .map((ws) => ({
+      name: ws.workstationName,
+      value: Number(ws.oee.toFixed(1)),
+      color: ws.oee >= 80 ? '#10b981' : ws.oee >= 60 ? '#f59e0b' : '#ef4444',
+    }));
+  const visibleWidgetIds = new Set(widgetLayout.filter((w) => w.visible).map((w) => w.id));
 
   return (
-    <div className="px-6 py-6 max-w-[1600px] mx-auto space-y-6 relative">
-      {/* Subtle background decoration */}
-      <div className="fixed -right-20 -top-20 w-80 h-80 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
-      <div className="fixed -left-40 top-1/2 w-96 h-96 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
+    <div className="px-6 py-6 max-w-[1600px] mx-auto space-y-6">
+      <section className="brand-panel relative overflow-hidden px-8 py-8 shadow-[0_24px_80px_rgba(15,23,42,0.2)]">
+        <div className="absolute inset-0 opacity-[0.08]" style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }} />
+        <div className="absolute -right-24 top-0 h-64 w-64 rounded-full bg-blue-300/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-amber-300/10 blur-3xl" />
 
-      {/* ── Hero Section ───────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden rounded-[var(--radius-xl)] bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800
-                   p-8 text-white shadow-xl shadow-blue-500/20 animate-scale-in"
-      >
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-        <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl translate-y-1/2" />
-
-        <div className="relative z-10 flex items-start justify-between">
+        <div className="relative z-10 grid gap-8 xl:grid-cols-[1.25fr_0.75fr]">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1">
-                <Factory className="w-4 h-4 text-blue-200" />
-                <span className="text-sm font-medium text-blue-100">{user?.siteName || 'LeanPilot'}</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                <Clock className="w-3.5 h-3.5 text-blue-200" />
-                <span className="text-xs font-medium text-blue-200">{t('shift')}: {t(getShiftKey())}</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-[0.16em] text-white/80 uppercase">
+                <Factory className="h-3.5 w-3.5" />
+                {user?.siteName || 'LeanPilot'}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-[0.16em] text-white/70 uppercase">
+                <Clock3 className="h-3.5 w-3.5" />
+                {t(getShiftKey())}
+              </span>
             </div>
-            <h1 className="text-3xl font-black mt-4 tracking-tight">
-              {t(getGreetingKey())}, {user?.firstName || 'User'}
+            <h1 className="mt-5 text-4xl font-black tracking-[-0.04em] text-white">
+              {t(getGreetingKey())}, {user?.firstName || 'Operator'}.
             </h1>
-            <p className="text-blue-200 text-sm mt-1.5 font-medium">{formatDate()}</p>
+            <p className="mt-2 max-w-2xl text-sm text-blue-100/80">
+              {formatDate()}.
+              {' '}This is your operations command surface: throughput, exceptions, quality drift, and the next action that matters.
+            </p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {attention?.machinesDown ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-red-500/30 backdrop-blur-sm rounded-full px-3 py-1.5 text-red-100">
-                  <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                  {attention.machinesDown} machine{attention.machinesDown > 1 ? 's' : ''} down
-                </span>
-              ) : null}
-              {attention?.posBehind ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-amber-100">
-                  {attention.posBehind} PO{attention.posBehind > 1 ? 's' : ''} behind
-                </span>
-              ) : null}
-              {attention?.mudaSignals ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-400/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-blue-100">
-                  {attention.mudaSignals} open muda signal{attention.mudaSignals !== 1 ? 's' : ''}
-                </span>
-              ) : null}
-              {!attention?.machinesDown && !attention?.posBehind && !attention?.mudaSignals && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-emerald-100">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  {t('allSystemsRunning')}
-                </span>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {(attention?.machinesDown || 0) > 0 && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-100 ring-1 ring-red-300/20">
+                  <Siren className="h-4 w-4" />
+                  {attention?.machinesDown} machine{attention?.machinesDown === 1 ? '' : 's'} down
+                </div>
+              )}
+              {(attention?.posBehind || 0) > 0 && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-4 py-2 text-sm font-semibold text-amber-100 ring-1 ring-amber-300/20">
+                  <PackageX className="h-4 w-4" />
+                  {attention?.posBehind} order{attention?.posBehind === 1 ? '' : 's'} behind
+                </div>
+              )}
+              {(attention?.mudaSignals || 0) > 0 && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-sky-400/20 px-4 py-2 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/20">
+                  <Eye className="h-4 w-4" />
+                  {attention?.mudaSignals} open muda signal{attention?.mudaSignals === 1 ? '' : 's'}
+                </div>
+              )}
+              {!(attention?.machinesDown || attention?.posBehind || attention?.mudaSignals) && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-100 ring-1 ring-emerald-300/20">
+                  <Check className="h-4 w-4" />
+                  All core systems running
+                </div>
               )}
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
-            <button
-              onClick={() => setCustomizeMode(!customizeMode)}
-              className={`flex items-center gap-2 backdrop-blur-sm
-                         rounded-xl px-4 py-3 text-sm font-semibold text-white
-                         transition-all duration-200 hover:scale-105
-                         shadow-lg shadow-black/10 ${
-                           customizeMode ? 'bg-white/30' : 'bg-white/15 hover:bg-white/25'
-                         }`}
-            >
-              <Settings2 className="w-4 h-4" />
-              {customizeMode ? 'Done' : 'Customize'}
-            </button>
-            <Link
-              href="/gemba"
-              className="flex items-center gap-2 bg-white/15 backdrop-blur-sm
-                         rounded-xl px-5 py-3 text-sm font-semibold text-white
-                         hover:bg-white/25 transition-all duration-200 hover:scale-105
-                         shadow-lg shadow-black/10"
-            >
-              Start Gemba Walk
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <Card className="bg-white/10 border-white/10 text-white backdrop-blur-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-card-label text-white/60">Site OEE</p>
+                  <p className="mt-2 text-[2.5rem] font-black leading-none tracking-[-0.05em]">
+                    {siteOee?.oee?.toFixed(1) || '0.0'}%
+                  </p>
+                  <p className="mt-2 text-sm text-blue-100/75">Availability {siteOee?.availability?.toFixed(1) || '0.0'} · Performance {siteOee?.performance?.toFixed(1) || '0.0'}</p>
+                </div>
+                <Gauge className="h-11 w-11 text-blue-100/80" />
+              </div>
+            </Card>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
+              <Link href="/shopfloor" className="brand-button flex items-center justify-between px-5 py-4">
+                <span className="text-sm font-semibold">Go to Shop Floor</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/gemba" className="flex items-center justify-between rounded-[var(--radius-lg)] border border-white/12 bg-white/10 px-5 py-4 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15">
+                <span>Start Gemba Walk</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setCustomizeMode((v) => !v)}
+                className="flex items-center justify-between rounded-[var(--radius-lg)] border border-white/12 bg-white/5 px-5 py-4 text-sm font-semibold text-white/90 transition hover:bg-white/10 sm:col-span-2"
+              >
+                <span className="inline-flex items-center gap-2"><Settings2 className="h-4 w-4" /> {customizeMode ? 'Close layout controls' : 'Customize mission board'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── Attention Alerts ────── */}
-      {attention && (attention.machinesDown > 0 || attention.posBehind > 0) && (
-        <div className="flex flex-wrap gap-3 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-          {attention.machinesDown > 0 && (
-            <Link href="/shopfloor" className="flex items-center gap-2.5 rounded-[var(--radius-xl)] px-5 py-3 text-sm
-              border border-red-300/50 dark:border-red-800/50
-              bg-red-50/80 dark:bg-red-900/20 backdrop-blur-sm
-              hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group"
-              style={{ animation: 'pulseGlow 2s ease-in-out infinite' }}
-            >
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
-              </span>
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="font-bold text-red-700 dark:text-red-400">
-                {attention.machinesDown} machine{attention.machinesDown > 1 ? 's' : ''} down
-              </span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-red-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </Link>
-          )}
-          {attention.posBehind > 0 && (
-            <Link href="/shopfloor" className="flex items-center gap-2.5 rounded-[var(--radius-xl)] px-5 py-3 text-sm
-              border border-orange-300/50 dark:border-orange-800/50
-              bg-orange-50/80 dark:bg-orange-900/20 backdrop-blur-sm
-              hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
-              <PackageX className="w-4 h-4 text-orange-500" />
-              <span className="font-bold text-orange-700 dark:text-orange-400">
-                {attention.posBehind} PO{attention.posBehind > 1 ? 's' : ''} behind schedule
-              </span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-orange-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* ── Customize Panel ──────────────────────────────────── */}
       {customizeMode && (
-        <div className="animate-fade-in-up">
-          <GlassCard>
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700
-                              flex items-center justify-center shadow-sm">
-                <Settings2 className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                  Customize Dashboard
-                </h3>
-                <p className="text-[11px] text-gray-400">Toggle visibility and reorder widgets</p>
-              </div>
+        <Card>
+          <CardHeader>
+            <div>
+              <p className="text-section-title mb-1">Layout Controls</p>
+              <CardTitle>Mission board visibility</CardTitle>
+              <CardDescription>Toggle or reorder the dashboard blocks that matter most for this site.</CardDescription>
             </div>
-            <div className="space-y-2">
-              {widgetLayout.map((w, idx) => {
-                const def = DASHBOARD_WIDGETS.find(d => d.id === w.id);
-                if (!def) return null;
-                return (
-                  <div
-                    key={w.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700/50"
-                  >
-                    <button
-                      onClick={() => toggleWidget(w.id)}
-                      className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                        w.visible
-                          ? 'bg-blue-600 border-blue-600 text-white'
-                          : 'border-gray-300 dark:border-gray-600'
-                      }`}
-                    >
-                      {w.visible && <Check className="w-3.5 h-3.5" />}
-                    </button>
-                    <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-                      {def.label}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => moveWidget(w.id, 'up')}
-                        disabled={idx === 0}
-                        className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      </button>
-                      <button
-                        onClick={() => moveWidget(w.id, 'down')}
-                        disabled={idx === widgetLayout.length - 1}
-                        className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      </button>
+          </CardHeader>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {widgetLayout.map((widget, idx) => {
+              const def = DASHBOARD_WIDGETS.find((item) => item.id === widget.id);
+              if (!def) return null;
+              return (
+                <div key={widget.id} className="interactive-card p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-strong)]">{def.label}</p>
+                      <p className="text-caption mt-1">{widget.visible ? 'Visible on dashboard' : 'Hidden from dashboard'}</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleWidget(widget.id)}
+                      className={`h-7 w-12 rounded-full p-1 transition ${widget.visible ? 'bg-blue-600' : 'bg-[var(--surface-2)]'}`}
+                    >
+                      <span className={`block h-5 w-5 rounded-full bg-white transition ${widget.visible ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          </GlassCard>
+                  <div className="mt-4 flex items-center justify-end gap-1">
+                    <button type="button" onClick={() => moveWidget(widget.id, 'up')} disabled={idx === 0} className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-2)] disabled:opacity-30">
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => moveWidget(widget.id, 'down')} disabled={idx === widgetLayout.length - 1} className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-2)] disabled:opacity-30">
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {visibleWidgetIds.has('kpis') && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <GradientStatCard label="Throughput" value={production?.totalProduced || 0} variant="blue" icon={Boxes} trend={(production?.totalProduced || 0) > 0 ? 'up' : 'flat'} trendLabel="Units completed" />
+          <GradientStatCard label="Quality Rate" value={qualityRate} suffix="%" decimals={1} variant="green" icon={ShieldCheck} trend={qualityRate >= 98 ? 'up' : 'down'} trendLabel={`${(production?.scrapRate || 0).toFixed(1)}% scrap`} />
+          <MetricCard label="Active Orders" value={attention?.activePOs || 0} variant="production" trend={{ value: -1 * (attention?.posBehind || 0), label: 'late queue pressure' }} />
+          <MetricCard label="Open Signals" value={(attention?.machinesDown || 0) + (attention?.mudaSignals || 0)} variant={(attention?.machinesDown || 0) > 0 ? 'danger' : 'warning'} trend={{ value: attention?.machinesDown || 0, label: 'critical interruptions' }} />
         </div>
       )}
 
-      {/* ── Widgets (rendered in saved order) ───────────────── */}
-      {widgetLayout.map(w => {
-        if (!w.visible) return null;
-
-        switch (w.id) {
-          case 'kpis':
-            return (
-              <div key="kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-                {[
-                  {
-                    label: t('totalProduced'), value: produced, variant: 'blue' as const,
-                    icon: Boxes, trend: 'up' as const, trendLabel: 'vs. last week',
-                  },
-                  {
-                    label: t('qualityRate'), value: qualityRate, suffix: '%', decimals: 1,
-                    variant: 'green' as const, icon: ShieldCheck,
-                    trend: (qualityRate >= 98 ? 'up' : 'down') as 'up' | 'down',
-                    trendLabel: `${production?.scrapRate ?? 0}% ${t('scrapRate')}`,
-                  },
-                  {
-                    label: t('activePOs'), value: attention?.activePOs ?? 0,
-                    variant: 'orange' as const, icon: ClipboardCheck,
-                    trend: (attention?.posBehind ? 'down' : 'up') as 'up' | 'down',
-                    trendLabel: attention?.posBehind ? `${attention.posBehind} ${t('posBehind')}` : t('allSystemsRunning'),
-                  },
-                  {
-                    label: t('mudaSignals'), value: attention?.mudaSignals ?? 0,
-                    variant: 'amber' as const, icon: Eye,
-                    trend: 'flat' as const, trendLabel: t('mudaSignals'),
-                  },
-                ].map((card, i) => (
-                  <div
-                    key={card.label}
-                    className="animate-fade-in-up"
-                    style={{ animationDelay: `${0.2 + i * 0.06}s` }}
-                  >
-                    <GradientStatCard
-                      label={card.label}
-                      value={card.value}
-                      suffix={card.suffix}
-                      decimals={card.decimals}
-                      variant={card.variant}
-                      icon={card.icon}
-                      trend={card.trend}
-                      trendLabel={card.trendLabel}
-                      delay={200 + i * 60}
-                    />
-                  </div>
-                ))}
-              </div>
-            );
-
-          case 'oee':
-            return (
-              <div key="oee">
-                {(oee || !loading) && (
-                  <div className="animate-fade-in-up" style={{ animationDelay: '0.45s' }}>
-                    <div className="surface-card p-5">
-                      <div className="flex items-center gap-2.5 mb-6">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500
-                                        flex items-center justify-center shadow-sm shadow-blue-500/20">
-                          <Gauge className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-section-title">OEE — Overall Equipment Effectiveness</h3>
-                          <p className="text-caption">Site-level metrics this period</p>
-                        </div>
+      <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-5">
+          {visibleWidgetIds.has('oee') && (
+            <SectionCard
+              eyebrow="Performance"
+              title="Equipment effectiveness"
+              description="Live site-level OEE with workstation ranking and loss pressure."
+              action={<Link href="/dashboard/oee" className="text-sm font-semibold text-blue-600 hover:text-blue-700">Open OEE board</Link>}
+            >
+              {!siteOee ? (
+                <EmptyState icon={Gauge} title="No production history yet" description="Close production runs on the shop floor to populate the OEE board." />
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-2">
+                    {[
+                      { label: 'Availability', value: siteOee.availability, color: '#2563eb' },
+                      { label: 'Performance', value: siteOee.performance, color: '#10b981' },
+                      { label: 'Quality', value: siteOee.quality, color: '#0891b2' },
+                      { label: 'OEE', value: siteOee.oee, color: '#f59e0b' },
+                    ].map((ring) => (
+                      <div key={ring.label} className="rounded-[1rem] border border-[var(--border-default)] bg-[var(--surface-1)] p-4 text-center">
+                        <ProgressRing value={ring.value} size={104} strokeWidth={8} color={ring.color}>
+                          <span className="text-sm font-bold tabular-nums text-[var(--text-strong)]">{ring.value.toFixed(1)}%</span>
+                        </ProgressRing>
+                        <p className="mt-3 text-sm font-semibold text-[var(--text)]">{ring.label}</p>
                       </div>
-
-                      {!hasOeeData && (
-                        <div className="text-center py-8 text-gray-400">
-                          <Gauge className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                          <p className="text-sm font-medium">No production data yet</p>
-                          <p className="text-xs mt-1">OEE will populate after production runs are closed</p>
-                        </div>
-                      )}
-                      {hasOeeData && oee && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6">
-                        {[
-                          { val: oee.siteOee.availability, label: t('availability'), color: '#3b82f6', labelClass: 'text-blue-600 dark:text-blue-400' },
-                          { val: oee.siteOee.performance, label: t('performance'), color: '#10b981', labelClass: 'text-emerald-600 dark:text-emerald-400' },
-                          { val: oee.siteOee.quality, label: t('qualityRate'), color: '#8b5cf6', labelClass: 'text-purple-600 dark:text-purple-400' },
-                          { val: oee.siteOee.oee, label: t('oee'), color: '#f59e0b', labelClass: '' },
-                        ].map((ring, i) => (
-                          <div
-                            key={ring.label}
-                            className="flex flex-col items-center gap-2 animate-scale-in"
-                            style={{ animationDelay: `${0.6 + i * 0.1}s` }}
-                          >
-                            <ProgressRing value={ring.val || 0} size={100} strokeWidth={8} color={ring.color}>
-                              <span className={`text-lg font-bold tabular-nums ${
-                                ring.label === 'Overall OEE'
-                                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent'
-                                  : 'text-gray-900 dark:text-white'
-                              }`}>
-                                {(ring.val || 0).toFixed(1)}%
-                              </span>
-                            </ProgressRing>
-                            <span className={`text-xs font-medium ${
-                              ring.label === 'Overall OEE'
-                                ? 'font-semibold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent'
-                                : ring.labelClass
-                            }`}>
-                              {ring.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>}
-
-                      {hasOeeData && oee && oee.workstations && oee.workstations.length > 0 && (
-                        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-                          <p className="text-section-title mb-3">Per Workstation</p>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400">
-                                  <th className="pb-2 font-medium">Workstation</th>
-                                  <th className="pb-2 font-medium text-right">Availability</th>
-                                  <th className="pb-2 font-medium text-right">Performance</th>
-                                  <th className="pb-2 font-medium text-right">Quality</th>
-                                  <th className="pb-2 font-medium text-right">OEE</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
-                                {oee.workstations.map((ws, i) => (
-                                  <tr
-                                    key={ws.workstationId}
-                                    className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 animate-fade-in-up"
-                                    style={{ animationDelay: `${0.8 + i * 0.05}s` }}
-                                  >
-                                    <td className="py-2 font-medium text-gray-700 dark:text-gray-200">{ws.workstationName}</td>
-                                    <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.availability || 0).toFixed(1)}%</td>
-                                    <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.performance || 0).toFixed(1)}%</td>
-                                    <td className="py-2 text-right text-gray-600 dark:text-gray-300 tabular-nums">{(ws.quality || 0).toFixed(1)}%</td>
-                                    <td className="py-2 text-right font-semibold text-gray-800 dark:text-white tabular-nums">{(ws.oee || 0).toFixed(1)}%</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            );
-
-          case 'charts':
-            return (
-              <div key="charts" className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-                <div className="xl:col-span-2 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-                  <div className="surface-card p-5">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700
-                                        flex items-center justify-center shadow-sm shadow-blue-500/20">
-                          <Activity className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-section-title">Production Trend</h3>
-                          <p className="text-caption">Units produced & scrap this week</p>
-                        </div>
+                  <div className="rounded-[1rem] border border-[var(--border-default)] bg-[var(--surface-1)] p-4">
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                      <div>
+                        <p className="text-card-label">Top Workstations</p>
+                        <p className="text-sm text-[var(--text-muted)]">Sorted by best OEE this period</p>
                       </div>
-                      <Link href="/dashboard/oee"
-                        className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1
-                                   hover:gap-2 transition-all duration-200">
-                        View OEE <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
                     </div>
-                    {WEEK_TREND.length > 0 ? (
-                      <TrendChart
-                        data={WEEK_TREND}
-                        color1="#3b82f6"
-                        color2="#ef4444"
-                        label1="Produced"
-                        label2="Scrap"
-                        height={240}
-                      />
+                    {workstationBars.length > 0 ? (
+                      <HBarChart data={workstationBars} height={260} />
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-60 text-gray-400">
-                        <Activity className="w-10 h-10 mb-2 opacity-30" />
-                        <p className="text-sm font-medium">No production trend data yet</p>
-                        <p className="text-xs mt-0.5">Data will appear after production runs are recorded</p>
-                      </div>
+                      <EmptyState icon={Wrench} title="No workstation comparison yet" description="Once runs are recorded across stations, they will rank here automatically." />
                     )}
                   </div>
                 </div>
+              )}
+            </SectionCard>
+          )}
 
-                <div className="animate-fade-in-up" style={{ animationDelay: '0.56s' }}>
-                  <div className="surface-card p-5">
-                    <div className="flex items-center gap-2.5 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-500
-                                      flex items-center justify-center shadow-sm shadow-emerald-500/20">
-                        <ShieldCheck className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-section-title">Quality Overview</h3>
-                        <p className="text-caption">Good vs scrap this week</p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-center">
-                      <DonutChart data={donutData} size={180} innerRadius={60} outerRadius={80}>
-                        <p className="text-kpi text-gray-900 dark:text-white">
-                          {qualityRate.toFixed(1)}%
-                        </p>
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Pass Rate</p>
+          {visibleWidgetIds.has('charts') && (
+            <SectionCard
+              eyebrow="Flow"
+              title="Production mix"
+              description="Use this view to balance output quality against current station performance."
+            >
+              <div className="grid gap-5 lg:grid-cols-[0.78fr_1.22fr]">
+                <div className="rounded-[1rem] border border-[var(--border-default)] bg-[var(--surface-1)] p-5 text-center">
+                  <p className="text-card-label mb-4">Good vs Scrap</p>
+                  {(production?.totalProduced || 0) > 0 ? (
+                    <>
+                      <DonutChart data={donutData} size={220}>
+                        <div className="text-center">
+                          <p className="text-caption">Good Units</p>
+                          <p className="text-2xl font-black tracking-[-0.04em] text-[var(--text-strong)]">{goodUnits}</p>
+                        </div>
                       </DonutChart>
-
-                      <div className="flex items-center gap-6 mt-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">Good ({Math.max(0, produced - scrap)})</span>
+                      <div className="mt-5 grid grid-cols-2 gap-3 text-left">
+                        <div className="rounded-xl bg-white p-3 ring-1 ring-[var(--border-default)]">
+                          <p className="text-caption">Scrap</p>
+                          <p className="mt-1 text-lg font-semibold text-[var(--danger)]">{production?.totalScrap || 0}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-red-500" />
-                          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">Scrap ({scrap})</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{attention?.totalWorkstations ?? 0} workstations</span>
-                      </div>
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-300 tabular-nums">
-                        {Math.max(0, (attention?.totalWorkstations ?? 0) - (attention?.machinesDown ?? 0))} online
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-
-          case 'losses':
-            return (
-              <div key="losses" className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="animate-fade-in-up" style={{ animationDelay: '0.62s' }}>
-                  <div className="surface-card p-5">
-                    <div className="flex items-center justify-between mb-5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500
-                                        flex items-center justify-center shadow-sm shadow-orange-500/20">
-                          <Zap className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-section-title">Loss Analysis</h3>
-                          <p className="text-caption">{losses?.totalHours?.toFixed(1) ?? 0}h total downtime</p>
+                        <div className="rounded-xl bg-white p-3 ring-1 ring-[var(--border-default)]">
+                          <p className="text-caption">Scrap Rate</p>
+                          <p className="mt-1 text-lg font-semibold text-[var(--warning)]">{(production?.scrapRate || 0).toFixed(1)}%</p>
                         </div>
                       </div>
-                      {losses?.totalHours ? (
-                        <span className="text-2xl font-black tabular-nums text-gray-900 dark:text-white">
-                          {losses.totalHours.toFixed(1)}<span className="text-sm font-semibold text-gray-400 ml-0.5">h</span>
-                        </span>
-                      ) : null}
-                    </div>
-                    {lossBarData.length > 0 ? (
-                      <div className="space-y-4">
-                        {lossBarData.map((loss, i) => (
-                          <LossBar
-                            key={loss.key}
-                            label={loss.label}
-                            hours={loss.hours}
-                            maxHours={maxLossHours}
-                            barColor={loss.barColor}
-                            index={i}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-52 text-gray-400">
-                        <ShieldCheck className="w-10 h-10 mb-2 opacity-30" />
-                        <p className="text-sm font-medium">No losses recorded</p>
-                        <p className="text-xs mt-0.5">Great work keeping the line running</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {isWidgetVisible('muda') && (
-                  <div className="animate-fade-in-up" style={{ animationDelay: '0.68s' }}>
-                    <div className="surface-card p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="relative">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500
-                                            flex items-center justify-center shadow-sm shadow-amber-500/20">
-                              <CircleAlert className="w-4 h-4 text-white" />
-                            </div>
-                            {mudaSignals.length > 0 && (
-                              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-500 text-white
-                                               text-[10px] font-bold flex items-center justify-center
-                                               animate-bounce shadow-lg shadow-amber-500/30">
-                                {mudaSignals.length}
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="text-section-title">Open Muda Signals</h3>
-                            <p className="text-caption">{mudaSignals.length} observation{mudaSignals.length !== 1 ? 's' : ''}</p>
-                          </div>
-                        </div>
-                        <Link href="/gemba"
-                          className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1
-                                     hover:gap-2 transition-all duration-200">
-                          View All <ChevronRight className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-
-                      {mudaSignals.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10">
-                          <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-3">
-                            <ShieldCheck className="w-6 h-6 text-emerald-500" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">All clear</p>
-                          <p className="text-xs text-gray-400 mt-0.5">No open observations</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                          {mudaSignals.slice(0, 8).map((obs, i) => (
-                            <div key={obs.id}
-                              className="flex items-start gap-3 p-3 rounded-[var(--radius-xl)]
-                                         bg-gray-50/80 dark:bg-gray-700/30 backdrop-blur-sm
-                                         hover:bg-gray-100 dark:hover:bg-gray-700/50
-                                         hover:shadow-md hover:-translate-y-0.5
-                                         transition-all duration-300 group cursor-pointer
-                                         animate-slide-in-right"
-                              style={{ animationDelay: `${0.8 + i * 0.06}s` }}
-                            >
-                              <span className={`mt-0.5 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full
-                                                ${SEVERITY_BADGE[obs.severity] || SEVERITY_BADGE.medium}`}>
-                                {obs.severity}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-800 dark:text-white leading-snug line-clamp-1">
-                                  {obs.description}
-                                </p>
-                                <p className="text-[11px] text-gray-400 mt-0.5">
-                                  {WASTE_LABELS[obs.wasteCategory] || obs.wasteCategory}
-                                  <span className="mx-1">&middot;</span>{obs.status}
-                                </p>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all duration-200 mt-0.5" />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-
-          case 'muda':
-            if (isWidgetVisible('losses')) return null;
-            return (
-              <div key="muda" className="animate-fade-in-up" style={{ animationDelay: '0.68s' }}>
-                <div className="surface-card p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500
-                                        flex items-center justify-center shadow-sm shadow-amber-500/20">
-                          <CircleAlert className="w-4 h-4 text-white" />
-                        </div>
-                        {mudaSignals.length > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-500 text-white
-                                           text-[10px] font-bold flex items-center justify-center
-                                           animate-bounce shadow-lg shadow-amber-500/30">
-                            {mudaSignals.length}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="text-section-title">Open Muda Signals</h3>
-                        <p className="text-caption">{mudaSignals.length} observation{mudaSignals.length !== 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-                    <Link href="/gemba"
-                      className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1
-                                 hover:gap-2 transition-all duration-200">
-                      View All <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                  {mudaSignals.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10">
-                      <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-3">
-                        <ShieldCheck className="w-6 h-6 text-emerald-500" />
-                      </div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">All clear</p>
-                      <p className="text-xs text-gray-400 mt-0.5">No open observations</p>
-                    </div>
+                    </>
                   ) : (
-                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                      {mudaSignals.slice(0, 8).map((obs, i) => (
-                        <div key={obs.id}
-                          className="flex items-start gap-3 p-3 rounded-[var(--radius-xl)]
-                                     bg-gray-50/80 dark:bg-gray-700/30 backdrop-blur-sm
-                                     hover:bg-gray-100 dark:hover:bg-gray-700/50
-                                     hover:shadow-md hover:-translate-y-0.5
-                                     transition-all duration-300 group cursor-pointer
-                                     animate-slide-in-right"
-                          style={{ animationDelay: `${0.8 + i * 0.06}s` }}
-                        >
-                          <span className={`mt-0.5 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full
-                                            ${SEVERITY_BADGE[obs.severity] || SEVERITY_BADGE.medium}`}>
-                            {obs.severity}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-white leading-snug line-clamp-1">
-                              {obs.description}
-                            </p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">
-                              {WASTE_LABELS[obs.wasteCategory] || obs.wasteCategory}
-                              <span className="mx-1">&middot;</span>{obs.status}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all duration-200 mt-0.5" />
-                        </div>
-                      ))}
-                    </div>
+                    <EmptyState icon={ClipboardCheck} title="No production mix yet" description="Production output and scrap split will show here after the first completed runs." />
                   )}
                 </div>
-              </div>
-            );
 
-          case 'actions':
-            return (
-              <div key="actions" className="animate-fade-in-up" style={{ animationDelay: '0.75s' }}>
-                <h2 className="text-section-title mb-3">Quick Actions</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { label: 'Gemba Walk', href: '/gemba', icon: Eye, gradient: 'from-blue-600 to-blue-700', shadow: 'shadow-blue-500/20' },
-                    { label: '5S Audit', href: '/tools/five-s', icon: ClipboardCheck, gradient: 'from-orange-500 to-amber-500', shadow: 'shadow-orange-500/20' },
-                    { label: 'Kaizen Idea', href: '/tools/kaizen', icon: Lightbulb, gradient: 'from-blue-600 to-blue-700', shadow: 'shadow-blue-500/20' },
-                    { label: 'Quality', href: '/quality', icon: ShieldCheck, gradient: 'from-emerald-600 to-teal-500', shadow: 'shadow-emerald-500/20' },
-                  ].map(({ label, href, icon: Icon, gradient, shadow }, i) => (
-                    <Link key={href} href={href}
-                      className="group flex items-center gap-3 p-4
-                        surface-glass hover:shadow-lg hover:-translate-y-0.5
-                        transition-all duration-300 animate-fade-in-up"
-                      style={{ animationDelay: `${0.8 + i * 0.06}s` }}
-                    >
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient}
-                        flex items-center justify-center shadow-md ${shadow}
-                        group-hover:scale-110 transition-transform duration-200`}>
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{label}</span>
-                      <ArrowRight className="w-4 h-4 text-gray-300 ml-auto group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all duration-200" />
-                    </Link>
-                  ))}
+                <div className="rounded-[1rem] border border-[var(--border-default)] bg-[var(--surface-1)] p-5">
+                  <div className="mb-4">
+                    <p className="text-card-label">Operational Load</p>
+                    <p className="text-sm text-[var(--text-muted)]">Quick context on current site pressure and station count.</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <MetricCard label="Workstations" value={attention?.totalWorkstations || 0} />
+                    <MetricCard label="Open Muda" value={attention?.mudaSignals || 0} variant={(attention?.mudaSignals || 0) > 0 ? 'warning' : 'default'} />
+                    <MetricCard label="Down Assets" value={attention?.machinesDown || 0} variant={(attention?.machinesDown || 0) > 0 ? 'danger' : 'default'} />
+                    <MetricCard label="Behind Orders" value={attention?.posBehind || 0} variant={(attention?.posBehind || 0) > 0 ? 'warning' : 'default'} />
+                  </div>
                 </div>
               </div>
-            );
+            </SectionCard>
+          )}
+        </div>
 
-          default:
-            return null;
-        }
-      })}
+        <div className="space-y-5">
+          {visibleWidgetIds.has('losses') && (
+            <SectionCard
+              eyebrow="Losses"
+              title="Downtime structure"
+              description="Where time is leaking today, ranked from highest impact downward."
+            >
+              {lossRows.length === 0 ? (
+                <EmptyState icon={Activity} title="No recorded losses yet" description="Loss categories will appear once downtime events and changeovers are recorded." />
+              ) : (
+                <div className="space-y-4">
+                  {lossRows.map((row) => (
+                    <LossBar key={row.key} label={row.label} value={row.value} maxValue={lossMax} tone={row.tone} />
+                  ))}
+                  <div className="rounded-[1rem] border border-dashed border-[var(--border-strong)] bg-[var(--surface-1)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    Total loss time this period: <span className="font-semibold text-[var(--text-strong)]">{(losses?.totalHours || 0).toFixed(1)}h</span>
+                  </div>
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {visibleWidgetIds.has('muda') && (
+            <SectionCard
+              eyebrow="Signals"
+              title="Active muda watchlist"
+              description="Open waste observations that still require attention or assignment."
+              action={<Link href="/gemba" className="text-sm font-semibold text-blue-600 hover:text-blue-700">Open Gemba</Link>}
+            >
+              {mudaSignals.length === 0 ? (
+                <EmptyState icon={Eye} title="No open muda signals" description="When operators or leaders identify waste, it will surface here for review." />
+              ) : (
+                <div className="space-y-3">
+                  {mudaSignals.slice(0, 5).map((signal) => (
+                    <div key={signal.id} className="rounded-[1rem] border border-[var(--border-default)] bg-[var(--surface-1)] p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--text-strong)]">{WASTE_LABELS[signal.wasteCategory] || signal.wasteCategory}</p>
+                          <p className="mt-1 text-sm text-[var(--text-muted)] line-clamp-2">{signal.description}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${SEVERITY_CLASS[signal.severity] || SEVERITY_CLASS.medium}`}>
+                          {signal.severity}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {visibleWidgetIds.has('actions') && (
+            <SectionCard
+              eyebrow="Actions"
+              title="Next moves"
+              description="Jump directly into the operational workflows that keep this shift moving."
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { href: '/shopfloor', label: 'Record Production', icon: Factory, meta: 'Close runs, post quantities' },
+                  { href: '/quality', label: 'Quality Checks', icon: ShieldCheck, meta: 'Inspections, NCR, CAPA' },
+                  { href: '/equipment', label: 'Maintenance', icon: Wrench, meta: 'Plans, logs, CILT' },
+                  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, meta: 'Capture and review ideas' },
+                ].map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <Link key={action.href} href={action.href} className="interactive-card p-4 group">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-xl bg-[var(--brand-soft)] p-2.5 text-[var(--brand)]">
+                            <Icon className="h-4.5 w-4.5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--text-strong)]">{action.label}</p>
+                            <p className="mt-1 text-[13px] leading-5 text-[var(--text-muted)]">{action.meta}</p>
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-[var(--text-muted)] transition group-hover:translate-x-0.5" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
