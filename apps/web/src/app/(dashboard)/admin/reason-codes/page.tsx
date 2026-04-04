@@ -419,7 +419,7 @@ export default function ReasonCodesPage() {
                 <button
                   onClick={() => {
                     setAddingCategory(category);
-                    setAddForm({ code: '', label: '', color: meta.color });
+                    setAddForm({ code: '', label: '', color: meta.color, wsTypes: [] });
                     setEditingId(null);
                   }}
                   className="w-full flex items-center gap-2 px-5 py-2.5 text-xs font-medium text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-t border-gray-100 dark:border-gray-700"
