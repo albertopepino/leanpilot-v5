@@ -731,22 +731,24 @@ export default function ShopFloorPage() {
             Flag Issue
           </button>
 
-          {/* Close shift button */}
+          {/* End Shift — hand over to next operator, PO stays open */}
           <button
             onClick={() => setStep('close')}
-            className="w-full flex items-center justify-center gap-3 p-4 rounded-xl bg-gray-700 active:bg-gray-600 font-bold text-lg border border-gray-600"
+            className="w-full flex items-center justify-center gap-3 p-4 rounded-xl bg-blue-700 active:bg-blue-600 font-bold text-lg border border-blue-600"
             style={{ minHeight: 64 }}
           >
-            <CheckCircle2 className="w-7 h-7" />
-            Close Shift / End Run
+            <ArrowLeft className="w-7 h-7" />
+            End My Shift
           </button>
+          <p className="text-xs text-gray-500 text-center -mt-2">Hands over to next operator. PO stays open.</p>
         </div>
       )}
 
       {/* ── STEP 4: Close Shift ─────────────────────────────────────── */}
       {step === 'close' && (
         <div className="p-4 space-y-6">
-          <h2 className="text-xl font-bold">Close Run</h2>
+          <h2 className="text-xl font-bold">End My Shift</h2>
+          <p className="text-sm text-gray-400 -mt-4">Record your output and leave a note for the next operator. The production order stays open.</p>
 
           {/* Produced counter */}
           <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
@@ -818,7 +820,7 @@ export default function ShopFloorPage() {
             style={{ minHeight: 64 }}
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
-            Confirm & Close Run
+            Confirm & End Shift
           </button>
         </div>
       )}
