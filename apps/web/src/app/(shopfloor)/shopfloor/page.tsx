@@ -6,6 +6,7 @@ import {
   Factory, ArrowLeft, Play, AlertTriangle, Wrench, Pause,
   Clock, ShieldAlert, CalendarOff, Flag, ChevronRight,
   Plus, Minus, Send, X, CheckCircle2, Loader2, WifiOff, Wifi,
+  LogOut, UserCircle,
 } from 'lucide-react';
 
 // ── Error Boundary ────────────────────────────────────────────────────
@@ -526,12 +527,33 @@ export default function ShopFloorPage() {
           <Factory className="w-6 h-6 text-blue-400" />
           <span className="font-bold text-lg">Shop Floor</span>
         </div>
-        {selectedWs && (
-          <div className="text-right">
-            <div className="text-sm text-gray-400">{selectedWs.code}</div>
-            <div className="font-semibold">{selectedWs.name}</div>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {selectedWs && (
+            <div className="text-right">
+              <div className="text-sm text-gray-400">{selectedWs.code}</div>
+              <div className="font-semibold">{selectedWs.name}</div>
+            </div>
+          )}
+          {!selectedWs && (
+            <div className="flex items-center gap-2">
+              <UserCircle className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-400">{auth.getUser()?.firstName || 'User'}</span>
+            </div>
+          )}
+          <button
+            onClick={() => {
+              if (activeRun) {
+                if (!window.confirm('You have an active run. Logging out won\'t close it. Continue?')) return;
+              }
+              auth.logout();
+            }}
+            className="p-2 rounded-lg active:bg-gray-700 text-gray-400 hover:text-white"
+            aria-label="Log out"
+            title="Log out / Switch user"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {/* Error toast */}
