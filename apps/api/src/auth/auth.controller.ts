@@ -8,6 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { TwoFactorTokenDto, TwoFactorVerifyDto } from './dto/two-factor.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -75,12 +76,11 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Enable 2FA after verifying token' })
-  @ApiBody({ schema: { properties: { token: { type: 'string' } } } })
   async enableTwoFactor(
     @CurrentUser('id') userId: string,
-    @Body() body: { token: string },
+    @Body() dto: TwoFactorTokenDto,
   ) {
-    return this.auth.enableTwoFactor(userId, body.token);
+    return this.auth.enableTwoFactor(userId, dto.token);
   }
 
   @Post('2fa/disable')
@@ -88,19 +88,17 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Disable 2FA' })
-  @ApiBody({ schema: { properties: { token: { type: 'string' } } } })
   async disableTwoFactor(
     @CurrentUser('id') userId: string,
-    @Body() body: { token: string },
+    @Body() dto: TwoFactorTokenDto,
   ) {
-    return this.auth.disableTwoFactor(userId, body.token);
+    return this.auth.disableTwoFactor(userId, dto.token);
   }
 
   @Post('2fa/verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify 2FA code during login' })
-  @ApiBody({ schema: { properties: { tempToken: { type: 'string' }, token: { type: 'string' } } } })
-  async verifyTwoFactor(@Body() body: { tempToken: string; token: string }) {
-    return this.auth.verifyTwoFactorLogin(body.tempToken, body.token);
+  async verifyTwoFactor(@Body() dto: TwoFactorVerifyDto) {
+    return this.auth.verifyTwoFactorLogin(dto.tempToken, dto.token);
   }
 }
