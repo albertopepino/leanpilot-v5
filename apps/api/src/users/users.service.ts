@@ -118,4 +118,77 @@ export class UsersService {
       data: { isActive: false },
     });
   }
+
+  /** GDPR Art. 20 — Export all user data in machine-readable format */
+  async exportUserData(userId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId },
+      select: {
+        id: true, email: true, firstName: true, lastName: true, role: true,
+        siteId: true, corporateId: true, isActive: true, lastLogin: true, createdAt: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const [
+      productionRuns, fiveSAudits, kaizenIdeas, gembaWalks,
+      gembaObservations, qualityInspections, safetyIncidents,
+      maintenanceLogs, ciltChecks, auditLogs,
+    ] = await Promise.all([
+      this.prisma.productionRun.findMany({ where: { operatorId: userId }, select: { id: true, startedAt: true, endedAt: true, producedQuantity: true, scrapQuantity: true } }),
+      this.prisma.fiveSAudit.findMany({ where: { auditorId: userId }, select: { id: true, area: true, status: true, percentage: true, createdAt: true } }),
+      this.prisma.kaizenIdea.findMany({ where: { submittedById: userId }, select: { id: true, title: true, status: true, createdAt: true } }),
+      this.prisma.gembaWalk.findMany({ where: { walkerId: userId }, select: { id: true, date: true, status: true } }),
+      this.prisma.gembaObservation.findMany({ where: { observerId: userId }, select: { id: true, wasteCategory: true, description: true, status: true } }),
+      this.prisma.qualityInspection.findMany({ where: { inspectorId: userId }, select: { id: true, status: true, createdAt: true } }),
+      this.prisma.safetyIncident.findMany({ where: { reporterId: userId }, select: { id: true, title: true, type: true, severity: true, date: true } }),
+      this.prisma.maintenanceLog.findMany({ where: { performedById: userId }, select: { id: true, type: true, description: true, performedAt: true } }),
+      this.prisma.ciltCheck.findMany({ where: { operatorId: userId }, select: { id: true, date: true, shift: true } }),
+      this.prisma.auditLog.findMany({ where: { userId }, select: { action: true, entityType: true, timestamp: true }, take: 100, orderBy: { timestamp: 'desc' } }),
+    ]);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      personalData: user,
+      activityData: {
+        productionRuns,
+        fiveSAudits,
+        kaizenIdeas,
+        gembaWalks,
+        gembaObservations,
+        qualityInspections,
+        safetyIncidents,
+        maintenanceLogs,
+        ciltChecks,
+      },
+      auditLog: auditLogs,
+    };
+  }
+
+  /** GDPR Art. 17 — Anonymize user and delete non-essential data */
+  async gdprDelete(userId: string, callerCorporateId: string) {
+    const user = await this.prisma.user.findFirst({ where: { id: userId, corporateId: callerCorporateId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    // 1. Delete non-essential data
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    await this.prisma.passwordResetToken.deleteMany({ where: { email: user.email } });
+    await this.prisma.notification.deleteMany({ where: { userId } });
+    await this.prisma.userSkill.deleteMany({ where: { userId } });
+
+    // 2. Anonymize the user record (keep for foreign key integrity on compliance records)
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: `deleted-${userId}@leanpilot.local`,
+        firstName: '[Deleted]',
+        lastName: '[User]',
+        password: 'DELETED',
+        isActive: false,
+        customRoleId: null,
+      },
+    });
+
+    return { anonymized: true, userId };
+  }
 }

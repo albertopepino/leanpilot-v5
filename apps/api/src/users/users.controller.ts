@@ -9,12 +9,20 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('users')
 export class UsersController {
   constructor(private users: UsersService) {}
 
+  /** GDPR Art. 20 — Any authenticated user can export their own data */
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Export own user data (GDPR Art. 20)' })
+  async exportMyData(@CurrentUser('id') userId: string) {
+    return this.users.exportUserData(userId);
+  }
+
   @Get()
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission('people', 'view')
   @ApiOperation({ summary: 'List users (scoped by role)' })
   async findAll(
@@ -26,6 +34,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission('people', 'view')
   @ApiOperation({ summary: 'Get user by ID' })
   async findById(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
@@ -33,6 +42,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Update user (admin only)' })
   async update(
@@ -44,9 +54,22 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Deactivate user (soft delete)' })
   async deactivate(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
     return this.users.deactivate(id, corporateId);
+  }
+
+  /** GDPR Art. 17 — Anonymize user and delete non-essential data */
+  @Delete(':id/gdpr')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission('people', 'manage')
+  @ApiOperation({ summary: 'GDPR delete user (anonymize + purge non-essential data)' })
+  async gdprDelete(
+    @Param('id') id: string,
+    @CurrentUser('corporateId') corporateId: string,
+  ) {
+    return this.users.gdprDelete(id, corporateId);
   }
 }

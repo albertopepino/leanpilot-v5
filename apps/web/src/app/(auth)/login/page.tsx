@@ -263,9 +263,20 @@ function LoginForm() {
           </div>
 
           {/* Footer */}
-          <p className="text-center text-[11px] text-gray-300 dark:text-gray-600 mt-8">
-            LeanPilot v4 — Manufacturing Intelligence by Centro Studi Grassi
-          </p>
+          <div className="text-center mt-8 space-y-2">
+            <div className="flex items-center justify-center gap-3 text-[11px]">
+              <Link href="/privacy" className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                Privacy Policy
+              </Link>
+              <span className="text-gray-300 dark:text-gray-600">|</span>
+              <Link href="/terms" className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+            <p className="text-[11px] text-gray-300 dark:text-gray-600">
+              LeanPilot v4 — Manufacturing Intelligence by Centro Studi Grassi
+            </p>
+          </div>
         </div>
       </div>
     </div>
