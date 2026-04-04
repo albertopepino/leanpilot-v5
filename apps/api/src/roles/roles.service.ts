@@ -54,13 +54,18 @@ export class RolesService {
     return { roles, total };
   }
 
-  async findById(id: string) {
+  async findById(id: string, siteId?: string) {
     const role = await this.prisma.customRole.findUnique({
       where: { id },
       include: { permissions: true, _count: { select: { users: true } } },
     });
 
     if (!role) {
+      throw new NotFoundException(`Role ${id} not found`);
+    }
+
+    // If siteId is provided, enforce that the role belongs to the caller's site or is a system role
+    if (siteId && !role.isSystem && role.siteId !== siteId) {
       throw new NotFoundException(`Role ${id} not found`);
     }
 
@@ -90,7 +95,7 @@ export class RolesService {
   }
 
   async update(id: string, siteId: string, data: UpdateRoleInput) {
-    const existing = await this.findById(id);
+    const existing = await this.findById(id, siteId);
 
     if (existing.isSystem) {
       throw new BadRequestException('Cannot modify system roles');
@@ -126,7 +131,7 @@ export class RolesService {
   }
 
   async delete(id: string, siteId: string) {
-    const existing = await this.findById(id);
+    const existing = await this.findById(id, siteId);
 
     if (existing.isSystem) {
       throw new BadRequestException('Cannot delete system roles');
@@ -147,7 +152,7 @@ export class RolesService {
   }
 
   async cloneRole(id: string, siteId: string, newName: string) {
-    const source = await this.findById(id);
+    const source = await this.findById(id, siteId);
 
     return this.prisma.customRole.create({
       data: {

@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -47,8 +49,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ short: { ttl: 60000, limit: 3 } })
   @ApiOperation({ summary: 'Request password reset email' })
-  @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
-  async forgotPassword(@Body() body: { email: string }) {
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
     await this.auth.requestPasswordReset(body.email);
     return { message: 'If an account exists, a reset email has been sent' };
   }
@@ -56,8 +57,7 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
-  @ApiBody({ schema: { properties: { token: { type: 'string' }, password: { type: 'string' } } } })
-  async resetPassword(@Body() body: { token: string; password: string }) {
+  async resetPassword(@Body() body: ResetPasswordDto) {
     await this.auth.resetPassword(body.token, body.password);
     return { message: 'Password reset successful' };
   }

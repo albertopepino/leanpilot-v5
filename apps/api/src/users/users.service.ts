@@ -64,9 +64,15 @@ export class UsersService {
     return { data: mappedData, total, limit: take, offset: skip };
   }
 
-  async findById(id: string, callerCorporateId: string) {
+  async findById(id: string, caller: { role: string; siteId: string; corporateId: string }) {
+    const where: any = { id };
+    if (caller.role === 'corporate_admin') {
+      where.corporateId = caller.corporateId;
+    } else {
+      where.siteId = caller.siteId;
+    }
     const user = await this.prisma.user.findFirst({
-      where: { id, corporateId: callerCorporateId },
+      where,
       select: {
         id: true,
         email: true,
@@ -87,8 +93,14 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto, currentUser: { role: string; corporateId: string }) {
-    const target = await this.prisma.user.findFirst({ where: { id, corporateId: currentUser.corporateId } });
+  async update(id: string, dto: UpdateUserDto, currentUser: { role: string; siteId: string; corporateId: string }) {
+    const where: any = { id };
+    if (currentUser.role === 'corporate_admin') {
+      where.corporateId = currentUser.corporateId;
+    } else {
+      where.siteId = currentUser.siteId;
+    }
+    const target = await this.prisma.user.findFirst({ where });
     if (!target) throw new NotFoundException('User not found');
 
     // Cannot promote someone to a role higher than your own
@@ -118,8 +130,14 @@ export class UsersService {
     });
   }
 
-  async deactivate(id: string, callerCorporateId: string) {
-    const user = await this.prisma.user.findFirst({ where: { id, corporateId: callerCorporateId } });
+  async deactivate(id: string, caller: { role: string; siteId: string; corporateId: string }) {
+    const where: any = { id };
+    if (caller.role === 'corporate_admin') {
+      where.corporateId = caller.corporateId;
+    } else {
+      where.siteId = caller.siteId;
+    }
+    const user = await this.prisma.user.findFirst({ where });
     if (!user) throw new NotFoundException('User not found');
     return this.prisma.user.update({
       where: { id },
@@ -174,8 +192,14 @@ export class UsersService {
   }
 
   /** GDPR Art. 17 — Anonymize user and delete non-essential data */
-  async gdprDelete(userId: string, callerCorporateId: string) {
-    const user = await this.prisma.user.findFirst({ where: { id: userId, corporateId: callerCorporateId } });
+  async gdprDelete(userId: string, caller: { role: string; siteId: string; corporateId: string }) {
+    const where: any = { id: userId };
+    if (caller.role === 'corporate_admin') {
+      where.corporateId = caller.corporateId;
+    } else {
+      where.siteId = caller.siteId;
+    }
+    const user = await this.prisma.user.findFirst({ where });
     if (!user) throw new NotFoundException('User not found');
 
     // 1. Delete non-essential data

@@ -16,6 +16,10 @@ import { PermissionGuard } from './permission.guard';
 import { RequirePermission } from './permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RolesService } from './roles.service';
+import { CreateRoleDto } from './dto/create-role.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
+import { AssignRoleDto } from './dto/assign-role.dto';
+import { CloneRoleDto } from './dto/clone-role.dto';
 
 @Controller('roles')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -33,19 +37,14 @@ export class RolesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findById(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: { siteId: string }) {
+    return this.rolesService.findById(id, user.siteId);
   }
 
   @Post()
   create(
     @CurrentUser() user: { siteId: string },
-    @Body()
-    body: {
-      name: string;
-      description?: string;
-      permissions: Array<{ featureGroup: string; level: string }>;
-    },
+    @Body() body: CreateRoleDto,
   ) {
     return this.rolesService.create(user.siteId, body);
   }
@@ -53,7 +52,7 @@ export class RolesController {
   @Patch('assign')
   assign(
     @CurrentUser() user: { siteId: string },
-    @Body() body: { userId: string; roleId: string },
+    @Body() body: AssignRoleDto,
   ) {
     return this.rolesService.assignToUser(body.userId, body.roleId, user.siteId);
   }
@@ -62,12 +61,7 @@ export class RolesController {
   update(
     @Param('id') id: string,
     @CurrentUser() user: { siteId: string },
-    @Body()
-    body: {
-      name?: string;
-      description?: string;
-      permissions?: Array<{ featureGroup: string; level: string }>;
-    },
+    @Body() body: UpdateRoleDto,
   ) {
     return this.rolesService.update(id, user.siteId, body);
   }
@@ -84,7 +78,7 @@ export class RolesController {
   clone(
     @Param('id') id: string,
     @CurrentUser() user: { siteId: string },
-    @Body() body: { name: string },
+    @Body() body: CloneRoleDto,
   ) {
     return this.rolesService.cloneRole(id, user.siteId, body.name);
   }

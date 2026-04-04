@@ -66,11 +66,15 @@ export class DashboardController {
       where: { id: userId },
       select: { dashboardLayout: true },
     });
-    return {
-      layout: user?.dashboardLayout
-        ? JSON.parse(user.dashboardLayout)
-        : null,
-    };
+    let layout = null;
+    if (user?.dashboardLayout) {
+      try {
+        layout = JSON.parse(user.dashboardLayout);
+      } catch {
+        // Corrupted layout data, return null
+      }
+    }
+    return { layout };
   }
 
   @Patch('layout')

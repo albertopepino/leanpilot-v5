@@ -24,9 +24,11 @@ export class UploadsController {
     @CurrentUser('siteId') siteId: string,
   ) {
     if (!file) throw new BadRequestException('No file provided');
-    const validFunctions = ['quality', 'five-s', 'kaizen', 'gemba', 'documents'];
-    if (!validFunctions.includes(func)) {
+    const VALID_FUNCTIONS = ['quality', 'five-s', 'kaizen', 'gemba', 'documents', 'safety', 'maintenance', 'general'];
+    if (!func) {
       func = 'general';
+    } else if (!VALID_FUNCTIONS.includes(func)) {
+      throw new BadRequestException(`Invalid upload function: ${func}. Must be one of: ${VALID_FUNCTIONS.join(', ')}`);
     }
     return this.uploads.upload(file, siteId, func);
   }

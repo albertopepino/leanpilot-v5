@@ -37,8 +37,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission('people', 'view')
   @ApiOperation({ summary: 'Get user by ID' })
-  async findById(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
-    return this.users.findById(id, corporateId);
+  async findById(@Param('id') id: string, @CurrentUser() user: { role: string; siteId: string; corporateId: string }) {
+    return this.users.findById(id, user);
   }
 
   @Patch(':id')
@@ -57,8 +57,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission('people', 'manage')
   @ApiOperation({ summary: 'Deactivate user (soft delete)' })
-  async deactivate(@Param('id') id: string, @CurrentUser('corporateId') corporateId: string) {
-    return this.users.deactivate(id, corporateId);
+  async deactivate(@Param('id') id: string, @CurrentUser() user: { role: string; siteId: string; corporateId: string }) {
+    return this.users.deactivate(id, user);
   }
 
   /** GDPR Art. 17 — Anonymize user and delete non-essential data */
@@ -68,8 +68,8 @@ export class UsersController {
   @ApiOperation({ summary: 'GDPR delete user (anonymize + purge non-essential data)' })
   async gdprDelete(
     @Param('id') id: string,
-    @CurrentUser('corporateId') corporateId: string,
+    @CurrentUser() user: { role: string; siteId: string; corporateId: string },
   ) {
-    return this.users.gdprDelete(id, corporateId);
+    return this.users.gdprDelete(id, user);
   }
 }

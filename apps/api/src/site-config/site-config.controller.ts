@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../roles/permission.guard';
 import { RequirePermission } from '../roles/permission.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UpdateToolConfigsDto } from './dto/update-tool-configs.dto';
 
 @ApiTags('Site Configuration')
 @ApiBearerAuth()
@@ -22,9 +23,7 @@ export class SiteConfigController {
   @RequirePermission('people', 'manage')
   async updateToolConfigs(
     @CurrentUser('siteId') siteId: string,
-    @Body() body: {
-      tools: Array<{ toolSlug: string; isEnabled: boolean; minRole: string }>;
-    },
+    @Body() body: UpdateToolConfigsDto,
   ) {
     return this.siteConfig.updateToolConfigs(siteId, body.tools);
   }
