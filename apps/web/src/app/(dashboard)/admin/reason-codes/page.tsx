@@ -92,7 +92,7 @@ export default function ReasonCodesPage() {
       setAddForm({ code: '', label: '', color: '#6b7280' });
       loadCodes();
     } catch (err: any) {
-      toast(err?.message || 'Failed to create reason code', 'error');
+      toast('error', err?.message || 'Failed to create reason code');
     } finally {
       setSaving(false);
     }
@@ -109,7 +109,7 @@ export default function ReasonCodesPage() {
       setEditingId(null);
       loadCodes();
     } catch (err: any) {
-      toast(err?.message || 'Failed to update reason code', 'error');
+      toast('error', err?.message || 'Failed to update reason code');
     } finally {
       setSaving(false);
     }
@@ -120,10 +120,10 @@ export default function ReasonCodesPage() {
       await api.patch(`/shopfloor/reason-codes/${rc.id}`, {
         isActive: !rc.isActive,
       });
-      toast(`Reason code ${rc.isActive ? 'disabled' : 'enabled'}`, 'success');
+      toast('success', `Reason code ${rc.isActive ? 'disabled' : 'enabled'}`);
       loadCodes();
     } catch (err: any) {
-      toast(err?.message || 'Failed to toggle reason code', 'error');
+      toast('error', err?.message || 'Failed to toggle reason code');
     }
   };
 
@@ -135,7 +135,7 @@ export default function ReasonCodesPage() {
       setDeleteConfirmId(null);
       loadCodes();
     } catch (err: any) {
-      toast(err?.message || 'Failed to delete reason code', 'error');
+      toast('error', err?.message || 'Failed to delete reason code');
     } finally {
       setSaving(false);
     }
