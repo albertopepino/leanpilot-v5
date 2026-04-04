@@ -262,14 +262,15 @@ model Workstation {
 // Configurable reason codes per site, per category
 // category: breakdown | changeover | quality | idle | maintenance | planned_stop | scrap
 model ReasonCode {
-  id        String  @id @default(cuid())
-  siteId    String
-  category  String // which status or scrap this reason applies to
-  code      String // short code, e.g. "MECH"
-  label     String // display name, e.g. "Mechanical failure"
-  color     String  @default("#gray")
-  sortOrder Int     @default(0)
-  isActive  Boolean @default(true)
+  id              String  @id @default(cuid())
+  siteId          String
+  category        String // which status or scrap this reason applies to
+  code            String // short code, e.g. "MECH"
+  label           String // display name, e.g. "Mechanical failure"
+  color           String  @default("#gray")
+  sortOrder       Int     @default(0)
+  isActive        Boolean @default(true)
+  workstationTypes String? // JSON: ["machine","line","manual"] — null = all types
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 

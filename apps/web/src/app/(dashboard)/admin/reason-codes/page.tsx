@@ -28,6 +28,12 @@ const PRESET_COLORS = [
   { value: '#6b7280', label: 'Gray' },
 ];
 
+const WS_TYPES = [
+  { value: 'machine', label: 'Machine' },
+  { value: 'line', label: 'Line' },
+  { value: 'manual', label: 'Manual' },
+];
+
 type ReasonCode = {
   id: string;
   siteId: string;
@@ -37,6 +43,7 @@ type ReasonCode = {
   color: string;
   sortOrder: number;
   isActive: boolean;
+  workstationTypes: string | null;
 };
 
 export default function ReasonCodesPage() {
@@ -49,7 +56,7 @@ export default function ReasonCodesPage() {
   const { toast } = useToast();
 
   // Add form state
-  const [addForm, setAddForm] = useState({ code: '', label: '', color: '#6b7280' });
+  const [addForm, setAddForm] = useState({ code: '', label: '', color: '#6b7280', wsTypes: [] as string[] });
   // Edit form state
   const [editForm, setEditForm] = useState({ label: '', color: '' });
 
@@ -85,11 +92,12 @@ export default function ReasonCodesPage() {
         code: addForm.code.toUpperCase().trim(),
         label: addForm.label.trim(),
         color: addForm.color,
+        workstationTypes: addForm.wsTypes.length > 0 ? JSON.stringify(addForm.wsTypes) : null,
         sortOrder: maxSort + 1,
       });
       toast('success', 'Reason code created');
       setAddingCategory(null);
-      setAddForm({ code: '', label: '', color: '#6b7280' });
+      setAddForm({ code: '', label: '', color: '#6b7280', wsTypes: [] });
       loadCodes();
     } catch (err: any) {
       toast('error', err?.message || 'Failed to create reason code');
@@ -259,6 +267,14 @@ export default function ReasonCodesPage() {
                         </code>
                         <span className="flex-1 text-sm text-gray-900 dark:text-white">
                           {rc.label}
+                          {rc.workstationTypes && (() => {
+                            try {
+                              const types = JSON.parse(rc.workstationTypes) as string[];
+                              return types.length > 0 ? (
+                                <span className="ml-2 text-xs text-gray-400">({types.join(', ')})</span>
+                              ) : null;
+                            } catch { return null; }
+                          })()}
                         </span>
                         <div
                           className="w-4 h-4 rounded-full flex-shrink-0"
@@ -337,7 +353,7 @@ export default function ReasonCodesPage() {
                         if (e.key === 'Enter') handleAdd(category);
                         if (e.key === 'Escape') {
                           setAddingCategory(null);
-                          setAddForm({ code: '', label: '', color: '#6b7280' });
+                          setAddForm({ code: '', label: '', color: '#6b7280', wsTypes: [] });
                         }
                       }}
                     />
@@ -356,6 +372,28 @@ export default function ReasonCodesPage() {
                         />
                       ))}
                     </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>Applies to:</span>
+                      {WS_TYPES.map(wt => (
+                        <label key={wt.value} className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={addForm.wsTypes.includes(wt.value)}
+                            onChange={e => {
+                              setAddForm(f => ({
+                                ...f,
+                                wsTypes: e.target.checked
+                                  ? [...f.wsTypes, wt.value]
+                                  : f.wsTypes.filter(t => t !== wt.value),
+                              }));
+                            }}
+                            className="rounded text-brand-600"
+                          />
+                          {wt.label}
+                        </label>
+                      ))}
+                      <span className="text-gray-400">(none = all)</span>
+                    </div>
                     <button
                       onClick={() => handleAdd(category)}
                       disabled={saving}
@@ -366,7 +404,7 @@ export default function ReasonCodesPage() {
                     <button
                       onClick={() => {
                         setAddingCategory(null);
-                        setAddForm({ code: '', label: '', color: '#6b7280' });
+                        setAddForm({ code: '', label: '', color: '#6b7280', wsTypes: [] });
                       }}
                       className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                     >

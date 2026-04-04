@@ -302,12 +302,25 @@ export class ShopfloorService {
     });
   }
 
-  /** Get reason codes for a status category */
-  async getReasonCodes(siteId: string, category: string) {
-    return this.prisma.reasonCode.findMany({
+  /** Get reason codes for a status category, optionally filtered by workstation type */
+  async getReasonCodes(siteId: string, category: string, workstationType?: string) {
+    const codes = await this.prisma.reasonCode.findMany({
       where: { siteId, category, isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
+
+    // Filter by workstation type if specified
+    if (workstationType) {
+      return codes.filter(rc => {
+        if (!rc.workstationTypes) return true; // null = applies to all
+        try {
+          const types = JSON.parse(rc.workstationTypes) as string[];
+          return types.length === 0 || types.includes(workstationType);
+        } catch { return true; }
+      });
+    }
+
+    return codes;
   }
 
   /** Get all reason codes for admin management */
@@ -319,7 +332,7 @@ export class ShopfloorService {
   }
 
   /** Create a new reason code */
-  async createReasonCode(siteId: string, data: { category: string; code: string; label: string; color?: string; sortOrder?: number }) {
+  async createReasonCode(siteId: string, data: { category: string; code: string; label: string; color?: string; sortOrder?: number; workstationTypes?: string | null }) {
     return this.prisma.reasonCode.create({
       data: { siteId, ...data, color: data.color || '#6b7280' },
     });

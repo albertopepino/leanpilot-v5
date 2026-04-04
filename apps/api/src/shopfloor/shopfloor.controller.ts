@@ -44,7 +44,7 @@ export class ShopfloorController {
   @RequirePermission('people', 'manage')
   async createReasonCode(
     @CurrentUser('siteId') siteId: string,
-    @Body() body: { category: string; code: string; label: string; color?: string; sortOrder?: number },
+    @Body() body: { category: string; code: string; label: string; color?: string; sortOrder?: number; workstationTypes?: string | null },
   ) {
     return this.shopfloor.createReasonCode(siteId, body);
   }
@@ -70,8 +70,12 @@ export class ShopfloorController {
 
   @Get('reason-codes')
   @RequirePermission('production', 'participate')
-  async getReasonCodes(@CurrentUser('siteId') siteId: string, @Query('category') category: string) {
-    return this.shopfloor.getReasonCodes(siteId, category);
+  async getReasonCodes(
+    @CurrentUser('siteId') siteId: string,
+    @Query('category') category: string,
+    @Query('workstationType') workstationType?: string,
+  ) {
+    return this.shopfloor.getReasonCodes(siteId, category, workstationType);
   }
 
   @Post('start-run')

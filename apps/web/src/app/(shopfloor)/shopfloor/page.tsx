@@ -323,10 +323,11 @@ export default function ShopFloorPage() {
 
   const loadReasonCodes = useCallback(async (category: string) => {
     try {
-      const codes = await api.get<any>(`/shopfloor/reason-codes?category=${category}`);
+      const wsType = selectedWs?.type || '';
+      const codes = await api.get<any>(`/shopfloor/reason-codes?category=${category}${wsType ? `&workstationType=${wsType}` : ''}`);
       setReasonCodes(Array.isArray(codes) ? codes : codes?.data || []);
     } catch { /* ignore */ }
-  }, []);
+  }, [selectedWs]);
 
   useEffect(() => {
     loadWorkstations();
