@@ -44,15 +44,15 @@ interface FiveSAudit {
 }
 
 const CATEGORIES = [
-  { key: 'sort', label: 'Sort (Seiri)', desc: 'Remove unnecessary items', emoji: '🗂️' },
-  { key: 'set_in_order', label: 'Set in Order (Seiton)', desc: 'Organize remaining items', emoji: '📐' },
-  { key: 'shine', label: 'Shine (Seiso)', desc: 'Clean the workspace', emoji: '✨' },
-  { key: 'standardize', label: 'Standardize (Seiketsu)', desc: 'Create consistent processes', emoji: '📋' },
-  { key: 'sustain', label: 'Sustain (Shitsuke)', desc: 'Maintain discipline', emoji: '🔄' },
-  { key: 'safety', label: 'Safety', desc: 'Hazard identification & PPE', emoji: '🦺' },
+  { key: 'sort', label: 'Sort (Seiri)', desc: 'Remove unnecessary items', emoji: '\u{1F5C2}\uFE0F' },
+  { key: 'set_in_order', label: 'Set in Order (Seiton)', desc: 'Organize remaining items', emoji: '\u{1F4D0}' },
+  { key: 'shine', label: 'Shine (Seiso)', desc: 'Clean the workspace', emoji: '\u2728' },
+  { key: 'standardize', label: 'Standardize (Seiketsu)', desc: 'Create consistent processes', emoji: '\u{1F4CB}' },
+  { key: 'sustain', label: 'Sustain (Shitsuke)', desc: 'Maintain discipline', emoji: '\u{1F504}' },
+  { key: 'safety', label: 'Safety', desc: 'Hazard identification & PPE', emoji: '\u{1F9BA}' },
 ];
 
-// Scoring criteria per category — what each score 1-5 means
+// Scoring criteria per category -- what each score 1-5 means
 const SCORE_CRITERIA: Record<string, Record<number, string>> = {
   sort: {
     1: 'Unnecessary items everywhere, no red-tag process in place',
@@ -153,6 +153,29 @@ const ScoreCriteriaTooltip = ({ categoryKey }: { categoryKey: string }) => {
   );
 };
 
+// Circular progress indicator for score percentage
+const CircularScore = ({ percentage }: { percentage: number }) => {
+  const color = percentage >= 80 ? '#22c55e' : percentage >= 60 ? '#eab308' : '#ef4444';
+  return (
+    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id={`scoreGrad-${percentage}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color} />
+          <stop offset="100%" stopColor={color} stopOpacity="0.6" />
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-gray-200 dark:text-gray-700" />
+      <circle cx="32" cy="32" r="28" fill="none" stroke={`url(#scoreGrad-${percentage})`} strokeWidth="4" strokeLinecap="round"
+        strokeDasharray={`${percentage * 1.76} 176`}
+        className="transition-all duration-1000 ease-out" />
+      <text x="32" y="32" textAnchor="middle" dominantBaseline="central"
+        className="fill-gray-900 dark:fill-white text-[14px] font-bold rotate-90" transform="rotate(90, 32, 32)">
+        {percentage}%
+      </text>
+    </svg>
+  );
+};
+
 // ── 5S Trends types ────────────────────────────────────────────
 interface FiveSCategoryScore {
   sort: number;
@@ -200,7 +223,7 @@ function FiveSTrendsSection() {
   if (loading) {
     return (
       <div className="mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="h-48 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
           </div>
@@ -211,7 +234,7 @@ function FiveSTrendsSection() {
 
   if (!trends || trends.insufficientData) {
     return (
-      <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
         <div className="text-center py-6">
           <TrendingUp className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -236,7 +259,8 @@ function FiveSTrendsSection() {
     <div className="mb-6 space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         {/* Radar chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm
+                        bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-950/10">
           <h3 className="font-medium text-gray-900 dark:text-white mb-4 text-center">Current vs Previous Audit</h3>
           <ResponsiveContainer width="100%" height={280}>
             <RechartsRadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
@@ -260,23 +284,23 @@ function FiveSTrendsSection() {
         </div>
 
         {/* Area comparison + sparkline */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
           <h3 className="font-medium text-gray-900 dark:text-white mb-4">Area Scores</h3>
           {areas.length > 0 ? (
             <div className="space-y-3">
-              {areas.map(area => {
+              {areas.map((area, i) => {
                 const pct = area.latestPercentage;
                 const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-red-500';
                 return (
-                  <div key={area.area}>
+                  <div key={area.area} className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]" style={{ animationDelay: `${i * 0.08}s` }}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{area.area}</span>
                       <span className={`text-sm font-mono font-bold ${
                         pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-yellow-600' : 'text-red-600'
                       }`}>{pct}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className={`h-2 rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                      <div className={`h-2 rounded-full transition-all duration-1000 ease-out ${color}`} style={{ width: `${pct}%` }} />
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{new Date(area.latestDate).toLocaleDateString()}</p>
                   </div>
@@ -381,7 +405,7 @@ export default function FiveSPage() {
       setNewArea('');
       setCustomArea('');
       setNewNotes('');
-      toast('success', 'Audit created — start scoring');
+      toast('success', 'Audit created -- start scoring');
     } catch (e: any) {
       setError(e.message || 'Failed to create audit');
     } finally {
@@ -523,10 +547,10 @@ export default function FiveSPage() {
           key={v}
           type="button"
           onClick={() => onChange(v === value ? 0 : v)}
-          className="p-0.5 transition-colors"
+          className="p-0.5 transition-all duration-200 hover:scale-110"
           aria-label={`Score ${v}`}
         >
-          <Star className={`w-6 h-6 ${v <= value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`} />
+          <Star className={`w-6 h-6 transition-colors duration-200 ${v <= value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`} />
         </button>
       ))}
       <span className="ml-2 text-sm font-mono text-gray-500 dark:text-gray-400 self-center">{value}/5</span>
@@ -537,11 +561,21 @@ export default function FiveSPage() {
   if (view === 'list') {
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}} />
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">5S / 6S Audit</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Workplace organization audits — Sort, Set in Order, Shine, Standardize, Sustain, Safety
+              Workplace organization audits -- Sort, Set in Order, Shine, Standardize, Sustain, Safety
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -555,14 +589,14 @@ export default function FiveSPage() {
                 Date: new Date(a.createdAt).toLocaleDateString(),
               })), '5s-audits')}
               disabled={audits.length === 0}
-              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-300 disabled:opacity-40"
               title="Export CSV"
             >
               <Download className="w-4 h-4" />
             </button>
             <button
               onClick={() => setView('create')}
-              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-brand-600/25"
             >
               <Plus className="w-4 h-4" />
               New Audit
@@ -585,35 +619,38 @@ export default function FiveSPage() {
           />
         ) : (
           <div className="grid gap-3">
-            {audits.map(audit => (
-              <Card key={audit.id} onClick={() => openDetail(audit)}>
-                <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">{audit.area}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {audit.auditor?.firstName} {audit.auditor?.lastName} — {new Date(audit.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {audit.status === 'completed' && (
-                    <span className={`text-lg font-bold ${
-                      audit.percentage >= 80 ? 'text-green-600' :
-                      audit.percentage >= 60 ? 'text-yellow-600' :
-                      'text-red-600'
+            {audits.map((audit, i) => (
+              <div
+                key={audit.id}
+                className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]"
+                style={{ animationDelay: `${i * 0.06}s` }}
+              >
+                <Card onClick={() => openDetail(audit)}>
+                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Circular score indicator */}
+                    {audit.status === 'completed' && (
+                      <CircularScore percentage={audit.percentage} />
+                    )}
+                    <div>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{audit.area}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {audit.auditor?.firstName} {audit.auditor?.lastName} -- {new Date(audit.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                      audit.status === 'completed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm shadow-green-500/10'
+                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                     }`}>
-                      {audit.percentage}%
+                      {audit.status === 'completed' ? 'Completed' : 'In Progress'}
                     </span>
-                  )}
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    audit.status === 'completed'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                  }`}>
-                    {audit.status === 'completed' ? 'Completed' : 'In Progress'}
-                  </span>
-                </div>
-                </div>
-              </Card>
+                  </div>
+                  </div>
+                </Card>
+              </div>
             ))}
           </div>
         )}
@@ -625,12 +662,19 @@ export default function FiveSPage() {
   if (view === 'create') {
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}} />
         <Breadcrumb items={[
           { label: '5S Audits', onClick: () => setView('list') },
           { label: 'New Audit' },
         ]} />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">New 5S Audit</h1>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-lg">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-lg shadow-sm
+                        opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]">
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
               <span className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</span>
@@ -642,9 +686,9 @@ export default function FiveSPage() {
             <select
               value={newArea}
               onChange={e => setNewArea(e.target.value)}
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]"
             >
-              <option value="">{wsFailed ? 'Workstations unavailable — use custom' : 'Select workstation or area...'}</option>
+              <option value="">{wsFailed ? 'Workstations unavailable -- use custom' : 'Select workstation or area...'}</option>
               {workstations.map(ws => (
                 <option key={ws.id} value={ws.name}>
                   {ws.name}{ws.area ? ` (${ws.area})` : ''}
@@ -661,7 +705,7 @@ export default function FiveSPage() {
                 value={customArea}
                 onChange={e => setCustomArea(e.target.value)}
                 placeholder="e.g. Warehouse Bay C, Loading Dock"
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]"
               />
             </label>
           )}
@@ -672,13 +716,13 @@ export default function FiveSPage() {
               onChange={e => setNewNotes(e.target.value)}
               rows={3}
               placeholder="Audit context, focus areas..."
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]"
             />
           </label>
           <button
             onClick={createAudit}
             disabled={creating || !resolvedArea}
-            className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+            className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-brand-600/25"
           >
             {creating ? 'Creating...' : 'Start Audit & Score'}
           </button>
@@ -695,6 +739,12 @@ export default function FiveSPage() {
 
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}} />
         <Breadcrumb items={[
           { label: '5S Audits', onClick: () => { setView('list'); setSelected(null); } },
           { label: selected.area, onClick: () => setView('detail') },
@@ -705,12 +755,7 @@ export default function FiveSPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Score: {selected.area}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Rate each category 0-5 stars</p>
           </div>
-          <div className="text-right">
-            <div className={`text-2xl font-bold ${pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-              {pct}%
-            </div>
-            <div className="text-xs text-gray-400">{total}/{maxTotal}</div>
-          </div>
+          <CircularScore percentage={pct} />
         </div>
 
         {error && (
@@ -721,8 +766,12 @@ export default function FiveSPage() {
         )}
 
         <div className="space-y-4 mb-6">
-          {CATEGORIES.map(cat => (
-            <div key={cat.key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          {CATEGORIES.map((cat, i) => (
+            <div key={cat.key}
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm
+                         opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards] transition-all duration-300 hover:shadow-md"
+              style={{ animationDelay: `${i * 0.06}s` }}
+            >
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-1">
@@ -738,7 +787,7 @@ export default function FiveSPage() {
                 value={scoreNotes[cat.key] || ''}
                 onChange={e => setScoreNotes(p => ({ ...p, [cat.key]: e.target.value }))}
                 placeholder="Notes for this category..."
-                className="w-full px-3 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]"
               />
               <div className="mt-2">
                 <FileUpload
@@ -758,7 +807,7 @@ export default function FiveSPage() {
           <button
             onClick={saveScores}
             disabled={saving}
-            className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-brand-600/25"
           >
             {saving ? 'Saving...' : 'Save Scores'}
           </button>
@@ -768,7 +817,7 @@ export default function FiveSPage() {
                 setShowConfirmComplete(true);
               }}
               disabled={saving || total === 0}
-              className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-green-600/25 flex items-center justify-center gap-2"
             >
               <CheckCircle className="w-4 h-4" />
               {saving ? 'Saving...' : 'Save & Complete'}
@@ -796,6 +845,15 @@ export default function FiveSPage() {
   if (view === 'detail' && selected) {
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes barGrow {
+            from { width: 0%; }
+          }
+        `}} />
         <Breadcrumb items={[
           { label: '5S Audits', onClick: () => { setView('list'); setSelected(null); } },
           { label: selected.area },
@@ -804,27 +862,27 @@ export default function FiveSPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selected.area}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              {selected.auditor?.firstName} {selected.auditor?.lastName} — {new Date(selected.createdAt).toLocaleDateString()}
+              {selected.auditor?.firstName} {selected.auditor?.lastName} -- {new Date(selected.createdAt).toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            <span className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 ${
               selected.status === 'completed'
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm shadow-green-500/10'
                 : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
             }`}>
               {selected.status === 'completed' ? 'Completed' : 'In Progress'}
             </span>
             <button
               onClick={() => api.downloadPdf(`/reports/five-s/${selected.id}`, `5s-audit-${selected.area}.pdf`).catch(() => toast('error', 'Failed to export PDF'))}
-              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300"
             >
               <Download className="w-4 h-4" /> Export PDF
             </button>
             {selected.status !== 'completed' && (
               <button
                 onClick={() => setView('scoring')}
-                className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-brand-600/25"
               >
                 Edit Scores
               </button>
@@ -834,38 +892,37 @@ export default function FiveSPage() {
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Radar Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm
+                          bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-950/10
+                          opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]">
             <h3 className="font-medium text-gray-900 dark:text-white mb-4 text-center">Radar Overview</h3>
             <RadarChart auditScores={selected.scores || []} />
-            <div className="text-center mt-3">
-              <span className={`text-3xl font-bold ${
-                selected.percentage >= 80 ? 'text-green-600' :
-                selected.percentage >= 60 ? 'text-yellow-600' :
-                'text-red-600'
-              }`}>
-                {selected.percentage}%
-              </span>
-              <span className="text-gray-400 text-sm ml-2">({selected.totalScore}/{CATEGORIES.length * 5})</span>
+            <div className="text-center mt-4 flex items-center justify-center gap-4">
+              <CircularScore percentage={selected.percentage} />
+              <div className="text-left">
+                <span className="text-gray-400 text-sm block">{selected.totalScore}/{CATEGORIES.length * 5} points</span>
+              </div>
             </div>
           </div>
 
           {/* Category breakdown */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm
+                          opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.1s_forwards]">
             <h3 className="font-medium text-gray-900 dark:text-white mb-4">Category Scores</h3>
             <div className="space-y-3">
-              {CATEGORIES.map(cat => {
+              {CATEGORIES.map((cat, i) => {
                 const sc = (selected.scores || []).find(s => s.category === cat.key);
                 const val = sc?.score || 0;
                 return (
-                  <div key={cat.key}>
+                  <div key={cat.key} className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]" style={{ animationDelay: `${(i + 2) * 0.06}s` }}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-gray-700 dark:text-gray-300">{cat.emoji} {cat.label}</span>
                       <span className="text-sm font-mono font-medium text-gray-900 dark:text-white">{val}/5</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                       <div
-                        className={`h-2 rounded-full transition-all ${
-                          val >= 4 ? 'bg-green-500' : val >= 3 ? 'bg-yellow-500' : val >= 1 ? 'bg-red-500' : 'bg-gray-300'
+                        className={`h-2.5 rounded-full animate-[barGrow_0.8s_ease-out_forwards] ${
+                          val >= 4 ? 'bg-gradient-to-r from-green-500 to-emerald-400' : val >= 3 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' : val >= 1 ? 'bg-gradient-to-r from-red-500 to-orange-400' : 'bg-gray-300'
                         }`}
                         style={{ width: `${(val / 5) * 100}%` }}
                       />
@@ -881,7 +938,8 @@ export default function FiveSPage() {
         </div>
 
         {selected.notes && (
-          <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm
+                          opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.3s_forwards]">
             <h3 className="font-medium text-gray-900 dark:text-white mb-2">Audit Notes</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">{selected.notes}</p>
           </div>
@@ -890,6 +948,6 @@ export default function FiveSPage() {
     );
   }
 
-  // Fallback — should never reach here
+  // Fallback -- should never reach here
   return null;
 }

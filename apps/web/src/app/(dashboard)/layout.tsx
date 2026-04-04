@@ -114,12 +114,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile header */}
-      <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <button onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+      <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
+        <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
         </button>
         <div className="flex items-center gap-2">
-          <Factory className="w-5 h-5 text-brand-600" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shadow-md shadow-blue-500/25">
+            <Factory className="w-4 h-4 text-white" />
+          </div>
           <span className="font-semibold text-gray-900 dark:text-white">LeanPilot</span>
         </div>
         <NotificationBell />
@@ -128,7 +130,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar overlay (mobile) */}
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -137,19 +139,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside
         className={`
           fixed top-0 left-0 z-50 h-full w-64
-          bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl
-          border-r border-gray-200/50 dark:border-gray-700/50
-          shadow-xl shadow-gray-200/20 dark:shadow-none
+          bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl
+          border-r border-gray-200/30 dark:border-gray-700/30
+          shadow-2xl shadow-gray-300/20 dark:shadow-black/30
           transform transition-transform duration-300 ease-out
           lg:translate-x-0 flex flex-col
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         {/* Sidebar header */}
-        <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100/80 dark:border-gray-800/80">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600
-                            flex items-center justify-center shadow-md shadow-blue-500/25">
+                            flex items-center justify-center shadow-lg shadow-blue-500/30">
               <Factory className="w-4.5 h-4.5 text-white" />
             </div>
             <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">LeanPilot</span>
@@ -164,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Site indicator */}
-        <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-5 py-3 border-b border-gray-100/80 dark:border-gray-800/80">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Site</p>
           <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate mt-0.5">
             {user.siteName || 'All Sites'}
@@ -186,29 +188,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             const isExternal = item.external;
 
-            // Section header
+            // Section header with gradient separator
             const sectionHeader = item.section ? (
-              <p className={`text-[10px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600
-                            ${idx > 0 ? 'mt-5' : ''} mb-2 px-3`}>
-                {item.section}
-              </p>
+              <div className={idx > 0 ? 'mt-5' : ''}>
+                <div className="h-px mx-3 mb-3 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600 mb-2 px-3">
+                  {item.section}
+                </p>
+              </div>
             ) : null;
 
             // Icon element — gradient bg when active, muted otherwise
             const iconEl = (
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:scale-110
                 ${active && item.iconGradient
                   ? `bg-gradient-to-br ${item.iconGradient} shadow-sm`
                   : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'}`}>
-                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
+                <Icon className={`w-3.5 h-3.5 transition-transform duration-200 ${active ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
               </div>
             );
 
             const linkClass = `
               group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200
               ${active
-                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/40 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 border-l-2 border-blue-500 dark:border-blue-400 translate-x-0.5'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/40 hover:text-gray-900 dark:hover:text-gray-200 hover:translate-x-1 border-l-2 border-transparent'
               }
             `;
 
@@ -234,11 +238,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       const childIsActive = pathname === child.href || pathname.startsWith(child.href + '/');
                       return (
                         <Link key={child.href} href={child.href} onClick={() => setSidebarOpen(false)}
-                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] transition-all
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] transition-all duration-200
                             ${childIsActive
                               ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/20'
-                              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
-                          <ChildIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:translate-x-0.5'}`}>
+                          <ChildIcon className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200" />
                           {child.label}
                         </Link>
                       );
@@ -257,11 +261,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* User footer — pinned to bottom */}
-        <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 px-4 py-4">
-          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-500
-                            flex items-center justify-center shadow-sm">
+        {/* Gradient separator before user footer */}
+        <div className="h-px mx-4 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+
+        {/* User footer -- pinned to bottom */}
+        <div className="shrink-0 px-4 py-4">
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-200">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-500
+                            flex items-center justify-center shadow-lg shadow-brand-500/25 ring-2 ring-white/50 dark:ring-gray-800/50">
               <span className="text-xs font-bold text-white">
                 {user.firstName?.[0]}{user.lastName?.[0]}
               </span>
@@ -279,7 +286,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => auth.logout()}
             className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg
                        text-xs font-medium text-gray-400 hover:text-red-600
-                       hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                       hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign Out

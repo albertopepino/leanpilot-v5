@@ -67,6 +67,13 @@ const SEVERITY_BADGE: Record<string, string> = {
   critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+const SEVERITY_BORDER: Record<string, string> = {
+  minor: 'border-l-4 border-l-yellow-400',
+  moderate: 'border-l-4 border-l-orange-400',
+  serious: 'border-l-4 border-l-red-500',
+  critical: 'border-l-4 border-l-red-600 animate-[severityPulse_2s_ease-in-out_infinite]',
+};
+
 const STATUS_BADGE: Record<string, string> = {
   open: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
   investigating: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -108,11 +115,11 @@ const NearMissInterpretation = ({ ratio }: { ratio: number }) => {
   }
 
   return (
-    <div className={`p-3 rounded-lg border ${bgColor} flex items-start gap-2`}>
+    <div className={`p-3 rounded-2xl border ${bgColor} flex items-start gap-2 transition-all duration-300`}>
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
           <span className={`text-sm font-semibold ${color}`}>
-            {ratio.toFixed(1)}% Near-Miss Ratio — {label}
+            {ratio.toFixed(1)}% Near-Miss Ratio -- {label}
           </span>
           <div className="relative inline-block">
             <button
@@ -181,7 +188,7 @@ function SafetyAnalyticsSection() {
   if (loading) {
     return (
       <div className="mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="h-48 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-gray-200 border-t-brand-600 rounded-full animate-spin" />
           </div>
@@ -192,7 +199,7 @@ function SafetyAnalyticsSection() {
 
   if (!trends || trends.insufficientData) {
     return (
-      <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
         <div className="text-center py-6">
           <TrendingUp className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -209,17 +216,22 @@ function SafetyAnalyticsSection() {
 
   const trirColor = trir < 2 ? 'text-green-600 dark:text-green-400' : trir <= 5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400';
   const trirBg = trir < 2 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : trir <= 5 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+  const trirGlow = trir < 2 ? 'shadow-emerald-500/20' : trir <= 5 ? 'shadow-yellow-500/20' : 'shadow-red-500/20';
 
   return (
     <div className="mb-6 space-y-4">
       {/* Big counter: days without injury + TRIR */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white text-center">
-          <p className="text-sm font-medium text-green-100 uppercase tracking-wider mb-2">Days Without Injury</p>
-          <p className="text-6xl font-black tabular-nums">{daysSafe}</p>
-          <p className="text-sm text-green-200 mt-2">Keep the streak going!</p>
+        {/* Hero: Days Without Injury */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-8 text-white shadow-xl shadow-emerald-500/25">
+          <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-white/5 blur-2xl" />
+          <p className="text-sm font-semibold text-emerald-100 uppercase tracking-wider relative z-10">Days Without Injury</p>
+          <p className="text-6xl font-black mt-2 tabular-nums relative z-10 animate-[countUp_0.6s_ease-out]">{daysSafe}</p>
+          <p className="text-sm text-emerald-200 mt-2 relative z-10">Keep the streak going!</p>
         </div>
-        <div className={`rounded-2xl p-6 text-center border ${trirBg}`}>
+        {/* TRIR */}
+        <div className={`rounded-2xl p-6 text-center border shadow-lg ${trirBg} ${trirGlow}`}>
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">TRIR</p>
           <p className={`text-5xl font-black tabular-nums ${trirColor}`}>{trir.toFixed(2)}</p>
           <p className="text-xs text-gray-400 mt-2">Total Recordable Incident Rate</p>
@@ -232,7 +244,7 @@ function SafetyAnalyticsSection() {
       {/* Monthly trend stacked bar chart + near-miss ratio line */}
       {months.length > 0 && (
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
             <h3 className="font-medium text-gray-900 dark:text-white mb-4">Monthly Incidents by Type</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={months} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
@@ -266,7 +278,7 @@ function SafetyAnalyticsSection() {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
             <h3 className="font-medium text-gray-900 dark:text-white mb-4">Near-Miss Ratio Trend</h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
               Higher ratio = better reporting culture (target: &gt;80%)
@@ -454,6 +466,24 @@ export default function SafetyPage() {
   if (view === 'list') {
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes countUp {
+            from { opacity: 0; transform: scale(0.8) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+          }
+          @keyframes severityPulse {
+            0%, 100% { border-left-color: #dc2626; }
+            50% { border-left-color: #fca5a5; }
+          }
+        `}} />
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -477,14 +507,14 @@ export default function SafetyPage() {
                 'Days Lost': i.daysLost,
               })), 'safety-incidents')}
               disabled={incidents.length === 0}
-              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-300 disabled:opacity-40"
               title="Export CSV"
             >
               <Download className="w-4 h-4" />
             </button>
             <button
               onClick={() => { setView('create'); setError(''); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-600/25"
             >
               <Plus className="w-4 h-4" /> Report Incident
             </button>
@@ -519,18 +549,18 @@ export default function SafetyPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search incidents..."
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]"
             />
           </div>
           <select value={filterType} onChange={e => setFilterType(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white">
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-300">
             <option value="all">All Types</option>
             <option value="injury">Injury</option>
             <option value="near_miss">Near Miss</option>
             <option value="property_damage">Property Damage</option>
           </select>
           <select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white">
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-300">
             <option value="all">All Severity</option>
             <option value="minor">Minor</option>
             <option value="moderate">Moderate</option>
@@ -538,7 +568,7 @@ export default function SafetyPage() {
             <option value="critical">Critical</option>
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white">
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-300">
             <option value="all">All Status</option>
             <option value="open">Open</option>
             <option value="investigating">Investigating</option>
@@ -560,34 +590,42 @@ export default function SafetyPage() {
           />
         ) : (
           <div className="space-y-2">
-            {filtered.map(incident => {
+            {filtered.map((incident, i) => {
               const typeConf = TYPE_CONFIG[incident.type] || TYPE_CONFIG.near_miss;
               const TypeIcon = typeConf.icon;
               return (
-                <Card key={incident.id} onClick={() => openDetail(incident)}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${typeConf.bgColor}`}>
-                        <TypeIcon className={`w-4 h-4 ${typeConf.color}`} />
+                <div
+                  key={incident.id}
+                  className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]"
+                  style={{ animationDelay: `${i * 0.06}s` }}
+                >
+                  <div className={`rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm
+                                   hover:shadow-md transition-all duration-300 cursor-pointer ${SEVERITY_BORDER[incident.severity]}`}
+                       onClick={() => openDetail(incident)}>
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${typeConf.bgColor} transition-all duration-300`}>
+                          <TypeIcon className={`w-4 h-4 ${typeConf.color}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-medium text-gray-900 dark:text-white truncate">{incident.title}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {typeConf.label} -- {new Date(incident.date).toLocaleDateString()} -- {incident.location}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="font-medium text-gray-900 dark:text-white truncate">{incident.title}</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {typeConf.label} — {new Date(incident.date).toLocaleDateString()} — {incident.location}
-                        </p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${SEVERITY_BADGE[incident.severity]}`}>
+                          {incident.severity}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[incident.status]}`}>
+                          {STATUS_LABEL[incident.status]}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5" />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${SEVERITY_BADGE[incident.severity]}`}>
-                        {incident.severity}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[incident.status]}`}>
-                        {STATUS_LABEL[incident.status]}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
@@ -600,13 +638,20 @@ export default function SafetyPage() {
   if (view === 'create') {
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}} />
         <Breadcrumb items={[
           { label: 'Safety', onClick: () => { setView('list'); resetForm(); } },
           { label: 'Report Incident' },
         ]} />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Report Safety Incident</h1>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl shadow-sm
+                        opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]">
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
               <span className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</span>
@@ -615,7 +660,7 @@ export default function SafetyPage() {
           )}
 
           {/* Type selector */}
-          <div className="mb-6">
+          <div className="mb-6 opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.05s_forwards]">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Incident Type *</span>
             <div className="grid grid-cols-3 gap-3">
               {(['injury', 'near_miss', 'property_damage'] as const).map(type => {
@@ -627,13 +672,13 @@ export default function SafetyPage() {
                     key={type}
                     type="button"
                     onClick={() => setNewType(type)}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-300 ${
                       active
-                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm'
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm shadow-brand-500/10'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${conf.bgColor}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${conf.bgColor}`}>
                       <Icon className={`w-5 h-5 ${conf.color}`} />
                     </div>
                     <span className={`text-sm font-medium ${active ? 'text-brand-700 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'}`}>
@@ -646,10 +691,10 @@ export default function SafetyPage() {
           </div>
 
           {/* Severity */}
-          <label className="block mb-4">
+          <label className="block mb-4 opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.1s_forwards]">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Severity *</span>
             <select value={newSeverity} onChange={e => setNewSeverity(e.target.value as any)}
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]">
               <option value="minor">Minor</option>
               <option value="moderate">Moderate</option>
               <option value="serious">Serious</option>
@@ -658,38 +703,39 @@ export default function SafetyPage() {
           </label>
 
           {/* Title */}
-          <label className="block mb-4">
+          <label className="block mb-4 opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.15s_forwards]">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Title *</span>
             <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
               placeholder="Brief incident title"
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500" />
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]" />
           </label>
 
-          <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          <div className="grid sm:grid-cols-2 gap-4 mb-4 opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.2s_forwards]">
             <label className="block">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Date *</span>
               <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)}
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500" />
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]" />
             </label>
             <label className="block">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Location *</span>
               <input type="text" value={newLocation} onChange={e => setNewLocation(e.target.value)}
                 placeholder="e.g. Assembly Line B"
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500" />
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]" />
             </label>
           </div>
 
           {/* Description */}
-          <label className="block mb-4">
+          <label className="block mb-4 opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.25s_forwards]">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Description *</span>
             <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={3}
               placeholder="Describe what happened..."
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500" />
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]" />
           </label>
 
           {/* Injury-specific fields */}
           {newType === 'injury' && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-2xl
+                            opacity-0 animate-[fadeSlideUp_0.3s_ease-out_forwards]">
               <h4 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-3 flex items-center gap-1.5">
                 <HardHat className="w-4 h-4" /> Injury Details
               </h4>
@@ -697,19 +743,19 @@ export default function SafetyPage() {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Injured Person</span>
                 <input type="text" value={newInjuredPerson} onChange={e => setNewInjuredPerson(e.target.value)}
                   placeholder="Name of injured person"
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500" />
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]" />
               </label>
               <label className="block">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Injury Description</span>
                 <textarea value={newInjuryDesc} onChange={e => setNewInjuryDesc(e.target.value)} rows={2}
                   placeholder="Nature and extent of injury..."
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500" />
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-300 focus:ring-2 focus:ring-brand-500 focus:shadow-[0_0_12px_rgba(37,99,235,0.15)]" />
               </label>
             </div>
           )}
 
           {/* Photo upload */}
-          <div className="mb-6">
+          <div className="mb-6 opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.3s_forwards]">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Photo Evidence (optional)</span>
             <FileUpload
               func="safety"
@@ -721,7 +767,7 @@ export default function SafetyPage() {
           </div>
 
           <button onClick={createIncident} disabled={creating || !newTitle.trim() || !newDesc.trim() || !newLocation.trim()}
-            className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
+            className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-600/25">
             {creating ? 'Reporting...' : 'Report Incident'}
           </button>
         </div>
@@ -744,6 +790,12 @@ export default function SafetyPage() {
 
     return (
       <div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}} />
         <Breadcrumb items={[
           { label: 'Safety', onClick: () => { setView('list'); setSelected(null); } },
           { label: selected.title },
@@ -753,13 +805,13 @@ export default function SafetyPage() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeConf.bgColor}`}>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${typeConf.bgColor} transition-all duration-300`}>
                 <TypeIcon className={`w-4 h-4 ${typeConf.color}`} />
               </div>
               {selected.title}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Reported by {selected.reporter.firstName} {selected.reporter.lastName} — {new Date(selected.createdAt).toLocaleDateString()}
+              Reported by {selected.reporter.firstName} {selected.reporter.lastName} -- {new Date(selected.createdAt).toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -775,74 +827,88 @@ export default function SafetyPage() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Left: Details + Actions */}
           <div className="space-y-4">
-            <Card>
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Details</h3>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Type</dt><dd className="text-gray-900 dark:text-white capitalize">{typeConf.label}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Severity</dt><dd className="text-gray-900 dark:text-white capitalize">{selected.severity}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Date</dt><dd className="text-gray-900 dark:text-white">{new Date(selected.date).toLocaleDateString()}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Location</dt><dd className="text-gray-900 dark:text-white">{selected.location}</dd></div>
-                {selected.daysLost > 0 && (
-                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Days Lost</dt><dd className="text-red-600 dark:text-red-400 font-medium">{selected.daysLost}</dd></div>
-                )}
-              </dl>
-            </Card>
+            <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]">
+              <Card>
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Details</h3>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Type</dt><dd className="text-gray-900 dark:text-white capitalize">{typeConf.label}</dd></div>
+                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Severity</dt><dd className="text-gray-900 dark:text-white capitalize">{selected.severity}</dd></div>
+                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Date</dt><dd className="text-gray-900 dark:text-white">{new Date(selected.date).toLocaleDateString()}</dd></div>
+                  <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Location</dt><dd className="text-gray-900 dark:text-white">{selected.location}</dd></div>
+                  {selected.daysLost > 0 && (
+                    <div className="flex justify-between"><dt className="text-gray-500 dark:text-gray-400">Days Lost</dt><dd className="text-red-600 dark:text-red-400 font-medium">{selected.daysLost}</dd></div>
+                  )}
+                </dl>
+              </Card>
+            </div>
 
             {available.length > 0 && (
-              <Card>
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Progress</h3>
-                <div className="flex flex-col gap-2">
-                  {available.map(ns => (
-                    <button key={ns} onClick={() => updateStatus(selected.id, ns)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
-                      <ChevronRight className="w-4 h-4" /> {STATUS_LABEL[ns]}
-                    </button>
-                  ))}
-                </div>
-              </Card>
+              <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.1s_forwards]">
+                <Card>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Progress</h3>
+                  <div className="flex flex-col gap-2">
+                    {available.map(ns => (
+                      <button key={ns} onClick={() => updateStatus(selected.id, ns)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300">
+                        <ChevronRight className="w-4 h-4" /> {STATUS_LABEL[ns]}
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              </div>
             )}
           </div>
 
           {/* Right: Description + Investigation */}
           <div className="md:col-span-2 space-y-4">
-            <Card>
-              <h3 className="font-medium text-gray-900 dark:text-white mb-3">Description</h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.description}</p>
-            </Card>
+            <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.05s_forwards]">
+              <Card>
+                <h3 className="font-medium text-gray-900 dark:text-white mb-3">Description</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.description}</p>
+              </Card>
+            </div>
 
             {selected.injuredPerson && (
-              <Card>
-                <h3 className="font-medium text-red-700 dark:text-red-400 mb-3 flex items-center gap-1.5">
-                  <HardHat className="w-4 h-4" /> Injury Details
-                </h3>
-                <dl className="space-y-2 text-sm">
-                  <div><dt className="text-gray-500 dark:text-gray-400">Injured Person</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuredPerson}</dd></div>
-                  {selected.injuryType && (
-                    <div><dt className="text-gray-500 dark:text-gray-400">Injury</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuryType}</dd></div>
-                  )}
-                </dl>
-              </Card>
+              <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.1s_forwards]">
+                <Card>
+                  <h3 className="font-medium text-red-700 dark:text-red-400 mb-3 flex items-center gap-1.5">
+                    <HardHat className="w-4 h-4" /> Injury Details
+                  </h3>
+                  <dl className="space-y-2 text-sm">
+                    <div><dt className="text-gray-500 dark:text-gray-400">Injured Person</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuredPerson}</dd></div>
+                    {selected.injuryType && (
+                      <div><dt className="text-gray-500 dark:text-gray-400">Injury</dt><dd className="text-gray-900 dark:text-white mt-0.5">{selected.injuryType}</dd></div>
+                    )}
+                  </dl>
+                </Card>
+              </div>
             )}
 
             {selected.investigationNotes && (
-              <Card>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-3">Investigation Notes</h3>
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.investigationNotes}</p>
-              </Card>
+              <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.15s_forwards]">
+                <Card>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Investigation Notes</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selected.investigationNotes}</p>
+                </Card>
+              </div>
             )}
 
             {selected.photoUrl && (
-              <Card>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-3">Photo Evidence</h3>
-                <img src={selected.photoUrl} alt="Incident photo" className="rounded-lg max-w-full max-h-80 object-contain" />
-              </Card>
+              <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.2s_forwards]">
+                <Card>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Photo Evidence</h3>
+                  <img src={selected.photoUrl} alt="Incident photo" className="rounded-xl max-w-full max-h-80 object-contain" />
+                </Card>
+              </div>
             )}
 
             {selected.fiveWhyId && (
-              <Card>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Linked Root Cause Analysis</h3>
-                <p className="text-sm text-brand-600 dark:text-brand-400">Five-Why ID: {selected.fiveWhyId}</p>
-              </Card>
+              <div className="opacity-0 animate-[fadeSlideUp_0.4s_ease-out_0.25s_forwards]">
+                <Card>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Linked Root Cause Analysis</h3>
+                  <p className="text-sm text-brand-600 dark:text-brand-400">Five-Why ID: {selected.fiveWhyId}</p>
+                </Card>
+              </div>
             )}
           </div>
         </div>
