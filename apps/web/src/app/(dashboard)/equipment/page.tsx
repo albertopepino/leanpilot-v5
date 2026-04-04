@@ -14,6 +14,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
+import { useTranslations } from 'next-intl';
 
 // ===== TYPES =====
 interface Workstation {
@@ -115,6 +116,7 @@ type View = 'list' | 'detail';
 type DetailTab = 'plans' | 'logs' | 'cilt';
 
 export default function EquipmentPage() {
+  const t = useTranslations('equipment');
   const [workstations, setWorkstations] = useState<Workstation[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
@@ -327,14 +329,14 @@ export default function EquipmentPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Wrench className="w-6 h-6 text-brand-600" />
-              Equipment Management
+              {t('title')}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              TPM &amp; CILT — Workstation maintenance and autonomous care
+              {t('subtitle')}
             </p>
           </div>
           <button onClick={() => setShowAddWs(true)} className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm">
-            <Plus className="w-4 h-4" /> Add Workstation
+            <Plus className="w-4 h-4" /> {t('addWorkstation')}
           </button>
         </div>
 

@@ -12,6 +12,7 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
+import { useTranslations } from 'next-intl';
 
 // ===== TYPES =====
 interface CAPA {
@@ -84,6 +85,7 @@ const PRIORITY_BADGE: Record<string, string> = {
 };
 
 export default function CAPAPage() {
+  const t = useTranslations('capa');
   const [view, setView] = useState<View>('list');
   const [capas, setCAPAs] = useState<CAPA[]>([]);
   const [summary, setSummary] = useState<CAPASummary>({ open: 0, in_progress: 0, verification: 0, closed: 0 });
@@ -235,15 +237,15 @@ export default function CAPAPage() {
     <div className="p-6">
       <Breadcrumb items={[
         { label: 'Quality', onClick: () => window.history.back() },
-        { label: 'CAPA Register' },
+        { label: t('title') },
       ]} />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">CAPA Register</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Corrective and Preventive Actions
+            {t('subtitle')}
           </p>
         </div>
         {view === 'list' && (
@@ -252,7 +254,7 @@ export default function CAPAPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New CAPA
+            {t('newCapa')}
           </button>
         )}
       </div>

@@ -9,6 +9,7 @@ import {
   LogOut, UserCircle, Camera,
 } from 'lucide-react';
 import { BarcodeScanner } from '@/components/ui/BarcodeScanner';
+import { useTranslations } from 'next-intl';
 
 // ── Error Boundary ────────────────────────────────────────────────────
 
@@ -211,6 +212,7 @@ function resolveReasonColor(color: string): string {
 // ── Main Page ──────────────────────────────────────────────────────────
 
 export default function ShopFloorPage() {
+  const t = useTranslations('shopfloor');
   const [step, setStep] = useState<Step>('workstation');
   const [workstations, setWorkstations] = useState<Workstation[]>([]);
   const [selectedWs, setSelectedWs] = useState<Workstation | null>(null);
@@ -625,7 +627,7 @@ export default function ShopFloorPage() {
       {/* ── STEP 1: Workstation Select ──────────────────────────────── */}
       {step === 'workstation' && (
         <div className="relative p-4">
-          <h2 className="text-2xl font-bold mb-1 tracking-tight">Select Your Workstation</h2>
+          <h2 className="text-2xl font-bold mb-1 tracking-tight">{t('selectWorkstation')}</h2>
           <p className="text-sm text-gray-500 mb-5">Tap to start your shift</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {workstations.map((ws, idx) => (
@@ -667,7 +669,7 @@ export default function ShopFloorPage() {
       {/* ── STEP 2: PO Select ───────────────────────────────────────── */}
       {step === 'po' && (
         <div className="relative p-4">
-          <h2 className="text-2xl font-bold mb-1 tracking-tight">Select Production Order</h2>
+          <h2 className="text-2xl font-bold mb-1 tracking-tight">{t('selectPO')}</h2>
           <p className="text-sm text-gray-500 mb-5">Choose the order to work on</p>
 
           <div className="mb-4 flex gap-3">
@@ -839,10 +841,10 @@ export default function ShopFloorPage() {
             style={{ minHeight: 64, animation: 'fadeIn 0.4s ease-out 0.3s both' }}
           >
             <Flag className="w-7 h-7" />
-            Flag Issue
+            {t('flagIssue')}
           </button>
 
-          {/* End Shift buttons */}
+          {/* {t('endShift')} buttons */}
           <div className="grid grid-cols-2 gap-3" style={{ animation: 'fadeIn 0.4s ease-out 0.35s both' }}>
             <button
               onClick={() => { setClosePoClosed(false); setStep('close'); }}
@@ -852,7 +854,7 @@ export default function ShopFloorPage() {
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-0.5">
                 <Send className="w-5 h-5" />
               </div>
-              End Shift
+              {t('endShift')}
               <span className="text-xs font-normal opacity-60">PO stays open</span>
             </button>
             <button
@@ -863,7 +865,7 @@ export default function ShopFloorPage() {
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-0.5">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
-              End Shift
+              {t('endShift')}
               <span className="text-xs font-normal opacity-60">PO complete</span>
             </button>
           </div>
@@ -961,7 +963,7 @@ export default function ShopFloorPage() {
                 <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-white animate-spin" />
               </div>
             ) : closePoClosed ? <CheckCircle2 className="w-6 h-6" /> : <Send className="w-6 h-6" />}
-            {closePoClosed ? 'Confirm & Complete PO' : 'Confirm & End Shift'}
+            {closePoClosed ? t('confirmCompletePO') : t('confirmEndShift')}
           </button>
         </div>
       )}
@@ -1033,7 +1035,7 @@ export default function ShopFloorPage() {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-amber-500 to-amber-700 flex items-center justify-center">
                   <Flag className="w-4 h-4" />
                 </div>
-                Flag Issue
+                {t('flagIssue')}
               </h3>
               <button onClick={() => { setShowFlag(false); setFlagNote(''); }} className="p-2 rounded-xl hover:bg-gray-800 transition-colors" aria-label="Close">
                 <X className="w-5 h-5 text-gray-400" />

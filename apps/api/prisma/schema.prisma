@@ -68,6 +68,7 @@ model Site {
   customRoles        CustomRole[]
   escalationRules    EscalationRule[]
   capas              CorrectiveAction[]
+  erpConnection      ErpConnection?
 
   @@unique([corporateId, slug])
   @@map("sites")
@@ -1271,4 +1272,47 @@ model EscalationLog {
 
   @@unique([ruleId, sourceId])
   @@map("escalation_logs")
+}
+
+// ===== ERP INTEGRATION =====
+
+model ErpConnection {
+  id              String    @id @default(cuid())
+  siteId          String    @unique
+  provider        String    // sap | oracle | custom_api | csv_import
+  name            String    @default("ERP Connection")
+  baseUrl         String?   // API endpoint URL
+  apiKey          String?   // encrypted API key or token
+  username        String?
+  password        String?   // encrypted
+  syncEnabled     Boolean   @default(false)
+  syncInterval    Int       @default(60) // minutes between auto-sync
+  lastSyncAt      DateTime?
+  lastSyncStatus  String?   // success | error | partial
+  lastSyncMessage String?
+  config          String?   // JSON: provider-specific settings
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  site     Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  syncLogs ErpSyncLog[]
+
+  @@map("erp_connections")
+}
+
+model ErpSyncLog {
+  id           String    @id @default(cuid())
+  connectionId String
+  direction    String    // import | export
+  entityType   String    // production_order | production_result | inventory
+  recordCount  Int       @default(0)
+  status       String    // success | error | partial
+  message      String?
+  details      String?   // JSON: detailed sync results
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  connection ErpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@map("erp_sync_logs")
 }

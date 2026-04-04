@@ -16,6 +16,7 @@ import {
   ResponsiveContainer, Tooltip, Legend,
 } from 'recharts';
 import { Sparkline } from '@/components/ui/charts';
+import { useTranslations } from 'next-intl';
 
 interface Workstation {
   id: string;
@@ -333,6 +334,8 @@ function FiveSTrendsSection() {
 type View = 'list' | 'create' | 'detail' | 'scoring';
 
 export default function FiveSPage() {
+  const t = useTranslations('fiveS');
+  const tCommon = useTranslations('common');
   const [audits, setAudits] = useState<FiveSAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
@@ -573,9 +576,9 @@ export default function FiveSPage() {
         `}} />
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">5S / 6S Audit</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Workplace organization audits -- Sort, Set in Order, Shine, Standardize, Sustain, Safety
+              {t('subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -599,7 +602,7 @@ export default function FiveSPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-brand-600/25"
             >
               <Plus className="w-4 h-4" />
-              New Audit
+              {t('newAudit')}
             </button>
           </div>
         </div>
@@ -612,9 +615,9 @@ export default function FiveSPage() {
         ) : audits.length === 0 ? (
           <EmptyState
             icon={ClipboardCheck}
-            title="No audits yet"
-            description="Start your first 5S audit to assess workplace organization."
-            actionLabel="New Audit"
+            title={tCommon('noData')}
+            description={t('subtitle')}
+            actionLabel={t('newAudit')}
             onAction={() => setView('create')}
           />
         ) : (
@@ -645,7 +648,7 @@ export default function FiveSPage() {
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 shadow-sm shadow-green-500/10'
                         : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                     }`}>
-                      {audit.status === 'completed' ? 'Completed' : 'In Progress'}
+                      {audit.status === 'completed' ? t('completed') : t('draft')}
                     </span>
                   </div>
                   </div>
@@ -669,10 +672,10 @@ export default function FiveSPage() {
           }
         `}} />
         <Breadcrumb items={[
-          { label: '5S Audits', onClick: () => setView('list') },
-          { label: 'New Audit' },
+          { label: t('title'), onClick: () => setView('list') },
+          { label: t('newAudit') },
         ]} />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">New 5S Audit</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('newAudit')}</h1>
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-lg shadow-sm
                         opacity-0 animate-[fadeSlideUp_0.4s_ease-out_forwards]">
           {error && (

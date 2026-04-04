@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Gauge, TrendingUp, TrendingDown, Clock, Zap, CheckCircle, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { useTranslations } from 'next-intl';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend,
 } from 'recharts';
@@ -124,7 +125,7 @@ interface OEETrendResponse {
   lastWeek?: { oee: number };
 }
 
-function OEETrendChart() {
+function OEETrendChart({ t }: { t: (key: string) => string }) {
   const [trend, setTrend] = useState<OEETrendResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -148,11 +149,11 @@ function OEETrendChart() {
   if (!trend || trend.insufficientData) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
-        <h3 className="font-medium text-gray-900 dark:text-white mb-3">OEE Trend (30 days)</h3>
+        <h3 className="font-medium text-gray-900 dark:text-white mb-3">{t('trend30d')}</h3>
         <div className="text-center py-8">
           <TrendingUp className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Need more production data to show trends. Run at least 5 shifts to start seeing OEE trends.
+            {t('needMoreData')}
           </p>
         </div>
       </div>
@@ -167,7 +168,7 @@ function OEETrendChart() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
-      <h3 className="font-medium text-gray-900 dark:text-white mb-4">OEE Trend (30 days)</h3>
+      <h3 className="font-medium text-gray-900 dark:text-white mb-4">{t('trend30d')}</h3>
       {points.length > 0 && (
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={points} margin={{ top: 8, right: 16, bottom: 0, left: -10 }}>
@@ -208,7 +209,7 @@ function OEETrendChart() {
 
       {/* Week-over-week comparison */}
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400">This week vs last week:</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">{t('thisWeekVsLast')}</span>
         <div className="flex items-center gap-1.5">
           {deltaPositive ? (
             <ArrowUp className="w-4 h-4 text-green-500" />
@@ -228,6 +229,8 @@ function OEETrendChart() {
 }
 
 export default function OEEPage() {
+  const t = useTranslations('oee');
+  const tDash = useTranslations('dashboard');
   const [data, setData] = useState<OEEData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -264,17 +267,17 @@ export default function OEEPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Gauge className="w-7 h-7 text-brand-600" />
-            OEE Dashboard
+            {t('title')}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Overall Equipment Effectiveness — current shift
+            {t('subtitle')}
           </p>
         </div>
         <button
           onClick={() => api.downloadPdf('/reports/oee?period=week', 'oee-summary.pdf').catch(() => toast('error', 'Failed to export PDF'))}
           className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          <Download className="w-4 h-4" /> Export PDF
+          <Download className="w-4 h-4" /> {t('exportPdf')}
         </button>
       </div>
 
@@ -282,38 +285,38 @@ export default function OEEPage() {
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 mb-6">
         <div className="flex flex-wrap items-center justify-center gap-12">
           <div className="relative">
-            <DonutGauge value={data.oee} label="OEE" color={oeeColor} size={180} />
+            <DonutGauge value={data.oee} label={tDash('oee')} color={oeeColor} size={180} />
           </div>
           <div className="flex gap-8">
             <div className="relative">
-              <DonutGauge value={data.availability} label="Availability" color="#3b82f6" size={120} />
+              <DonutGauge value={data.availability} label={tDash('availability')} color="#3b82f6" size={120} />
             </div>
             <div className="relative">
-              <DonutGauge value={data.performance} label="Performance" color="#8b5cf6" size={120} />
+              <DonutGauge value={data.performance} label={tDash('performance')} color="#8b5cf6" size={120} />
             </div>
             <div className="relative">
-              <DonutGauge value={data.quality} label="Quality" color="#06b6d4" size={120} />
+              <DonutGauge value={data.quality} label={tDash('qualityRate')} color="#06b6d4" size={120} />
             </div>
           </div>
         </div>
         {data.oee >= 85 && (
           <div className="mt-4 text-center">
-            <span className="text-sm text-green-600 dark:text-green-400 font-medium">World-class OEE (&ge;85%)</span>
+            <span className="text-sm text-green-600 dark:text-green-400 font-medium">{t('worldClass')}</span>
           </div>
         )}
       </div>
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard icon={Zap} label="Produced" value={data.totalProduced.toLocaleString()} color="bg-blue-500" />
-        <MetricCard icon={CheckCircle} label="Scrap" value={data.totalScrap.toLocaleString()}
-          sub={data.totalProduced > 0 ? `${((data.totalScrap / data.totalProduced) * 100).toFixed(1)}% rate` : '—'}
+        <MetricCard icon={Zap} label={t('produced')} value={data.totalProduced.toLocaleString()} color="bg-blue-500" />
+        <MetricCard icon={CheckCircle} label={t('scrap')} value={data.totalScrap.toLocaleString()}
+          sub={data.totalProduced > 0 ? `${((data.totalScrap / data.totalProduced) * 100).toFixed(1)}% ${t('rate')}` : '—'}
           color="bg-red-500"
         />
-        <MetricCard icon={Clock} label="Operating" value={`${data.operatingMinutes}m`}
-          sub={`of ${data.plannedMinutes}m planned`} color="bg-green-500"
+        <MetricCard icon={Clock} label={t('operating')} value={`${data.operatingMinutes}m`}
+          sub={t('ofPlanned', { planned: data.plannedMinutes })} color="bg-green-500"
         />
-        <MetricCard icon={TrendingUp} label="Downtime" value={`${data.downtimeMinutes}m`}
+        <MetricCard icon={TrendingUp} label={t('downtime')} value={`${data.downtimeMinutes}m`}
           sub={data.plannedMinutes > 0 ? `${((data.downtimeMinutes / data.plannedMinutes) * 100).toFixed(1)}%` : '—'}
           color="bg-orange-500"
         />
@@ -323,7 +326,7 @@ export default function OEEPage() {
       {data.workstations && data.workstations.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
           <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="font-medium text-gray-900 dark:text-white">Workstation Breakdown</h3>
+            <h3 className="font-medium text-gray-900 dark:text-white">{t('workstationBreakdown')}</h3>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {data.workstations.map(ws => (
@@ -356,7 +359,7 @@ export default function OEEPage() {
       )}
 
       {/* OEE Trend Chart */}
-      <OEETrendChart />
+      <OEETrendChart t={t} />
     </div>
   );
 }

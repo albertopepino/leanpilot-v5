@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { exportToCSV } from '@/lib/csv-export';
+import { useTranslations } from 'next-intl';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, Cell,
@@ -300,6 +301,7 @@ type View = 'list' | 'detail' | 'add-obs' | 'obs-detail';
 // ── Page ───────────────────────────────────────────────────────────────
 
 export default function GembaPage() {
+  const t = useTranslations('gemba');
   const [walks, setWalks] = useState<GembaWalk[]>([]);
   const [selectedWalk, setSelectedWalk] = useState<GembaWalkDetail | null>(null);
   const [selectedObs, setSelectedObs] = useState<Observation | null>(null);
@@ -484,7 +486,7 @@ export default function GembaPage() {
       {/* Breadcrumb */}
       {view !== 'list' && (
         <Breadcrumb items={[
-          { label: 'Gemba Walk', onClick: () => { setView('list'); setSelectedWalk(null); setSelectedObs(null); } },
+          { label: t('title'), onClick: () => { setView('list'); setSelectedWalk(null); setSelectedObs(null); } },
           ...(view === 'detail' || view === 'add-obs' || view === 'obs-detail'
             ? [{ label: selectedWalk?.date || 'Walk', onClick: view !== 'detail' ? () => { setView('detail'); setSelectedObs(null); } : undefined }]
             : []),
@@ -498,10 +500,10 @@ export default function GembaPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Eye className="w-6 h-6 text-brand-600" />
-            {view === 'list' ? 'Gemba Walk' : view === 'detail' ? `Walk — ${selectedWalk?.date}` : view === 'add-obs' ? 'Add Observation' : 'Observation Detail'}
+            {view === 'list' ? t('title') : view === 'detail' ? `${t('title')} — ${selectedWalk?.date}` : view === 'add-obs' ? t('observations') : t('observations')}
           </h1>
           {view === 'list' && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Go see, ask why, show respect</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('subtitle')}</p>
           )}
         </div>
         {view === 'list' && (

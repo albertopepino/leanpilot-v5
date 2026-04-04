@@ -8,10 +8,12 @@ import {
   Lightbulb, Settings, LogOut, Menu, X, Bell,
   Eye, MonitorSmartphone, Radio, ShieldCheck, Gauge, FileText,
   Wrench, ShieldAlert, Search, PackageCheck, ArrowLeftRight,
-  CheckSquare, Users2, FileBarChart, GraduationCap, Timer,
+  CheckSquare, Users2, FileBarChart, GraduationCap, Timer, Database,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/ui/NotificationBell';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { hasPermission, isSystemAdmin, type UserWithPermissions } from '@/lib/permissions';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -57,6 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/tools', label: 'Tools', icon: Settings, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
   { href: '/admin/escalation', label: 'Escalation', icon: Bell, group: 'people', minLevel: 'manage', iconGradient: 'from-amber-500 to-orange-500' },
   { href: '/admin/reason-codes', label: 'Reason Codes', icon: Settings, group: 'people', minLevel: 'manage', iconGradient: 'from-gray-500 to-gray-400' },
+  { href: '/admin/erp', label: 'ERP Integration', icon: Database, group: 'people', minLevel: 'manage', iconGradient: 'from-indigo-500 to-blue-500' },
   { href: '/settings', label: 'Settings', icon: Settings, iconGradient: 'from-gray-500 to-gray-400' },
   // ── External (Shop Floor) ───────────────────────────────────
   { href: '/shopfloor', label: 'Shop Floor', icon: MonitorSmartphone, group: 'production', minLevel: 'participate', external: true, iconGradient: 'from-indigo-500 to-blue-500' },
@@ -73,9 +76,36 @@ function isNavItemVisible(item: NavItem, user: UserWithPermissions, enabledTools
   return hasPermission(user, item.group as any, (item.minLevel || 'view') as any);
 }
 
+// Map nav item href to translation key
+const NAV_LABEL_KEYS: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/shift-handover': 'shiftHandover',
+  '/orders': 'orders',
+  '/corporate': 'corporate',
+  '/gemba': 'gembaWalk',
+  '/tools/five-s': 'fiveS',
+  '/tools/kaizen': 'kaizen',
+  '/equipment': 'equipment',
+  '/quality': 'quality',
+  '/quality/documents': 'documents',
+  '/quality/root-cause': 'rootCause',
+  '/quality/capa': 'capaRegister',
+  '/safety': 'safety',
+  '/admin/users': 'users',
+  '/admin/roles': 'roles',
+  '/admin/tools': 'tools',
+  '/admin/escalation': 'escalation',
+  '/admin/reason-codes': 'reasonCodes',
+  '/settings': 'settings',
+  '/shopfloor': 'shopFloor',
+  '/andon': 'andonBoard',
+};
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const tNav = useTranslations('nav');
+  const tAuth = useTranslations('auth');
   const [user, setUser] = useState<any>(null);
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -216,15 +246,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }
             `;
 
+            const translatedLabel = NAV_LABEL_KEYS[item.href] ? tNav(NAV_LABEL_KEYS[item.href]) : item.label;
+
             const navLink = isExternal ? (
               <a key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={linkClass}>
                 {iconEl}
-                {item.label}
+                {translatedLabel}
               </a>
             ) : (
               <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={linkClass}>
                 {iconEl}
-                {item.label}
+                {translatedLabel}
               </Link>
             );
 
@@ -243,7 +275,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                               ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/20'
                               : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:translate-x-0.5'}`}>
                           <ChildIcon className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200" />
-                          {child.label}
+                          {NAV_LABEL_KEYS[child.href] ? tNav(NAV_LABEL_KEYS[child.href]) : child.label}
                         </Link>
                       );
                     })}
@@ -263,6 +295,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Gradient separator before user footer */}
         <div className="h-px mx-4 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+
+        {/* Language switcher */}
+        <div className="px-4 py-2">
+          <LanguageSwitcher />
+        </div>
 
         {/* User footer -- pinned to bottom */}
         <div className="shrink-0 px-4 py-4">
@@ -289,7 +326,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                        hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
           >
             <LogOut className="w-3.5 h-3.5" />
-            Sign Out
+            {tAuth('logout')}
           </button>
         </div>
       </aside>

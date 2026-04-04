@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { useTranslations } from 'next-intl';
 
 interface KaizenIdea {
   id: string;
@@ -52,6 +53,7 @@ const NEXT_STATUS: Record<string, string[]> = {
 type View = 'board' | 'create' | 'detail';
 
 export default function KaizenPage() {
+  const t = useTranslations('kaizen');
   const [items, setItems] = useState<KaizenIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('board');
@@ -200,9 +202,9 @@ export default function KaizenPage() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kaizen Board</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Continuous improvement: submit ideas, review, implement, verify
+              {t('subtitle')}
             </p>
           </div>
           <button
@@ -210,7 +212,7 @@ export default function KaizenPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New Idea
+            {t('submitIdea')}
           </button>
         </div>
 
@@ -310,9 +312,9 @@ export default function KaizenPage() {
         ) : items.length === 0 ? (
           <EmptyState
             icon={Lightbulb}
-            title="No Kaizen suggestions yet"
-            description="Submit your first improvement idea — even small changes compound into big results."
-            actionLabel="New Idea"
+            title={t('title')}
+            description={t('subtitle')}
+            actionLabel={t('submitIdea')}
             onAction={() => { setView('create'); setTitle(''); setProblem(''); setSolution(''); setImpact('medium'); setArea(''); setError(''); }}
           />
         ) : (

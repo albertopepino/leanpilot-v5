@@ -14,6 +14,7 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToCSV } from '@/lib/csv-export';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { useTranslations } from 'next-intl';
 
 // ===== TYPES =====
 interface Checkpoint {
@@ -353,6 +354,7 @@ function NcrCapaSection({ ncrId, ncrTitle }: { ncrId: string; ncrTitle: string }
 }
 
 export default function QualityPage() {
+  const t = useTranslations('quality');
   const [tab, setTab] = useState<Tab>('inspections');
   const [view, setView] = useState<View>('list');
   const [error, setError] = useState('');
@@ -412,9 +414,9 @@ export default function QualityPage() {
 
   // ===== Tab selector =====
   const tabs = [
-    { key: 'inspections' as Tab, label: 'Inspections', icon: ClipboardList, count: inspections.length },
-    { key: 'templates' as Tab, label: 'Templates', icon: FileText, count: templates.length },
-    { key: 'ncr' as Tab, label: 'NCR', icon: AlertOctagon, count: ncrs.length },
+    { key: 'inspections' as Tab, label: t('inspections'), icon: ClipboardList, count: inspections.length },
+    { key: 'templates' as Tab, label: t('templates'), icon: FileText, count: templates.length },
+    { key: 'ncr' as Tab, label: t('ncr'), icon: AlertOctagon, count: ncrs.length },
   ];
 
   const switchTab = (t: Tab) => { setTab(t); setView('list'); setError(''); };

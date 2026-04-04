@@ -11,6 +11,7 @@ import {
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
 import { ProgressRing, TrendChart, HBarChart, DonutChart } from '@/components/ui/charts';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -101,11 +102,11 @@ const WEEK_TREND = [
 const fakeSparkline = (base: number, n = 7) =>
   Array.from({ length: n }, () => Math.max(0, base + (Math.random() - 0.5) * base * 0.4));
 
-function getGreeting(): string {
+function getGreetingKey(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'goodMorning';
+  if (hour < 17) return 'goodAfternoon';
+  return 'goodEvening';
 }
 
 function formatDate(): string {
@@ -114,11 +115,11 @@ function formatDate(): string {
   });
 }
 
-function getShift(): string {
+function getShiftKey(): string {
   const hour = new Date().getHours();
-  if (hour >= 6 && hour < 14) return 'Morning Shift';
-  if (hour >= 14 && hour < 22) return 'Afternoon Shift';
-  return 'Night Shift';
+  if (hour >= 6 && hour < 14) return 'morning';
+  if (hour >= 14 && hour < 22) return 'afternoon';
+  return 'night';
 }
 
 // ── Skeleton with shimmer ─────────────────────────────────────────────
@@ -213,6 +214,7 @@ const DEFAULT_LAYOUT: WidgetConfig[] = DASHBOARD_WIDGETS.map(w => ({
 }));
 
 export default function DashboardPage() {
+  const t = useTranslations('dashboard');
   const [data, setData] = useState<DashboardOverview | null>(null);
   const [mudaSignals, setMudaSignals] = useState<MudaSignal[]>([]);
   const [oee, setOee] = useState<OeeData | null>(null);
@@ -359,11 +361,11 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
                   <Clock className="w-3.5 h-3.5 text-blue-200" />
-                  <span className="text-xs font-medium text-blue-200">{getShift()}</span>
+                  <span className="text-xs font-medium text-blue-200">{t('shift')}: {t(getShiftKey())}</span>
                 </div>
               </div>
               <h1 className="text-3xl font-black mt-4 tracking-tight">
-                {getGreeting()}, {user?.firstName || 'User'}
+                {t(getGreetingKey())}, {user?.firstName || 'User'}
               </h1>
               <p className="text-blue-200 text-sm mt-1.5 font-medium">{formatDate()}</p>
 
@@ -388,7 +390,7 @@ export default function DashboardPage() {
                 {!attention?.machinesDown && !attention?.posBehind && !attention?.mudaSignals && (
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-emerald-100">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    All systems running smoothly
+                    {t('allSystemsRunning')}
                   </span>
                 )}
               </div>
@@ -529,28 +531,28 @@ export default function DashboardPage() {
                 <div key="kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
           {[
             {
-              label: 'Total Produced', value: produced, variant: 'blue' as const,
+              label: t('totalProduced'), value: produced, variant: 'blue' as const,
               icon: Boxes, trend: 'up' as const, trendLabel: 'vs. last week',
               sparkData: fakeSparkline(produced / 7),
             },
             {
-              label: 'Quality Rate', value: qualityRate, suffix: '%', decimals: 1,
+              label: t('qualityRate'), value: qualityRate, suffix: '%', decimals: 1,
               variant: 'green' as const, icon: ShieldCheck,
               trend: (qualityRate >= 98 ? 'up' : 'down') as 'up' | 'down',
-              trendLabel: `${production?.scrapRate ?? 0}% scrap`,
+              trendLabel: `${production?.scrapRate ?? 0}% ${t('scrapRate')}`,
               sparkData: fakeSparkline(qualityRate, 7),
             },
             {
-              label: 'Active Orders', value: attention?.activePOs ?? 0,
+              label: t('activePOs'), value: attention?.activePOs ?? 0,
               variant: 'orange' as const, icon: ClipboardCheck,
               trend: (attention?.posBehind ? 'down' : 'up') as 'up' | 'down',
-              trendLabel: attention?.posBehind ? `${attention.posBehind} behind` : 'On schedule',
+              trendLabel: attention?.posBehind ? `${attention.posBehind} ${t('posBehind')}` : t('allSystemsRunning'),
               sparkData: fakeSparkline(attention?.activePOs ?? 3),
             },
             {
-              label: 'Muda Signals', value: attention?.mudaSignals ?? 0,
+              label: t('mudaSignals'), value: attention?.mudaSignals ?? 0,
               variant: 'purple' as const, icon: Eye,
-              trend: 'flat' as const, trendLabel: 'Open observations',
+              trend: 'flat' as const, trendLabel: t('mudaSignals'),
               sparkData: fakeSparkline(attention?.mudaSignals ?? 2),
             },
           ].map((card, i) => (
@@ -604,10 +606,10 @@ export default function DashboardPage() {
               )}
               {hasOeeData && oee && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6">
                 {[
-                  { val: oee.siteOee.availability, label: 'Availability', color: '#3b82f6', labelClass: 'text-blue-600 dark:text-blue-400' },
-                  { val: oee.siteOee.performance, label: 'Performance', color: '#10b981', labelClass: 'text-emerald-600 dark:text-emerald-400' },
-                  { val: oee.siteOee.quality, label: 'Quality', color: '#8b5cf6', labelClass: 'text-purple-600 dark:text-purple-400' },
-                  { val: oee.siteOee.oee, label: 'Overall OEE', color: '#f59e0b', labelClass: '' },
+                  { val: oee.siteOee.availability, label: t('availability'), color: '#3b82f6', labelClass: 'text-blue-600 dark:text-blue-400' },
+                  { val: oee.siteOee.performance, label: t('performance'), color: '#10b981', labelClass: 'text-emerald-600 dark:text-emerald-400' },
+                  { val: oee.siteOee.quality, label: t('qualityRate'), color: '#8b5cf6', labelClass: 'text-purple-600 dark:text-purple-400' },
+                  { val: oee.siteOee.oee, label: t('oee'), color: '#f59e0b', labelClass: '' },
                 ].map((ring, i) => (
                   <div
                     key={ring.label}

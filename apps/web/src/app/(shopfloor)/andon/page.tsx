@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Wifi, WifiOff, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { useTranslations } from 'next-intl';
 
 interface Workstation {
   id: string;
@@ -121,6 +122,7 @@ function getSocketUrl(): string {
 }
 
 export default function AndonBoardPage() {
+  const t = useTranslations('andon');
   const [workstations, setWorkstations] = useState<Workstation[]>([]);
   const [online, setOnline] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -282,8 +284,8 @@ export default function AndonBoardPage() {
               </svg>
             </div>
             <div>
-              <div className="text-lg font-black tracking-wider text-white">ANDON</div>
-              <div className="text-[10px] font-semibold tracking-[0.2em] text-blue-400/60 uppercase">Control Center</div>
+              <div className="text-lg font-black tracking-wider text-white">{t('title')}</div>
+              <div className="text-[10px] font-semibold tracking-[0.2em] text-blue-400/60 uppercase">{t('controlCenter')}</div>
             </div>
           </div>
 
@@ -295,7 +297,7 @@ export default function AndonBoardPage() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
               </span>
               <span className="text-sm font-bold text-emerald-400 tabular-nums">{running}</span>
-              <span className="text-xs text-emerald-400/60">running</span>
+              <span className="text-xs text-emerald-400/60">{t('running')}</span>
             </div>
             {down > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 animate-border-pulse">
@@ -304,12 +306,12 @@ export default function AndonBoardPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-400" />
                 </span>
                 <span className="text-sm font-bold text-red-400 tabular-nums">{down}</span>
-                <span className="text-xs text-red-400/60">down</span>
+                <span className="text-xs text-red-400/60">{t('down')}</span>
               </div>
             )}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10 border border-slate-500/20">
               <span className="text-sm font-bold text-slate-300 tabular-nums">{total}</span>
-              <span className="text-xs text-slate-400/60">total</span>
+              <span className="text-xs text-slate-400/60">{t('total')}</span>
             </div>
           </div>
         </div>
@@ -330,12 +332,12 @@ export default function AndonBoardPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
               </span>
-              <span className="text-xs font-bold text-emerald-400 tracking-wider">LIVE</span>
+              <span className="text-xs font-bold text-emerald-400 tracking-wider">{t('live')}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span className="text-xs font-bold text-amber-400 tracking-wider">POLLING</span>
+              <span className="text-xs font-bold text-amber-400 tracking-wider">{t('polling')}</span>
             </div>
           )}
 

@@ -15,6 +15,7 @@ import { exportToCSV } from '@/lib/csv-export';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
+import { useTranslations } from 'next-intl';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -329,6 +330,7 @@ function SafetyAnalyticsSection() {
 type View = 'list' | 'detail' | 'create';
 
 export default function SafetyPage() {
+  const t = useTranslations('safety');
   const [incidents, setIncidents] = useState<SafetyIncident[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
@@ -488,10 +490,10 @@ export default function SafetyPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <ShieldAlert className="w-6 h-6 text-red-500" />
-              Safety Management
+              {t('title')}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Incident reporting, tracking &amp; safety metrics
+              {t('incidents')}
             </p>
           </div>
           <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import { api, auth } from '@/lib/api';
 import { UserPlus, Search, Shield, X, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { useTranslations } from 'next-intl';
 
 const ROLE_COLORS: Record<string, string> = {
   corporate_admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -21,6 +22,7 @@ const ROLE_LEVEL: Record<string, number> = {
 const ALL_ROLES = ['viewer', 'operator', 'manager', 'site_admin', 'corporate_admin'];
 
 export default function UsersPage() {
+  const t = useTranslations('admin');
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -145,9 +147,9 @@ export default function UsersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('users')}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Manage team members and their roles
+            {t('users')}
           </p>
         </div>
         {allowedRoles.length > 0 && (
@@ -156,7 +158,7 @@ export default function UsersPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <UserPlus className="w-4 h-4" />
-            Add User
+            {t('createUser')}
           </button>
         )}
       </div>

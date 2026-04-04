@@ -8,6 +8,7 @@ import {
   Printer, Activity,
 } from 'lucide-react';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { useTranslations } from 'next-intl';
 
 // ===== Print Styles =====
 
@@ -263,6 +264,8 @@ function shiftToOeePeriod(shift: string): string {
 // ===== Component =====
 
 export default function ShiftHandoverPage() {
+  const t = useTranslations('shiftHandover');
+  const tDash = useTranslations('dashboard');
   const [data, setData] = useState<ShiftHandoverData | null>(null);
   const [oeeData, setOeeData] = useState<OeeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -298,7 +301,7 @@ export default function ShiftHandoverPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Shift Handover</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('title')}</h1>
         <SkeletonList count={4} />
       </div>
     );
@@ -307,8 +310,8 @@ export default function ShiftHandoverPage() {
   if (!data) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Shift Handover</h1>
-        <p className="text-gray-500 dark:text-gray-400">Failed to load shift data. Please try again.</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{t('title')}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{t('failedToLoad')}</p>
       </div>
     );
   }
@@ -340,9 +343,9 @@ export default function ShiftHandoverPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 no-print" data-no-print>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shift Handover</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Overview of production, issues, and notes for the incoming shift
+            {t('subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -360,7 +363,7 @@ export default function ShiftHandoverPage() {
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Printer className="w-4 h-4" />
-            Print Report
+            {t('printReport')}
           </button>
           <button
             onClick={loadData}
@@ -368,7 +371,7 @@ export default function ShiftHandoverPage() {
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('refresh')}
           </button>
         </div>
       </div>
@@ -377,23 +380,23 @@ export default function ShiftHandoverPage() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 print-section">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{totals.totalProduced}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Produced</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('produced')}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{totals.totalScrap}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Scrap</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('scrap')}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{totals.workstationsRunning}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Running</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('running')}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{totals.workstationsDown}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Down</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('down')}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{totals.totalWorkstations}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Workstations</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('totalWorkstations')}</p>
         </div>
       </div>
 
@@ -402,14 +405,14 @@ export default function ShiftHandoverPage() {
         <div className="print-section">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <Activity className="w-5 h-5 text-violet-500" />
-            OEE Summary
+            {t('oeeSummary')}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {([
-              { label: 'Availability', value: siteOee.availability },
-              { label: 'Performance', value: siteOee.performance },
-              { label: 'Quality', value: siteOee.quality },
-              { label: 'OEE', value: siteOee.oee },
+              { label: tDash('availability'), value: siteOee.availability },
+              { label: tDash('performance'), value: siteOee.performance },
+              { label: tDash('qualityRate'), value: siteOee.quality },
+              { label: tDash('oee'), value: siteOee.oee },
             ] as const).map(({ label, value }) => (
               <div
                 key={label}
@@ -430,7 +433,7 @@ export default function ShiftHandoverPage() {
         <div className="space-y-4 print-section">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            Attention Items
+            {t('attentionItems')}
           </h2>
 
           {/* Breakdowns */}
@@ -438,7 +441,7 @@ export default function ShiftHandoverPage() {
             <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-1.5">
                 <Wrench className="w-4 h-4" />
-                Breakdowns ({attentionItems.breakdowns.length})
+                {t('breakdowns')} ({attentionItems.breakdowns.length})
               </h3>
               <div className="space-y-2">
                 {attentionItems.breakdowns.map((b, i) => (
@@ -464,7 +467,7 @@ export default function ShiftHandoverPage() {
             <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
                 <FileWarning className="w-4 h-4" />
-                Open NCRs ({attentionItems.ncrs.length})
+                {t('openNcrs')} ({attentionItems.ncrs.length})
               </h3>
               <div className="space-y-2">
                 {attentionItems.ncrs.map(ncr => (
@@ -500,7 +503,7 @@ export default function ShiftHandoverPage() {
             <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4" />
-                Safety Incidents ({attentionItems.safetyIncidents.length})
+                {t('safetyIncidents')} ({attentionItems.safetyIncidents.length})
               </h3>
               <div className="space-y-2">
                 {attentionItems.safetyIncidents.map(si => (
@@ -531,26 +534,26 @@ export default function ShiftHandoverPage() {
       <div className="print-section print-break-before">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
           <Factory className="w-5 h-5 text-blue-500" />
-          Workstations
+          {t('workstations')}
         </h2>
         {/* Status summary line */}
         {workstations.length > 0 && (
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> {wsProducing} producing</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> {wsProducing} {t('producing')}</span>
             <span className="mx-2">|</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> {wsIdle} idle</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> {wsIdle} {t('idle')}</span>
             <span className="mx-2">|</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {wsDown} down</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {wsDown} {t('down')}</span>
             {wsOther > 0 && (
               <>
                 <span className="mx-2">|</span>
-                <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> {wsOther} other</span>
+                <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> {wsOther} {t('other')}</span>
               </>
             )}
           </p>
         )}
         {workstations.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No active workstations found.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('noActiveWorkstations')}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 ws-grid">
             {workstations.map(ws => {
@@ -663,7 +666,7 @@ export default function ShiftHandoverPage() {
           <div className="print-section print-break-before">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
               <ArrowDownCircle className="w-5 h-5 text-indigo-500" />
-              Completed Runs (Handover Notes)
+              {t('completedRuns')}
             </h2>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <table className="w-full text-sm">

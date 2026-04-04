@@ -8,6 +8,7 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { useTranslations } from 'next-intl';
 import {
   FEATURE_GROUPS, FEATURE_GROUP_LABELS, PERMISSION_LEVEL_LABELS,
   type FeatureGroup, type PermissionLevel,
@@ -80,6 +81,8 @@ function permissionSummary(role: Role): string {
 }
 
 export default function RolesPage() {
+  const t = useTranslations('admin');
+  const tPerm = useTranslations('permissions');
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -203,7 +206,7 @@ export default function RolesPage() {
   if (loading) {
     return (
       <div className="p-6 lg:p-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Roles</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('roles')}</h1>
         <SkeletonList count={4} />
       </div>
     );
@@ -220,7 +223,7 @@ export default function RolesPage() {
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {editId ? 'Edit Role' : 'Create Role'}
+            {editId ? t('roles') : t('createRole')}
           </h1>
         </div>
 

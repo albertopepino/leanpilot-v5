@@ -36,6 +36,7 @@ import { EscalationModule } from './escalation/escalation.module';
 import { EmailModule } from './email/email.module';
 import { HealthModule } from './health/health.module';
 import { CleanupModule } from './cleanup/cleanup.module';
+import { ErpModule } from './erp/erp.module';
 import { PermissionGuard } from './roles/permission.guard';
 
 @Module({
@@ -78,6 +79,7 @@ import { PermissionGuard } from './roles/permission.guard';
     CapaModule,
     EscalationModule,
     CleanupModule,
+    ErpModule,
     HealthModule,
   ],
   providers: [

@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { exportToCSV } from '@/lib/csv-export';
+import { useTranslations } from 'next-intl';
 
 // ===== TYPES =====
 
@@ -89,6 +90,7 @@ type View = 'list' | 'detail' | 'create';
 // ===== COMPONENT =====
 
 export default function OrdersPage() {
+  const t = useTranslations('orders');
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
@@ -237,12 +239,12 @@ export default function OrdersPage() {
     return (
       <div className="px-6 py-6 max-w-4xl mx-auto space-y-6">
         <Breadcrumb items={[
-          { label: 'Orders', onClick: () => setView('list') },
-          { label: 'New Order' },
+          { label: t('title'), onClick: () => setView('list') },
+          { label: t('newOrder') },
         ]} />
 
         <GlassCard>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Create Production Order</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">{t('createOrder')}</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div>
@@ -416,7 +418,7 @@ export default function OrdersPage() {
                 shadow-sm shadow-blue-500/20 hover:shadow-md hover:shadow-blue-500/30
                 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {saving ? 'Creating...' : 'Create Order'}
+              {saving ? '...' : t('createOrder')}
             </button>
             <button
               onClick={() => setView('list')}
@@ -437,7 +439,7 @@ export default function OrdersPage() {
     return (
       <div className="px-6 py-6 max-w-5xl mx-auto space-y-6">
         <Breadcrumb items={[
-          { label: 'Orders', onClick: () => { setView('list'); setSelected(null); } },
+          { label: t('title'), onClick: () => { setView('list'); setSelected(null); } },
           { label: selected.poNumber },
         ]} />
 
@@ -547,7 +549,7 @@ export default function OrdersPage() {
 
   return (
     <div className="px-6 py-6 max-w-[1600px] mx-auto space-y-6">
-      <Breadcrumb items={[{ label: 'Orders' }]} />
+      <Breadcrumb items={[{ label: t('title') }]} />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -557,7 +559,7 @@ export default function OrdersPage() {
             <PackageCheck className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Production Orders</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
             <p className="text-xs text-gray-400">{orders.length} order{orders.length !== 1 ? 's' : ''} total</p>
           </div>
         </div>
@@ -586,7 +588,7 @@ export default function OrdersPage() {
                 shadow-sm shadow-blue-500/20 hover:shadow-md hover:shadow-blue-500/30
                 transition-all"
             >
-              <Plus className="w-4 h-4" /> New Order
+              <Plus className="w-4 h-4" /> {t('newOrder')}
             </button>
           )}
         </div>
