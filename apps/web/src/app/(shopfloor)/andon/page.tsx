@@ -376,7 +376,8 @@ export default function AndonBoardPage() {
             idle:         { base: '0 0 10px rgba(100,116,139,0.1)', bright: '0 0 20px rgba(100,116,139,0.2)' },
             planned_stop: { base: '0 0 15px rgba(249,115,22,0.15)', bright: '0 0 30px rgba(249,115,22,0.35)' },
           };
-          const glow = !isRunning ? glowColors[ws.currentStatus] || glowColors.idle : null;
+          const isIdle = ws.currentStatus === 'idle';
+          const glow = !isRunning && !isIdle ? glowColors[ws.currentStatus] : null;
 
           return (
             <div
