@@ -119,10 +119,12 @@ model User {
   customRoleId  String?
   siteId        String
   corporateId   String
-  isActive      Boolean    @default(true)
-  lastLogin     DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  isActive         Boolean    @default(true)
+  lastLogin        DateTime?
+  twoFactorSecret  String?
+  twoFactorEnabled Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   site       Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
   corporate  Corporate   @relation(fields: [corporateId], references: [id], onDelete: Cascade)
@@ -164,6 +166,8 @@ model User {
   capasAssigned            CorrectiveAction[]     @relation("CapaAssignee")
   capasCreated             CorrectiveAction[]     @relation("CapaCreator")
   capasVerified            CorrectiveAction[]     @relation("CapaVerifier")
+
+  dashboardLayout   String? // JSON: widget positions and visibility
 
   @@map("users")
 }

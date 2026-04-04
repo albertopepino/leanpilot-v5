@@ -6,7 +6,7 @@ import {
   AlertTriangle, Wrench, Pause, Clock, CalendarOff, ShieldAlert,
   Activity, Eye, PackageX, Boxes, CircleAlert, Gauge, ShieldCheck,
   ClipboardCheck, Lightbulb, ChevronRight, ArrowUpRight, Factory,
-  ArrowRight, Zap,
+  ArrowRight, Zap, Settings2, ChevronUp, ChevronDown, Check,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { GradientStatCard } from '@/components/ui/GradientStatCard';
@@ -191,24 +191,85 @@ function LossBar({ label, hours, maxHours, color, barColor, index }: {
 
 // ── Page ───────────────────────────────────────────────────────────────
 
+// ── Dashboard Widget Config ────────────────────────────────────────────
+
+interface WidgetConfig {
+  id: string;
+  visible: boolean;
+}
+
+const DASHBOARD_WIDGETS = [
+  { id: 'kpis', label: 'KPI Cards', defaultVisible: true },
+  { id: 'oee', label: 'OEE Overview', defaultVisible: true },
+  { id: 'charts', label: 'Production Trend & Quality', defaultVisible: true },
+  { id: 'losses', label: 'Loss Breakdown', defaultVisible: true },
+  { id: 'muda', label: 'Muda Signals', defaultVisible: true },
+  { id: 'actions', label: 'Quick Actions', defaultVisible: true },
+];
+
+const DEFAULT_LAYOUT: WidgetConfig[] = DASHBOARD_WIDGETS.map(w => ({
+  id: w.id,
+  visible: w.defaultVisible,
+}));
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardOverview | null>(null);
   const [mudaSignals, setMudaSignals] = useState<MudaSignal[]>([]);
   const [oee, setOee] = useState<OeeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [customizeMode, setCustomizeMode] = useState(false);
+  const [widgetLayout, setWidgetLayout] = useState<WidgetConfig[]>(DEFAULT_LAYOUT);
   const user = auth.getUser();
 
+  // Load saved layout + dashboard data
   useEffect(() => {
     Promise.all([
       api.get<DashboardOverview>('/dashboard/overview').catch(() => null),
       api.get<any>('/gemba/muda-signals').catch(() => []),
       api.get<OeeData>('/dashboard/oee').catch(() => null),
-    ]).then(([overview, signals, oeeData]) => {
+      api.get<{ layout: WidgetConfig[] | null }>('/dashboard/layout').catch(() => ({ layout: null })),
+    ]).then(([overview, signals, oeeData, layoutRes]) => {
       setData(overview);
       setMudaSignals(Array.isArray(signals) ? signals : []);
       setOee(oeeData);
+      if (layoutRes?.layout && Array.isArray(layoutRes.layout)) {
+        // Merge saved layout with defaults (in case new widgets were added)
+        const savedIds = new Set(layoutRes.layout.map((w: WidgetConfig) => w.id));
+        const merged = [
+          ...layoutRes.layout,
+          ...DEFAULT_LAYOUT.filter(w => !savedIds.has(w.id)),
+        ];
+        setWidgetLayout(merged);
+      }
     }).finally(() => setLoading(false));
   }, []);
+
+  const saveLayout = (layout: WidgetConfig[]) => {
+    setWidgetLayout(layout);
+    api.patch('/dashboard/layout', { layout }).catch(() => {});
+  };
+
+  const toggleWidget = (id: string) => {
+    const updated = widgetLayout.map(w =>
+      w.id === id ? { ...w, visible: !w.visible } : w,
+    );
+    saveLayout(updated);
+  };
+
+  const moveWidget = (id: string, direction: 'up' | 'down') => {
+    const idx = widgetLayout.findIndex(w => w.id === id);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= widgetLayout.length) return;
+    const updated = [...widgetLayout];
+    [updated[idx], updated[swapIdx]] = [updated[swapIdx], updated[idx]];
+    saveLayout(updated);
+  };
+
+  const isWidgetVisible = (id: string) => {
+    const w = widgetLayout.find(w => w.id === id);
+    return w ? w.visible : true;
+  };
 
   if (loading) return <DashboardSkeleton />;
 
@@ -333,16 +394,30 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <Link
-              href="/gemba"
-              className="hidden md:flex items-center gap-2 bg-white/15 backdrop-blur-sm
-                         rounded-xl px-5 py-3 text-sm font-semibold text-white
-                         hover:bg-white/25 transition-all duration-200 hover:scale-105
-                         shadow-lg shadow-black/10"
-            >
-              Start Gemba Walk
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="hidden md:flex items-center gap-2">
+              <button
+                onClick={() => setCustomizeMode(!customizeMode)}
+                className={`flex items-center gap-2 backdrop-blur-sm
+                           rounded-xl px-4 py-3 text-sm font-semibold text-white
+                           transition-all duration-200 hover:scale-105
+                           shadow-lg shadow-black/10 ${
+                             customizeMode ? 'bg-white/30' : 'bg-white/15 hover:bg-white/25'
+                           }`}
+              >
+                <Settings2 className="w-4 h-4" />
+                {customizeMode ? 'Done' : 'Customize'}
+              </button>
+              <Link
+                href="/gemba"
+                className="flex items-center gap-2 bg-white/15 backdrop-blur-sm
+                           rounded-xl px-5 py-3 text-sm font-semibold text-white
+                           hover:bg-white/25 transition-all duration-200 hover:scale-105
+                           shadow-lg shadow-black/10"
+              >
+                Start Gemba Walk
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -382,8 +457,76 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── KPI Cards (staggered animation) ──────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        {/* ── Customize Panel ──────────────────────────────────── */}
+        {customizeMode && (
+          <div className="opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]">
+            <GlassCard>
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700
+                                flex items-center justify-center shadow-sm">
+                  <Settings2 className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    Customize Dashboard
+                  </h3>
+                  <p className="text-[11px] text-gray-400">Toggle visibility and reorder widgets</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {widgetLayout.map((w, idx) => {
+                  const def = DASHBOARD_WIDGETS.find(d => d.id === w.id);
+                  if (!def) return null;
+                  return (
+                    <div
+                      key={w.id}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700/50"
+                    >
+                      <button
+                        onClick={() => toggleWidget(w.id)}
+                        className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                          w.visible
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                      >
+                        {w.visible && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                      <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                        {def.label}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => moveWidget(w.id, 'up')}
+                          disabled={idx === 0}
+                          className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        </button>
+                        <button
+                          onClick={() => moveWidget(w.id, 'down')}
+                          disabled={idx === widgetLayout.length - 1}
+                          className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {/* ── Widgets (rendered in saved order) ───────────────── */}
+        {widgetLayout.map(w => {
+          if (!w.visible) return null;
+
+          switch (w.id) {
+            case 'kpis':
+              return (
+                <div key="kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
           {[
             {
               label: 'Total Produced', value: produced, variant: 'blue' as const,
@@ -431,8 +574,11 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+              );
 
-        {/* ── OEE Section ──────────────────────────────────────── */}
+            case 'oee':
+              return (
+        <div key="oee">
         {(oee || !loading) && (
           <div className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]" style={{ animationDelay: '0.45s' }}>
             <GlassCard>
@@ -527,9 +673,12 @@ export default function DashboardPage() {
             </GlassCard>
           </div>
         )}
+        </div>
+              );
 
-        {/* ── Charts Row ───────────────────────────────────────── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+            case 'charts':
+              return (
+        <div key="charts" className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
           {/* Production Trend (2 cols) */}
           <div
@@ -619,9 +768,11 @@ export default function DashboardPage() {
             </GlassCard>
           </div>
         </div>
+              );
 
-        {/* ── Losses + Muda Row ──────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            case 'losses':
+              return (
+        <div key="losses" className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Losses — Animated Bar Chart */}
           <div
@@ -672,7 +823,8 @@ export default function DashboardPage() {
             </GlassCard>
           </div>
 
-          {/* Muda Signals */}
+          {/* Muda Signals (paired in grid if both visible) */}
+          {isWidgetVisible('muda') && (
           <div
             className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]"
             style={{ animationDelay: '0.68s' }}
@@ -747,10 +899,89 @@ export default function DashboardPage() {
               )}
             </GlassCard>
           </div>
+          )}
         </div>
+              );
 
-        {/* ── Quick Actions ──────────────────────────────────────── */}
-        <div className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]" style={{ animationDelay: '0.75s' }}>
+            case 'muda':
+              // Muda is rendered inside 'losses' grid when both are visible; standalone otherwise
+              if (isWidgetVisible('losses')) return null;
+              return (
+        <div key="muda" className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]" style={{ animationDelay: '0.68s' }}>
+          <GlassCard>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500
+                                  flex items-center justify-center shadow-sm shadow-amber-500/20">
+                    <CircleAlert className="w-4 h-4 text-white" />
+                  </div>
+                  {mudaSignals.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-500 text-white
+                                     text-[10px] font-bold flex items-center justify-center
+                                     animate-bounce shadow-lg shadow-amber-500/30">
+                      {mudaSignals.length}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    Open Muda Signals
+                  </h3>
+                  <p className="text-[11px] text-gray-400">{mudaSignals.length} observation{mudaSignals.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <Link href="/gemba"
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1
+                           hover:gap-2 transition-all duration-200">
+                View All <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            {mudaSignals.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-3">
+                  <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">All clear</p>
+                <p className="text-xs text-gray-400 mt-0.5">No open observations</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                {mudaSignals.slice(0, 8).map((obs, i) => (
+                  <div key={obs.id}
+                    className="flex items-start gap-3 p-3 rounded-2xl
+                               bg-gray-50/80 dark:bg-gray-700/30 backdrop-blur-sm
+                               hover:bg-gray-100 dark:hover:bg-gray-700/50
+                               hover:shadow-md hover:-translate-y-0.5
+                               transition-all duration-300 group cursor-pointer
+                               opacity-0 animate-[slideInRight_0.4s_ease-out_forwards]"
+                    style={{ animationDelay: `${0.8 + i * 0.06}s` }}
+                  >
+                    <span className={`mt-0.5 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full
+                                      ${SEVERITY_BADGE[obs.severity] || SEVERITY_BADGE.medium}`}>
+                      {obs.severity}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 dark:text-white leading-snug line-clamp-1">
+                        {obs.description}
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {WASTE_LABELS[obs.wasteCategory] || obs.wasteCategory}
+                        <span className="mx-1">&middot;</span>{obs.status}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all duration-200 mt-0.5" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </div>
+              );
+
+            case 'actions':
+              return (
+        <div key="actions" className="opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]" style={{ animationDelay: '0.75s' }}>
           <h2 className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
             Quick Actions
           </h2>
@@ -781,6 +1012,12 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+              );
+
+            default:
+              return null;
+          }
+        })}
       </div>
     </>
   );

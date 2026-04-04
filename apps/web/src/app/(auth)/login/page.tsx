@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { auth } from '@/lib/api';
 import { getLoginRedirect } from '@/lib/permissions';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 const LEAN_QUOTES = [
   { text: 'The most dangerous kind of waste is the waste we do not recognize.', author: 'Shigeo Shingo' },
@@ -19,9 +21,62 @@ const LEAN_QUOTES = [
   { text: 'Start by doing what is necessary; then do what is possible; and suddenly you are doing the impossible.', author: 'Francis of Assisi' },
 ];
 
+function TwoFactorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const inputRefs = Array.from({ length: 6 }, () => useRef<HTMLInputElement>(null));
+  const digits = value.padEnd(6, '').split('').slice(0, 6);
+
+  const handleChange = (index: number, char: string) => {
+    if (!/^\d?$/.test(char)) return;
+    const next = digits.slice();
+    next[index] = char;
+    onChange(next.join('').trim());
+    if (char && index < 5) {
+      inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    onChange(pasted);
+    const focusIdx = Math.min(pasted.length, 5);
+    inputRefs[focusIdx].current?.focus();
+  };
+
+  return (
+    <div className="flex gap-2 justify-center">
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          ref={inputRefs[i]}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={d || ''}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onPaste={i === 0 ? handlePaste : undefined}
+          autoFocus={i === 0}
+          className="w-12 h-14 text-center text-xl font-semibold rounded-xl border border-gray-200 dark:border-gray-700
+                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                     transition-all duration-200 outline-none"
+        />
+      ))}
+    </div>
+  );
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations('auth');
   const resetSuccess = searchParams.get('reset') === 'success';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +84,11 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [quoteFade, setQuoteFade] = useState(true);
+
+  // 2FA state
+  const [twoFactorStep, setTwoFactorStep] = useState(false);
+  const [tempToken, setTempToken] = useState('');
+  const [otpCode, setOtpCode] = useState('');
 
   // Rotate quotes
   useEffect(() => {
@@ -49,11 +109,32 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const user = await auth.login(email, password);
+      const result = await auth.login(email, password);
+      if (result && 'requiresTwoFactor' in result && result.requiresTwoFactor) {
+        setTempToken(result.tempToken);
+        setTwoFactorStep(true);
+      } else {
+        const dest = getLoginRedirect(result);
+        router.push(dest);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const user = await auth.verifyTwoFactor(tempToken, otpCode);
       const dest = getLoginRedirect(user);
       router.push(dest);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Invalid verification code');
     } finally {
       setLoading(false);
     }
@@ -151,13 +232,76 @@ function LoginForm() {
             <p className="text-sm text-gray-400">Manufacturing Intelligence Platform</p>
           </div>
 
+          {twoFactorStep ? (
+            /* 2FA Verification Screen */
+            <>
+              <div className="mb-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Two-Factor Authentication
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+                  Enter the 6-digit code from your authenticator app
+                </p>
+              </div>
+
+              <form onSubmit={handleTwoFactorSubmit} className="space-y-6">
+                {error && (
+                  <div className="p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {error}
+                  </div>
+                )}
+
+                <TwoFactorInput value={otpCode} onChange={setOtpCode} />
+
+                <button
+                  type="submit"
+                  disabled={loading || otpCode.length !== 6}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-violet-600
+                             hover:from-blue-700 hover:to-violet-700
+                             disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-gray-600 dark:disabled:to-gray-700
+                             text-white font-semibold rounded-xl text-sm
+                             shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30
+                             disabled:shadow-none
+                             transition-all duration-200
+                             focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                      Verifying...
+                    </span>
+                  ) : 'Verify'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setTwoFactorStep(false); setOtpCode(''); setTempToken(''); setError(''); }}
+                  className="w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                >
+                  Back to login
+                </button>
+              </form>
+            </>
+          ) : (
+          <>
           {/* Form header */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Welcome back
+              {t('welcomeBack')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
-              Sign in to your factory dashboard
+              {t('signInToFactory')}
             </p>
           </div>
 
@@ -167,7 +311,7 @@ function LoginForm() {
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Password reset successful. Please sign in with your new password.
+                {t('resetSuccess')}
               </div>
             )}
             {error && (
@@ -181,7 +325,7 @@ function LoginForm() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Email address
+                {t('email')}
               </label>
               <input
                 id="email"
@@ -191,7 +335,7 @@ function LoginForm() {
                 required
                 autoFocus
                 autoComplete="email"
-                placeholder="you@company.com"
+                placeholder={t('emailPlaceholder')}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700
                            bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                            text-sm placeholder-gray-400
@@ -203,13 +347,13 @@ function LoginForm() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Password
+                  {t('password')}
                 </label>
                 <Link
                   href="/forgot-password"
                   className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  Forgot password?
+                  {t('forgotPassword')}
                 </Link>
               </div>
               <input
@@ -219,7 +363,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="Enter your password"
+                placeholder={t('enterPassword')}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700
                            bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                            text-sm placeholder-gray-400
@@ -246,9 +390,9 @@ function LoginForm() {
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   </svg>
-                  Signing in...
+                  {t('signingIn')}
                 </span>
-              ) : 'Sign In'}
+              ) : t('login')}
             </button>
           </form>
 
@@ -263,7 +407,10 @@ function LoginForm() {
           </div>
 
           {/* Footer */}
-          <div className="text-center mt-8 space-y-2">
+          <div className="text-center mt-8 space-y-3">
+            <div className="flex justify-center">
+              <LanguageSwitcher />
+            </div>
             <div className="flex items-center justify-center gap-3 text-[11px]">
               <Link href="/privacy" className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                 Privacy Policy
@@ -277,6 +424,8 @@ function LoginForm() {
               LeanPilot v4 — Manufacturing Intelligence by Centro Studi Grassi
             </p>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

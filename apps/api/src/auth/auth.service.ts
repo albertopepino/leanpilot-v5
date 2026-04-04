@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { generateSecret, generateURI, verifySync } from 'otplib';
+import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../email/email.service';
@@ -38,6 +40,25 @@ export class AuthService {
     if (!passwordValid) {
       this.audit.log({ userId: user.id, userEmail: dto.email, action: 'login_failed', entityType: 'auth', result: 'failure', metadata: { reason: 'wrong_password' } });
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if 2FA is enabled
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      if (!dto.twoFactorToken) {
+        // Issue a short-lived temp token for 2FA verification only
+        const tempToken = this.jwt.sign(
+          { sub: user.id, purpose: '2fa-pending' },
+          { expiresIn: '5m' },
+        );
+        this.audit.log({ userId: user.id, userEmail: user.email, action: 'login_2fa_required', entityType: 'auth', entityId: user.id });
+        return { requiresTwoFactor: true, tempToken };
+      }
+
+      const isValid = verifySync({ token: dto.twoFactorToken, secret: user.twoFactorSecret }).valid;
+      if (!isValid) {
+        this.audit.log({ userId: user.id, userEmail: user.email, action: 'login_2fa_failed', entityType: 'auth', result: 'failure' });
+        throw new UnauthorizedException('Invalid 2FA code');
+      }
     }
 
     // Update last login
@@ -228,6 +249,134 @@ export class AuthService {
     }
 
     return this.generateTokens(user);
+  }
+
+  async setupTwoFactor(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found');
+
+    const secret = generateSecret();
+    const otpauthUrl = generateURI({ secret, issuer: 'LeanPilot', label: user.email });
+    const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
+
+    // Store secret — not yet enabled until user confirms with a valid token
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorSecret: secret },
+    });
+
+    this.audit.log({ userId, userEmail: user.email, action: '2fa_setup_initiated', entityType: 'auth', entityId: userId });
+
+    return { secret, qrCodeUrl };
+  }
+
+  async enableTwoFactor(userId: string, token: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.twoFactorSecret) {
+      throw new BadRequestException('2FA setup not initiated. Call setup first.');
+    }
+
+    const isValid = verifySync({ token, secret: user.twoFactorSecret }).valid;
+    if (!isValid) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: true },
+    });
+
+    this.audit.log({ userId, userEmail: user.email, action: '2fa_enabled', entityType: 'auth', entityId: userId });
+
+    return { message: 'Two-factor authentication enabled successfully' };
+  }
+
+  async disableTwoFactor(userId: string, token: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new BadRequestException('2FA is not enabled');
+    }
+
+    const isValid = verifySync({ token, secret: user.twoFactorSecret }).valid;
+    if (!isValid) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: false, twoFactorSecret: null },
+    });
+
+    this.audit.log({ userId, userEmail: user.email, action: '2fa_disabled', entityType: 'auth', entityId: userId });
+
+    return { message: 'Two-factor authentication disabled successfully' };
+  }
+
+  async verifyTwoFactorLogin(tempToken: string, token: string) {
+    let payload: { sub: string; purpose?: string };
+    try {
+      payload = this.jwt.verify(tempToken) as { sub: string; purpose?: string };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired temporary token');
+    }
+
+    if (payload.purpose !== '2fa-pending') {
+      throw new UnauthorizedException('Invalid token purpose');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: {
+        site: true,
+        corporate: true,
+        customRole: { include: { permissions: true } },
+      },
+    });
+
+    if (!user || !user.isActive || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new UnauthorizedException('Invalid 2FA state');
+    }
+
+    const isValid = verifySync({ token, secret: user.twoFactorSecret }).valid;
+    if (!isValid) {
+      this.audit.log({ userId: user.id, userEmail: user.email, action: 'login_2fa_failed', entityType: 'auth', result: 'failure' });
+      throw new UnauthorizedException('Invalid 2FA code');
+    }
+
+    // Update last login
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
+
+    const tokens = await this.generateTokens(user);
+
+    this.audit.log({ userId: user.id, userEmail: user.email, action: 'login', entityType: 'auth', entityId: user.id, metadata: { via: '2fa' } });
+
+    const permissions: Record<string, string> = {};
+    if (user.customRole?.permissions) {
+      for (const p of user.customRole.permissions) {
+        permissions[p.featureGroup] = p.level;
+      }
+    }
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        customRoleId: user.customRoleId,
+        customRoleName: user.customRole?.name ?? null,
+        siteId: user.siteId,
+        corporateId: user.corporateId,
+        siteName: user.site?.name ?? null,
+        corporateName: user.corporate?.name ?? null,
+        permissions,
+      },
+    };
   }
 
   private async generateTokens(user: { id: string; email: string; role: any; customRoleId?: string | null; siteId: string; corporateId: string }) {

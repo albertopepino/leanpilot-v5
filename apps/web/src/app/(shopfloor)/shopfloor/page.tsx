@@ -6,8 +6,9 @@ import {
   Factory, ArrowLeft, Play, AlertTriangle, Wrench, Pause,
   Clock, ShieldAlert, CalendarOff, Flag, ChevronRight,
   Plus, Minus, Send, X, CheckCircle2, Loader2, WifiOff, Wifi,
-  LogOut, UserCircle,
+  LogOut, UserCircle, Camera,
 } from 'lucide-react';
+import { BarcodeScanner } from '@/components/ui/BarcodeScanner';
 
 // ── Error Boundary ────────────────────────────────────────────────────
 
@@ -218,6 +219,9 @@ export default function ShopFloorPage() {
   const [reasonCodes, setReasonCodes] = useState<ReasonCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Barcode scanner
+  const [showScanner, setShowScanner] = useState(false);
 
   // Close shift state
   const [closePoClosed, setClosePoClosed] = useState(false);
@@ -665,6 +669,32 @@ export default function ShopFloorPage() {
         <div className="relative p-4">
           <h2 className="text-2xl font-bold mb-1 tracking-tight">Select Production Order</h2>
           <p className="text-sm text-gray-500 mb-5">Choose the order to work on</p>
+
+          <div className="mb-4 flex gap-3">
+            <button
+              onClick={() => setShowScanner(true)}
+              className="flex-1 flex items-center justify-center gap-3 p-4 rounded-xl bg-blue-600 active:bg-blue-700 font-bold text-lg"
+              style={{ minHeight: 64 }}
+            >
+              <Camera className="w-7 h-7" /> Scan PO Barcode
+            </button>
+          </div>
+
+          {showScanner && (
+            <BarcodeScanner
+              onScan={(code) => {
+                setShowScanner(false);
+                const po = availablePOs.find(p => p.poNumber === code);
+                if (po) {
+                  startRun(po);
+                } else {
+                  setError(`No matching PO found for barcode: ${code}`);
+                }
+              }}
+              onClose={() => setShowScanner(false)}
+            />
+          )}
+
           {availablePOs.length === 0 ? (
             <div className="text-center py-16 text-gray-500" style={{ animation: 'fadeIn 0.4s ease-out' }}>
               <div className="relative inline-block">

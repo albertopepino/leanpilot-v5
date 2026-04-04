@@ -1,5 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -59,5 +60,47 @@ export class AuthController {
   async resetPassword(@Body() body: { token: string; password: string }) {
     await this.auth.resetPassword(body.token, body.password);
     return { message: 'Password reset successful' };
+  }
+
+  @Post('2fa/setup')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Generate 2FA setup (QR code)' })
+  async setupTwoFactor(@CurrentUser('id') userId: string) {
+    return this.auth.setupTwoFactor(userId);
+  }
+
+  @Post('2fa/enable')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enable 2FA after verifying token' })
+  @ApiBody({ schema: { properties: { token: { type: 'string' } } } })
+  async enableTwoFactor(
+    @CurrentUser('id') userId: string,
+    @Body() body: { token: string },
+  ) {
+    return this.auth.enableTwoFactor(userId, body.token);
+  }
+
+  @Post('2fa/disable')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Disable 2FA' })
+  @ApiBody({ schema: { properties: { token: { type: 'string' } } } })
+  async disableTwoFactor(
+    @CurrentUser('id') userId: string,
+    @Body() body: { token: string },
+  ) {
+    return this.auth.disableTwoFactor(userId, body.token);
+  }
+
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify 2FA code during login' })
+  @ApiBody({ schema: { properties: { tempToken: { type: 'string' }, token: { type: 'string' } } } })
+  async verifyTwoFactor(@Body() body: { tempToken: string; token: string }) {
+    return this.auth.verifyTwoFactorLogin(body.tempToken, body.token);
   }
 }

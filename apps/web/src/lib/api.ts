@@ -96,15 +96,39 @@ export const api = {
 
 // Auth helpers
 export const auth = {
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, twoFactorToken?: string) => {
+    const data = await api.post<{
+      accessToken?: string;
+      refreshToken?: string;
+      user?: any;
+      requiresTwoFactor?: boolean;
+      tempToken?: string;
+    }>('/auth/login', { email, password, twoFactorToken });
+
+    if (data?.requiresTwoFactor && data?.tempToken) {
+      return { requiresTwoFactor: true as const, tempToken: data.tempToken };
+    }
+
+    if (!data?.accessToken || !data?.refreshToken || !data?.user) {
+      throw new Error('Invalid login response from server');
+    }
+
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    return data.user;
+  },
+
+  verifyTwoFactor: async (tempToken: string, token: string) => {
     const data = await api.post<{
       accessToken: string;
       refreshToken: string;
       user: any;
-    }>('/auth/login', { email, password });
+    }>('/auth/2fa/verify', { tempToken, token });
 
     if (!data?.accessToken || !data?.refreshToken || !data?.user) {
-      throw new Error('Invalid login response from server');
+      throw new Error('Invalid 2FA verification response');
     }
 
     localStorage.setItem('accessToken', data.accessToken);

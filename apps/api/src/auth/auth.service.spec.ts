@@ -9,6 +9,14 @@ import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../email/email.service';
 
 jest.mock('bcrypt');
+jest.mock('otplib', () => ({
+  generateSecret: jest.fn().mockReturnValue('MOCKSECRET'),
+  generateURI: jest.fn().mockReturnValue('otpauth://totp/LeanPilot:test?secret=MOCK'),
+  verifySync: jest.fn().mockReturnValue(true),
+}));
+jest.mock('qrcode', () => ({
+  toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,mock'),
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -111,8 +119,8 @@ describe('AuthService', () => {
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
-      expect(result.user.email).toBe('test@test.com');
-      expect(result.user.role).toBe('operator');
+      expect('user' in result && result.user.email).toBe('test@test.com');
+      expect('user' in result && result.user.role).toBe('operator');
       expect(mockAudit.log).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'login' }),
       );
