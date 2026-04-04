@@ -247,6 +247,7 @@ export default function AndonBoardPage() {
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         @keyframes strobe { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes borderPulse { 0%, 100% { border-color: rgba(239,68,68,0.6); } 50% { border-color: rgba(239,68,68,0.15); } }
+        @keyframes glowPulse { 0%, 100% { box-shadow: var(--glow-base); } 50% { box-shadow: var(--glow-bright); } }
         @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(200vh); } }
         @keyframes glow-breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
         .animate-strobe { animation: strobe 0.8s ease-in-out infinite; }
@@ -361,6 +362,18 @@ export default function AndonBoardPage() {
           const isCritical = isBreakdown || isQualityHold;
           const mins = isCritical ? elapsedMinutes(ws.statusSince) : 0;
           const escalation = isBreakdown ? getEscalationTier(mins) : null;
+          const isRunning = ws.currentStatus === 'running';
+
+          // Glow pulse colors per status
+          const glowColors: Record<string, { base: string; bright: string }> = {
+            breakdown:    { base: '0 0 20px rgba(239,68,68,0.2)',  bright: '0 0 40px rgba(239,68,68,0.5)' },
+            quality_hold: { base: '0 0 20px rgba(168,85,247,0.2)', bright: '0 0 40px rgba(168,85,247,0.5)' },
+            changeover:   { base: '0 0 15px rgba(245,158,11,0.15)', bright: '0 0 30px rgba(245,158,11,0.35)' },
+            maintenance:  { base: '0 0 15px rgba(59,130,246,0.15)', bright: '0 0 30px rgba(59,130,246,0.35)' },
+            idle:         { base: '0 0 10px rgba(100,116,139,0.1)', bright: '0 0 20px rgba(100,116,139,0.2)' },
+            planned_stop: { base: '0 0 15px rgba(249,115,22,0.15)', bright: '0 0 30px rgba(249,115,22,0.35)' },
+          };
+          const glow = !isRunning ? glowColors[ws.currentStatus] || glowColors.idle : null;
 
           return (
             <div
@@ -368,13 +381,18 @@ export default function AndonBoardPage() {
               className={`
                 relative overflow-hidden rounded-2xl border backdrop-blur-sm
                 bg-gradient-to-br ${cfg.bg}
-                ${cfg.glow} ${cfg.ring} ring-1
+                ${cfg.ring} ring-1
                 ${escalation?.strobe ? 'animate-strobe' : ''}
                 ${isCritical && !escalation?.strobe ? 'animate-border-pulse' : ''}
                 opacity-0
               `}
               style={{
-                animation: `${escalation?.strobe ? 'strobe 0.8s ease-in-out infinite, ' : ''}scaleIn 0.4s ease-out ${idx * 0.05}s forwards`,
+                ...(glow ? { '--glow-base': glow.base, '--glow-bright': glow.bright } as React.CSSProperties : {}),
+                animation: [
+                  `scaleIn 0.4s ease-out ${idx * 0.05}s forwards`,
+                  escalation?.strobe ? 'strobe 0.8s ease-in-out infinite' : '',
+                  glow ? 'glowPulse 2.5s ease-in-out infinite' : '',
+                ].filter(Boolean).join(', '),
               }}
             >
               {/* Decorative corner accent */}
