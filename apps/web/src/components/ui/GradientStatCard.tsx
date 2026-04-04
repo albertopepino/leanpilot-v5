@@ -13,34 +13,34 @@ const VARIANT_MAP: Record<Variant, {
   sparkColor: string;
 }> = {
   blue: {
-    bg: 'bg-gradient-to-br from-blue-600 to-blue-700',
+    bg: 'bg-gradient-to-br from-sky-700 via-blue-700 to-blue-900',
     iconBg: 'bg-blue-400/20',
     accent: 'text-blue-200',
     sparkColor: '#93c5fd',
   },
   green: {
-    bg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    bg: 'bg-gradient-to-br from-emerald-500 to-teal-700',
     iconBg: 'bg-emerald-400/20',
     accent: 'text-emerald-200',
     sparkColor: '#6ee7b7',
   },
   orange: {
-    bg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    bg: 'bg-gradient-to-br from-amber-500 to-orange-700',
     iconBg: 'bg-amber-400/20',
     accent: 'text-amber-200',
     sparkColor: '#fcd34d',
   },
   amber: {
-    bg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    bg: 'bg-gradient-to-br from-amber-500 to-orange-700',
     iconBg: 'bg-amber-400/20',
     accent: 'text-amber-200',
     sparkColor: '#fcd34d',
   },
   purple: {
-    bg: 'bg-gradient-to-br from-violet-600 to-purple-700',
-    iconBg: 'bg-violet-400/20',
-    accent: 'text-violet-200',
-    sparkColor: '#c4b5fd',
+    bg: 'bg-gradient-to-br from-cyan-600 to-blue-800',
+    iconBg: 'bg-sky-300/20',
+    accent: 'text-sky-200',
+    sparkColor: '#7dd3fc',
   },
   slate: {
     bg: 'bg-gradient-to-br from-slate-600 to-slate-700',

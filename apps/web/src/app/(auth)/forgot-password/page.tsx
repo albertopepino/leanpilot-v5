@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -30,16 +31,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <svg viewBox="0 0 32 32" className="w-6 h-6">
-                <path d="M8 22V10l4 4 4-4 4 4 4-4v12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="8" cy="22" r="1.5" fill="#fff"/>
-                <circle cx="24" cy="22" r="1.5" fill="#fff"/>
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">LeanPilot</span>
-          </div>
+          <BrandLogo size="md" subtitle="Factory Flow Control" className="justify-center" />
         </div>
 
         <div className="mb-8">
@@ -93,7 +85,7 @@ export default function ForgotPasswordPage() {
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700
                            bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                            text-sm placeholder-gray-400
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                           focus:ring-2 focus:ring-amber-400/70 focus:border-transparent
                            transition-all duration-200 outline-none"
               />
             </div>
@@ -101,8 +93,8 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-violet-600
-                         hover:from-blue-700 hover:to-violet-700
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-blue-700 to-amber-500
+                         hover:from-blue-700 hover:via-blue-800 hover:to-amber-500
                          disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-gray-600 dark:disabled:to-gray-700
                          text-white font-semibold rounded-xl text-sm
                          shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30
@@ -133,7 +125,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <p className="text-center text-[11px] text-gray-300 dark:text-gray-600 mt-8">
-          LeanPilot v4 — Manufacturing Intelligence by Centro Studi Grassi
+          LeanPilot v5.7 — Manufacturing Intelligence by Centro Studi Grassi
         </p>
       </div>
     </div>

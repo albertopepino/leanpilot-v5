@@ -112,8 +112,13 @@
 body {
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.06), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.05), transparent 24%);
   @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100;
 }
+
+.font-brand { font-family: var(--font-brand, var(--font-sans, ui-sans-serif, system-ui, sans-serif)); }
 
 /* Type scale */
 .text-kpi { font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
@@ -184,6 +189,25 @@ body {
     border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 500;
+  }
+  .brand-button {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 58%, #f59e0b 100%);
+    color: white;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 14px 28px rgba(29, 78, 216, 0.18);
+    transition: all var(--motion-base) ease;
+  }
+  .brand-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 36px rgba(29, 78, 216, 0.24);
+  }
+  .brand-panel {
+    background:
+      radial-gradient(circle at top left, rgba(96, 165, 250, 0.16), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.12), transparent 24%),
+      linear-gradient(145deg, #020617 0%, #0f172a 30%, #0b3b78 100%);
+    color: white;
+    border-radius: var(--radius-2xl);
   }
 }
 

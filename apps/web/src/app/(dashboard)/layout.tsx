@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { hasPermission, isSystemAdmin, type UserWithPermissions } from '@/lib/permissions';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -41,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   // ── Lean Tools ──────────────────────────────────────────────
   { section: 'Lean Tools', href: '/gemba', label: 'Gemba Walk', icon: Eye, group: 'continuous_improvement', minLevel: 'manage', toolSlug: 'gemba', iconGradient: 'from-cyan-600 to-blue-500' },
   { href: '/tools/five-s', label: '5S Audit', icon: ClipboardCheck, group: 'continuous_improvement', minLevel: 'participate', toolSlug: 'five-s', iconGradient: 'from-orange-500 to-amber-500' },
-  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, group: 'continuous_improvement', minLevel: 'participate', toolSlug: 'kaizen', iconGradient: 'from-violet-600 to-purple-500' },
+  { href: '/tools/kaizen', label: 'Kaizen Board', icon: Lightbulb, group: 'continuous_improvement', minLevel: 'participate', toolSlug: 'kaizen', iconGradient: 'from-amber-500 to-orange-500' },
   { href: '/equipment', label: 'Equipment', icon: Wrench, group: 'maintenance', minLevel: 'view', toolSlug: 'equipment', iconGradient: 'from-slate-600 to-slate-500' },
   {
     href: '/quality', label: 'Quality', icon: ShieldCheck, group: 'quality', minLevel: 'view', toolSlug: 'quality', iconGradient: 'from-emerald-600 to-teal-500',
@@ -148,12 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shadow-md shadow-blue-500/25">
-            <Factory className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-semibold text-gray-900 dark:text-white">LeanPilot</span>
-        </div>
+        <BrandLogo size="sm" subtitle="Ops" />
         <NotificationBell />
       </header>
 
@@ -177,15 +173,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
+        <div className="absolute inset-0 pointer-events-none opacity-[0.06]" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.7) 1px, transparent 0)',
+          backgroundSize: '22px 22px',
+        }} />
         {/* Sidebar header */}
-        <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100/80 dark:border-gray-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600
-                            flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Factory className="w-4.5 h-4.5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">LeanPilot</span>
-          </div>
+        <div className="relative flex items-center justify-between px-5 py-5 border-b border-gray-100/80 dark:border-gray-800/80">
+          <BrandLogo size="sm" subtitle="Operations" />
           <button
             className="lg:hidden p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             onClick={() => setSidebarOpen(false)}
@@ -196,7 +190,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Site indicator */}
-        <div className="px-5 py-3 border-b border-gray-100/80 dark:border-gray-800/80">
+        <div className="relative px-5 py-3 border-b border-gray-100/80 dark:border-gray-800/80">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Site</p>
           <div className="mt-0.5">
             {user.siteLogo ? (
@@ -310,8 +304,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* User footer -- pinned to bottom */}
         <div className="shrink-0 px-4 py-4">
           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-200">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-500
-                            flex items-center justify-center shadow-lg shadow-brand-500/25 ring-2 ring-white/50 dark:ring-gray-800/50">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-amber-500
+                            flex items-center justify-center shadow-lg shadow-blue-500/25 ring-2 ring-white/50 dark:ring-gray-800/50">
               <span className="text-xs font-bold text-white">
                 {user.firstName?.[0]}{user.lastName?.[0]}
               </span>
