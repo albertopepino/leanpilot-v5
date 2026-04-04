@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api, auth } from '@/lib/api';
-import { UserPlus, Search, Shield, X, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { UserPlus, Search, Shield, X, Loader2, ToggleLeft, ToggleRight, Tag } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { useTranslations } from 'next-intl';
@@ -36,11 +36,15 @@ export default function UsersPage() {
 
   // Edit user state
   const [editUser, setEditUser] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', role: '', isActive: true, password: '' });
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', role: '', isActive: true, password: '', customRoleId: '' });
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
+  // Custom roles
+  const [customRoles, setCustomRoles] = useState<any[]>([]);
+
   const currentUser = auth.getUser();
+  const canEdit = currentUser?.role === 'site_admin' || currentUser?.role === 'corporate_admin';
 
   const loadUsers = () => {
     api.get<any>('/users')
@@ -49,7 +53,13 @@ export default function UsersPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    loadUsers();
+    // Load custom roles for the edit modal dropdown
+    api.get<any>('/roles')
+      .then(res => setCustomRoles(Array.isArray(res) ? res : res.data || []))
+      .catch(() => {});
+  }, []);
 
   const filtered = users.filter(u =>
     `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
@@ -59,7 +69,7 @@ export default function UsersPage() {
   const allowedRoles = ALL_ROLES.filter(r => ROLE_LEVEL[r] < currentLevel);
 
   const openEditModal = (u: any) => {
-    if (ROLE_LEVEL[u.role] >= currentLevel) return; // can't edit peers or above
+    if (!canEdit) return;
     setEditUser(u);
     setEditForm({
       firstName: u.firstName || '',
@@ -67,6 +77,7 @@ export default function UsersPage() {
       role: u.role || 'operator',
       isActive: u.isActive !== false,
       password: '',
+      customRoleId: u.customRoleId || '',
     });
     setEditError('');
   };
@@ -83,12 +94,28 @@ export default function UsersPage() {
       if (editForm.isActive !== editUser.isActive) changes.isActive = editForm.isActive;
       if (editForm.password) changes.password = editForm.password;
 
-      if (Object.keys(changes).length === 0) {
+      // Handle custom role assignment change
+      const customRoleChanged = editForm.customRoleId !== (editUser.customRoleId || '');
+
+      if (Object.keys(changes).length === 0 && !customRoleChanged) {
         setEditUser(null);
         return;
       }
 
-      await api.patch('/users/' + editUser.id, changes);
+      if (Object.keys(changes).length > 0) {
+        await api.patch('/users/' + editUser.id, changes);
+      }
+
+      // Assign or remove custom role
+      if (customRoleChanged) {
+        if (editForm.customRoleId) {
+          await api.patch('/roles/assign', { userId: editUser.id, roleId: editForm.customRoleId });
+        } else {
+          // Remove custom role — assign with null
+          await api.patch('/roles/assign', { userId: editUser.id, roleId: null });
+        }
+      }
+
       setEditUser(null);
       loadUsers();
       toast('success', 'User updated');
@@ -195,7 +222,7 @@ export default function UsersPage() {
                 <tr
                   key={u.id}
                   onClick={() => openEditModal(u)}
-                  className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${ROLE_LEVEL[u.role] < currentLevel ? 'cursor-pointer' : ''}`}
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${canEdit ? 'cursor-pointer' : ''}`}
                 >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
@@ -209,10 +236,18 @@ export default function UsersPage() {
                   </td>
                   <td className="px-5 py-3 text-gray-600 dark:text-gray-300">{u.email}</td>
                   <td className="px-5 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${ROLE_COLORS[u.role] || ''}`}>
-                      <Shield className="w-3 h-3" />
-                      {u.role?.replace(/_/g, ' ')}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${ROLE_COLORS[u.role] || ''}`}>
+                        <Shield className="w-3 h-3" />
+                        {u.role?.replace(/_/g, ' ')}
+                      </span>
+                      {u.customRoleName && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                          <Tag className="w-3 h-3" />
+                          {u.customRoleName}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3 text-gray-600 dark:text-gray-300">{u.site?.name}</td>
                   <td className="px-5 py-3">
@@ -358,7 +393,7 @@ export default function UsersPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Role</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">System Role</label>
                 <select
                   value={editForm.role}
                   onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}
@@ -369,6 +404,24 @@ export default function UsersPage() {
                   ))}
                 </select>
               </div>
+              {customRoles.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Custom Role</label>
+                  <select
+                    value={editForm.customRoleId}
+                    onChange={e => setEditForm(f => ({ ...f, customRoleId: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                  >
+                    <option value="">None (use system role defaults)</option>
+                    {customRoles.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}{r.description ? ` — ${r.description}` : ''}</option>
+                    ))}
+                  </select>
+                  {editUser?.customRoleName && (
+                    <p className="text-xs text-gray-400 mt-1">Current: {editUser.customRoleName}</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">New Password (leave blank to keep)</label>
                 <input

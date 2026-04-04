@@ -330,6 +330,8 @@ export default function ShopFloorPage() {
   const loadWorkstations = useCallback(async () => {
     setLoading(true);
     try {
+      // TODO: Filter workstations by user assignment when implemented
+      // For now, all site workstations are shown to all operators
       const wsRes = await api.get<any>('/workstations');
       const wsList = Array.isArray(wsRes) ? wsRes : wsRes?.data || [];
       setWorkstations(wsList.filter((w: any) => w.isActive !== false));
@@ -696,6 +698,44 @@ export default function ShopFloorPage() {
               onClose={() => setShowScanner(false)}
             />
           )}
+
+          {/* Manual PO input */}
+          <form
+            className="mb-4 flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = (e.currentTarget.elements.namedItem('manualPo') as HTMLInputElement)?.value?.trim();
+              if (!input) return;
+              const po = availablePOs.find(p => p.poNumber.toLowerCase() === input.toLowerCase());
+              if (po) {
+                startRun(po);
+              } else {
+                setError(`No matching PO found: ${input}`);
+              }
+            }}
+          >
+            <input
+              name="manualPo"
+              type="text"
+              placeholder="Enter PO number manually..."
+              className="flex-1 px-4 py-3 rounded-xl bg-gray-900/80 border border-gray-700 text-white text-lg placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{ minHeight: 56 }}
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-green-600 active:bg-green-700 font-bold text-lg"
+              style={{ minHeight: 56 }}
+            >
+              GO
+            </button>
+          </form>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gray-700" />
+            <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">or select from list</span>
+            <div className="flex-1 h-px bg-gray-700" />
+          </div>
 
           {availablePOs.length === 0 ? (
             <div className="text-center py-16 text-gray-500" style={{ animation: 'fadeIn 0.4s ease-out' }}>

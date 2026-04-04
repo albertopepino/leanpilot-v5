@@ -198,9 +198,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Site indicator */}
         <div className="px-5 py-3 border-b border-gray-100/80 dark:border-gray-800/80">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Site</p>
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate mt-0.5">
-            {user.siteName || 'All Sites'}
-          </p>
+          <div className="mt-0.5">
+            {user.siteLogo ? (
+              <img src={user.siteLogo} alt={user.siteName || 'Site'} className="h-8 object-contain" />
+            ) : (
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+                {user.siteName || 'All Sites'}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Nav links */}

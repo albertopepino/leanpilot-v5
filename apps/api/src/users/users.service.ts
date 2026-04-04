@@ -39,6 +39,8 @@ export class UsersService {
           firstName: true,
           lastName: true,
           role: true,
+          customRoleId: true,
+          customRole: { select: { name: true } },
           siteId: true,
           corporateId: true,
           isActive: true,
@@ -53,7 +55,13 @@ export class UsersService {
       this.prisma.user.count({ where }),
     ]);
 
-    return { data, total, limit: take, offset: skip };
+    // Flatten customRole.name to customRoleName for frontend convenience
+    const mappedData = data.map(u => ({
+      ...u,
+      customRoleName: u.customRole?.name ?? null,
+    }));
+
+    return { data: mappedData, total, limit: take, offset: skip };
   }
 
   async findById(id: string, callerCorporateId: string) {

@@ -30,6 +30,7 @@ model Site {
   name        String
   slug        String
   location    String?
+  logo        String?
   timezone    String   @default("Europe/Rome")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
